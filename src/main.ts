@@ -22,7 +22,7 @@ async function bootstrap() {
   );
 
   const options = new DocumentBuilder()
-    .setTitle('BMA APIs')
+    .setTitle('Greenwich APIs')
     .addBearerAuth()
     .setVersion('1.0')
     .build();
