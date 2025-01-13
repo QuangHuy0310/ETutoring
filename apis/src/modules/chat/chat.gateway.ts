@@ -1,27 +1,37 @@
 import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, MessageBody, WsResponse, ConnectedSocket } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { ChatService } from './chat.service';
-import { CreateChatDto } from './dto/create-message.dto'
+import { CreateChatDto } from './dto/create-message.dto';
 
 @WebSocketGateway(3001, { transports: ['websocket'] })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly chatService: ChatService) {}
 
+  // Danh sách các client đang kết nối (key: userId, value: Socket)
   private clients: { [key: string]: Socket } = {};
 
   // Khi người dùng kết nối vào WebSocket
   handleConnection(client: Socket) {
-    console.log('User connected:', client.id);
-    this.clients[client.id] = client;
+    const userId = client.handshake.query.userId as string; // Lấy userId từ query string khi kết nối
+    if (userId) {
+      this.clients[userId] = client; // Lưu client vào danh sách theo userId
+      client.join(userId); // Người dùng tham gia phòng với userId
+      console.log(`${userId} has joined the room`);
+    } else {
+      console.log('No userId provided');
+    }
   }
 
   // Khi người dùng ngắt kết nối
   handleDisconnect(client: Socket) {
-    console.log('User disconnected:', client.id);
-    delete this.clients[client.id];
+    const userId = Object.keys(this.clients).find(key => this.clients[key] === client);
+    if (userId) {
+      delete this.clients[userId]; // Xóa client khỏi danh sách khi ngắt kết nối
+      console.log(`${userId} has disconnected`);
+    }
   }
 
-  // Lắng nghe sự kiện `sendMessage` từ người dùng
+  // Lắng nghe sự kiện `sendMessage` từ người dùng và gửi tin nhắn tới người nhận
   @SubscribeMessage('sendMessage')
   async handleMessage(@MessageBody() createChatDto: CreateChatDto, @ConnectedSocket() client: Socket): Promise<WsResponse<any>> {
     console.log('Received message:', createChatDto);
@@ -40,6 +50,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Kiểm tra nếu người nhận đang kết nối (đã join phòng)
     const receiverClient = this.clients[receiverId];
     if (receiverClient) {
+      console.log(`Sending message to receiver ${receiverId}:`, message);
       receiverClient.emit('receiveMessage', message);  // Gửi tin nhắn cho client nhận
     } else {
       console.log(`Receiver with ID ${receiverId} not connected`);
