@@ -1,3 +1,4 @@
+import { ChatGateway } from './modules/chat/chat.gateway';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
 import { Module } from '@nestjs/common';
@@ -21,18 +22,18 @@ import { routes } from '@utils/routes';
     ]),
   ],
   providers: [
-    {
-      provide: APP_FILTER,
-      useClass: HttpErrorFilter,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: AuthenticationGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    // {
+    //   provide: APP_FILTER,
+    //   useClass: HttpErrorFilter,
+    // },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthenticationGuard,
+    // },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: ThrottlerGuard,
+    // },
   ],
 })
-export class AppModule {}
+export class AppModule { }

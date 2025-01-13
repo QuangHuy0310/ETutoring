@@ -63,7 +63,7 @@ export class AuthService {
       const hash = await this.hashPassword(input.password);
       const data: CreateNewUserDto = {
         ...input,
-        hash,
+        hash
       };
       return this.userService.saveNewUser(data);
     } catch (error) {
@@ -76,10 +76,10 @@ export class AuthService {
     if (!user) {
       throw new HttpException('Login failed', HttpStatus.UNAUTHORIZED);
     }
+  
     if (!(await this.comparePasswords(input.password, user.hash))) {
       throw new HttpException('Login failed', HttpStatus.UNAUTHORIZED);
     }
-    console.log(user)
   
     const payload = { email: user.email, sub: user.id, role: user.role};
     const accessToken = this.jwtService.sign(payload, { expiresIn: '50m' });
@@ -90,6 +90,7 @@ export class AuthService {
       refreshToken,
     };
   }
+  
   
 
   async refreshAccessToken(refreshToken: string) {
