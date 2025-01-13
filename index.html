@@ -65,24 +65,31 @@
 
     // Hàm gửi tin nhắn
     function sendMessage() {
-  const userId = userIdField.value; // Lấy User ID
-  const receiverId = document.getElementById("receiverId").value;
-  const message = document.getElementById("message").value;
+      const userId = userIdField.value; // Lấy User ID
+      const receiverId = document.getElementById("receiverId").value;
+      const message = document.getElementById("message").value;
 
-  if (!userId || !receiverId || !message) {
-    alert("Please fill in all fields.");
-    return;
-  }
+      if (!userId || !receiverId || !message) {
+        alert("Please fill in all fields.");
+        return;
+      }
 
-  // Gửi tin nhắn đến server
-  socket.emit("sendMessage", {
-    senderId: userId,  // Gửi ID người gửi
-    receiverId,
-    message,
-  });
+      // Tham gia phòng với userId khi người dùng nhập ID lần đầu tiên
+      if (!socket.hasJoined) {
+        socket.emit("join", userId); // Tham gia vào phòng với userId
+        socket.hasJoined = true;
+        console.log(`${userId} has joined the room`);
+      }
 
-  console.log(`Message sent from ${userId} to ${receiverId}: ${message}`);
-}
+      // Gửi tin nhắn đến server
+      socket.emit("sendMessage", {
+        senderId: userId,  // Gửi ID người gửi
+        receiverId,
+        message,
+      });
+
+      console.log(`Message sent from ${userId} to ${receiverId}: ${message}`);
+    }
 
     // Hàm hiển thị tin nhắn lên giao diện
     function displayMessage(message) {
