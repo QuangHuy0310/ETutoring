@@ -20,6 +20,11 @@ export class UserService {
   }
 
   async findByEmail(email: string) {
-    return this.userModel.findOne({ email }, { hash: 0 });
+    return this.userModel.findOne({ email });
+  }
+
+  async findByEmailTest(email: string) {
+    const isCheck = await this.userModel.findOne({ email });
+    return isCheck.id
   }
 }
