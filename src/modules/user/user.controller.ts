@@ -13,6 +13,6 @@ export class UserController {
   @RequiredByUserRoles()
   @Get()
   async getInfor(@Request() { user }: AuthorizationRequest) {
-    return this.userService.findByEmailTest(user.email);
+    console.log(user)
   }
 }

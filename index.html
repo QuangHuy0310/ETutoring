@@ -4,43 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Application</title>
-  <!-- Kết nối với Socket.IO Client -->
   <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    .messages {
-      margin-bottom: 20px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    .message {
-      margin-bottom: 10px;
-    }
-    .message .sender {
-      font-weight: bold;
-    }
-  </style>
 </head>
 <body>
 
   <h2>Chat Application</h2>
 
-  <!-- Trường nhập ID người dùng -->
   <div>
-    <label for="userId">Your User ID:</label>
-    <input type="text" id="userId" placeholder="Enter your user ID" />
+    <label for="email">Email:</label>
+    <input type="email" id="email" placeholder="Enter your email" />
   </div>
 
-  <!-- Trường nhập ID người nhận -->
+  <div>
+    <label for="password">Password:</label>
+    <input type="password" id="password" placeholder="Enter your password" />
+  </div>
+
+  <button onclick="login()">Login</button>
+
   <div>
     <label for="receiverId">Receiver ID:</label>
     <input type="text" id="receiverId" placeholder="Enter receiver's user ID" />
   </div>
 
-  <!-- Trường nhập tin nhắn -->
   <div>
     <label for="message">Message:</label>
     <textarea id="message" rows="4" cols="50" placeholder="Type your message..."></textarea>
@@ -51,57 +37,75 @@
   <div class="messages" id="messages"></div>
 
   <script>
-    // Lấy User ID từ input
-    const userIdField = document.getElementById("userId");
+    let socket;
 
-    // Kết nối đến WebSocket server
-    const socket = io("http://localhost:3001", { transports: ["websocket"] });
+    // Hàm đăng nhập và lưu token
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-    // Lắng nghe sự kiện 'receiveMessage' từ server
-    socket.on("receiveMessage", (message) => {
-      console.log("Received message:", message);
-      displayMessage(message);
-    });
+      const response = await fetch('http://localhost:3002/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data && data.data && data.data.accessToken) {
+        localStorage.setItem('accessToken', data.data.accessToken);  // Lưu token vào localStorage
+        alert('Login successful!');
+        connectSocket();  // Kết nối WebSocket sau khi đăng nhập
+      } else {
+        alert('Login failed!');
+      }
+    }
+
+    // Hàm kết nối WebSocket với token
+    function connectSocket() {
+      const accessToken = localStorage.getItem("accessToken");
+
+      if (!accessToken) {
+        alert("No access token found. Please login.");
+        return;
+      }
+
+      socket = io("http://localhost:3001", {
+        transports: ["websocket"],
+        query: { token: accessToken },  // Gửi token vào query
+      });
+
+      socket.on("receiveMessage", (message) => {
+        console.log("Received message:", message);
+        displayMessage(message);
+      });
+    }
 
     // Hàm gửi tin nhắn
     function sendMessage() {
-      const userId = userIdField.value; // Lấy User ID
       const receiverId = document.getElementById("receiverId").value;
       const message = document.getElementById("message").value;
 
-      if (!userId || !receiverId || !message) {
+      if (!receiverId || !message) {
         alert("Please fill in all fields.");
         return;
       }
 
-      // Tham gia phòng với userId khi người dùng nhập ID lần đầu tiên
-      if (!socket.hasJoined) {
-        socket.emit("join", userId); // Tham gia vào phòng với userId
-        socket.hasJoined = true;
-        console.log(`${userId} has joined the room`);
-      }
-
-      // Gửi tin nhắn đến server
       socket.emit("sendMessage", {
-        senderId: userId,  // Gửi ID người gửi
+        senderId: localStorage.getItem("userId"),  // Lấy userId từ localStorage
         receiverId,
         message,
       });
-
-      console.log(`Message sent from ${userId} to ${receiverId}: ${message}`);
     }
 
     // Hàm hiển thị tin nhắn lên giao diện
     function displayMessage(message) {
       const messageContainer = document.getElementById("messages");
       const messageElement = document.createElement("div");
-      messageElement.classList.add("message");
-
-      messageElement.innerHTML = `<span class="sender">${message.senderId}:</span> ${message.message}`;
+      messageElement.innerHTML = `<strong>${message.senderId}:</strong> ${message.message}`;
       messageContainer.appendChild(messageElement);
-
-      // Cuộn xuống dưới cùng khi có tin nhắn mới
-      messageContainer.scrollTop = messageContainer.scrollHeight;
     }
   </script>
 
