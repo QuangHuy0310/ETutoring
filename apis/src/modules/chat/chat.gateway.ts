@@ -1,24 +1,42 @@
 import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, MessageBody, WsResponse, ConnectedSocket } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
+import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-message.dto';
 
 @WebSocketGateway(3001, { transports: ['websocket'] })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly chatService: ChatService) {}
-
-  // Danh sách các client đang kết nối (key: userId, value: Socket)
   private clients: { [key: string]: Socket } = {};
 
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly jwtService: JwtService,  // Inject JwtService
+  ) {}
+
   // Khi người dùng kết nối vào WebSocket
-  handleConnection(client: Socket) {
-    const userId = client.handshake.query.userId as string; // Lấy userId từ query string khi kết nối
-    if (userId) {
-      this.clients[userId] = client; // Lưu client vào danh sách theo userId
-      client.join(userId); // Người dùng tham gia phòng với userId
-      console.log(`${userId} has joined the room`);
-    } else {
-      console.log('No userId provided');
+  async handleConnection(client: Socket) {
+    const token = client.handshake.query.token as string;
+
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    try {
+      // Xác thực token
+      const decodedToken = this.jwtService.verify(token);  // Giải mã token
+      const userId = decodedToken.sub;  // Lấy userId từ payload
+
+      if (userId) {
+        this.clients[userId] = client; // Lưu client theo userId
+        client.join(userId);  // Người dùng tham gia phòng với userId
+        console.log(`${userId} has joined the room`);
+      } else {
+        throw new UnauthorizedException('Invalid token');
+      }
+    } catch (error) {
+      console.error('Error verifying token:', error);
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -26,28 +44,48 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     const userId = Object.keys(this.clients).find(key => this.clients[key] === client);
     if (userId) {
-      delete this.clients[userId]; // Xóa client khỏi danh sách khi ngắt kết nối
+      delete this.clients[userId];  // Xóa client khỏi danh sách
       console.log(`${userId} has disconnected`);
     }
   }
 
-  // Lắng nghe sự kiện `sendMessage` từ người dùng và gửi tin nhắn tới người nhận
+  // Lắng nghe sự kiện `sendMessage` và gửi tin nhắn tới người nhận
   @SubscribeMessage('sendMessage')
   async handleMessage(@MessageBody() createChatDto: CreateChatDto, @ConnectedSocket() client: Socket): Promise<WsResponse<any>> {
-    console.log('Received message:', createChatDto);
+    const token = client.handshake.query.token as string;
 
-    // Lưu tin nhắn vào database
-    const savedMessage = await this.chatService.create(createChatDto);
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
 
-    // Gửi tin nhắn tới người nhận
-    this.sendMessageToReceiver(createChatDto.receiverId, savedMessage);
+    try {
+      // Xác thực token
+      const decodedToken = this.jwtService.verify(token);  // Giải mã token
+      const userId = decodedToken.sub;
 
-    return { event: 'receiveMessage', data: savedMessage };
+      if (userId) {
+        // Đảm bảo senderId đã được gán
+        createChatDto.senderId = userId;
+        console.log('Received message:', createChatDto);
+
+        // Lưu tin nhắn vào database
+        const savedMessage = await this.chatService.create(createChatDto);
+
+        // Gửi tin nhắn tới người nhận
+        this.sendMessageToReceiver(createChatDto.receiverId, savedMessage);
+
+        return { event: 'receiveMessage', data: savedMessage };
+      } else {
+        throw new UnauthorizedException('Invalid token');
+      }
+    } catch (error) {
+      console.error('Error verifying token:', error);
+      throw new UnauthorizedException('Invalid token');
+    }
   }
 
-  // Phương thức gửi tin nhắn tới người nhận qua ID
+  // Gửi tin nhắn tới người nhận
   sendMessageToReceiver(receiverId: string, message: any): void {
-    // Kiểm tra nếu người nhận đang kết nối (đã join phòng)
     const receiverClient = this.clients[receiverId];
     if (receiverClient) {
       console.log(`Sending message to receiver ${receiverId}:`, message);

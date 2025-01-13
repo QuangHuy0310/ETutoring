@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ChatGateway } from './chat.gateway';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from '@entities/message.entities';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
     imports: [
