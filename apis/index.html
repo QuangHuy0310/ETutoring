@@ -1,113 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Application</title>
-  <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .chat-container {
+            width: 400px;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .message {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+
+        .message.sent {
+            background: #dcf8c6;
+            text-align: right;
+        }
+
+        .message.received {
+            background: #f1f1f1;
+            text-align: left;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .chat-input button {
+            margin-left: 5px;
+            padding: 8px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .load-more {
+            width: 100%;
+            padding: 8px;
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
 </head>
+
 <body>
+    <div class="chat-container">
+        <div class="chat-header">Chat App</div>
+        <div style="padding: 10px;">
+            <input type="text" id="receiverIdInput" placeholder="Nhập ID người nhận..."
+                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <button onclick="loadMessages(true)"
+                style="width: 100%; margin-top: 5px; padding: 8px; background: #28a745; color: white; border: none; cursor: pointer;">Tải
+                tin nhắn</button>
+        </div>
+        <button class="load-more" onclick="loadMoreMessages()">Tải tin nhắn cũ</button>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Nhập tin nhắn...">
+            <button onclick="sendMessage()">Gửi</button>
+        </div>
+    </div>
 
-  <h2>Chat Application</h2>
+    <script>
+        const socket = io("http://localhost:3001", {
+            transports: ["websocket"],
+            query: { token: localStorage.getItem("accessToken") }
+        });
 
-  <div>
-    <label for="email">Email:</label>
-    <input type="email" id="email" placeholder="Enter your email" />
-  </div>
+        const chatMessages = document.getElementById("chatMessages");
+        const messageInput = document.getElementById("messageInput");
+        const receiverIdInput = document.getElementById("receiverIdInput");
+        const API_BASE = "http://localhost:3002/chat";
+        let offset = 0;
+        const LIMIT = 10;
 
-  <div>
-    <label for="password">Password:</label>
-    <input type="password" id="password" placeholder="Enter your password" />
-  </div>
+        // 🟢 Load lịch sử tin nhắn, có tùy chọn reset khi đổi người nhận
+        async function loadMessages(reset = false) {
+            const receiverId = receiverIdInput.value.trim();
+            if (!receiverId) return alert("Vui lòng nhập ID người nhận!");
 
-  <button onclick="login()">Login</button>
+            const token = localStorage.getItem("accessToken");
+            if (!token) return alert("Bạn chưa đăng nhập!");
 
-  <div>
-    <label for="receiverId">Receiver ID:</label>
-    <input type="text" id="receiverId" placeholder="Enter receiver's user ID" />
-  </div>
+            if (reset) offset = 0; // Reset offset nếu đổi người nhận
 
-  <div>
-    <label for="message">Message:</label>
-    <textarea id="message" rows="4" cols="50" placeholder="Type your message..."></textarea>
-  </div>
+            const res = await fetch(`${API_BASE}/history?receiverId=${receiverId}&limit=${LIMIT}&offset=${offset}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-  <button onclick="sendMessage()">Send Message</button>
+            const result = await res.json(); // Đọc dữ liệu trả về
 
-  <div class="messages" id="messages"></div>
+            if (result.statusCode === 200 && Array.isArray(result.data)) { // Kiểm tra nếu API trả về đúng định dạng
+                if (reset) chatMessages.innerHTML = ""; // Xóa tin nhắn cũ khi tải mới
+                result.data.forEach(msg => displayMessage(msg, msg.senderId === receiverId ? "received" : "sent", true));
+                offset += LIMIT; // Tăng offset để tải thêm tin nhắn sau này
+            } else {
+                console.error("Lỗi khi tải tin nhắn: ", result);
+            }
+        }
 
-  <script>
-    let socket;
+        // 🔵 Hiển thị tin nhắn lên giao diện (isOld = true để chèn lên đầu)
+        function displayMessage(msg, type, isOld = false) {
+            const div = document.createElement("div");
+            div.classList.add("message", type);
+            div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
+            if (isOld) {
+                chatMessages.prepend(div); // Chèn tin nhắn cũ lên đầu
+            } else {
+                chatMessages.appendChild(div);
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
 
-    // Hàm đăng nhập và lưu token
-    async function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+        // 🟠 Gửi tin nhắn với receiverId
+        async function sendMessage() {
+            const receiverId = receiverIdInput.value.trim();
+            const message = messageInput.value.trim();
+            if (!receiverId) return alert("Vui lòng nhập ID người nhận!");
+            if (!message) return;
 
-      const response = await fetch('http://localhost:3002/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+            const token = localStorage.getItem("accessToken");
+            const res = await fetch(`${API_BASE}/send?receiverId=${receiverId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ message })
+            });
 
-      const data = await response.json();
+            if (res.ok) {
+                displayMessage({ senderId: "me", message }, "sent");
+                socket.emit("sendMessage", { receiverId, message });
+                messageInput.value = "";
+            }
+        }
 
-      if (data && data.data && data.data.accessToken) {
-        localStorage.setItem('accessToken', data.data.accessToken);  // Lưu token vào localStorage
-        alert('Login successful!');
-        connectSocket();  // Kết nối WebSocket sau khi đăng nhập
-      } else {
-        alert('Login failed!');
-      }
-    }
+        // 🟡 Tải tin nhắn cũ
+        function loadMoreMessages() {
+            loadMessages(false);
+        }
 
-    // Hàm kết nối WebSocket với token
-    function connectSocket() {
-      const accessToken = localStorage.getItem("accessToken");
+        // 🔴 Nhận tin nhắn từ Socket.IO
+        socket.on("receiveMessage", (msg) => {
+            displayMessage(msg, "received");
+        });
 
-      if (!accessToken) {
-        alert("No access token found. Please login.");
-        return;
-      }
-
-      socket = io("http://localhost:3001", {
-        transports: ["websocket"],
-        query: { token: accessToken },  // Gửi token vào query
-      });
-
-      socket.on("receiveMessage", (message) => {
-        console.log("Received message:", message);
-        displayMessage(message);
-      });
-    }
-
-    // Hàm gửi tin nhắn
-    function sendMessage() {
-      const receiverId = document.getElementById("receiverId").value;
-      const message = document.getElementById("message").value;
-
-      if (!receiverId || !message) {
-        alert("Please fill in all fields.");
-        return;
-      }
-
-      socket.emit("sendMessage", {
-        senderId: localStorage.getItem("userId"),  // Lấy userId từ localStorage
-        receiverId,
-        message,
-      });
-    }
-
-    // Hàm hiển thị tin nhắn lên giao diện
-    function displayMessage(message) {
-      const messageContainer = document.getElementById("messages");
-      const messageElement = document.createElement("div");
-      messageElement.innerHTML = `<strong>${message.senderId}:</strong> ${message.message}`;
-      messageContainer.appendChild(messageElement);
-    }
-  </script>
-
+    </script>
 </body>
+
 </html>

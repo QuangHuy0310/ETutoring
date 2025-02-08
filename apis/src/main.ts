@@ -21,6 +21,11 @@ async function bootstrap() {
     }),
   );
 
+  // app.enableCors({
+  //   origin: true, 
+  //   credentials: true
+  // });
+
   const options = new DocumentBuilder()
     .setTitle('Greenwich APIs')
     .addBearerAuth()
