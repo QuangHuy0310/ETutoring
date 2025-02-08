@@ -1,4 +1,3 @@
-import { ChatGateway } from './modules/chat/chat.gateway';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
 import { Module } from '@nestjs/common';
@@ -23,10 +22,10 @@ import { routes } from '@utils/routes';
     ]),
     JwtModule.register({
       secret: 'GreenwichGreenwich',
-      signOptions: { expiresIn: '10h' },  
+      signOptions: { expiresIn: '10h' },
     }),
-  ], 
-  providers: [ 
+  ],
+  providers: [
     {
       provide: APP_FILTER,
       useClass: HttpErrorFilter,

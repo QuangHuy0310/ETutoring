@@ -24,6 +24,14 @@ export class User extends BaseEntity {
     enum: USER_ROLE,
   })
   role: USER_ROLE;
+
+  @Prop({
+    type: String,
+  })
+  tutorId: string;
+
+  @Prop({ type: [String]})
+    membersId: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,23 +1,25 @@
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
-import { Module } from '@nestjs/common';
-import { ChatGateway } from './chat.gateway';
+import { forwardRef, Module } from '@nestjs/common';
+import { SocketGateway } from './socket.gateway';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from '@entities/message.entities';
 import { JwtService } from '@nestjs/jwt';
+import { UserModule } from '@modules/user/user.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            {
-              name: Message.name,
-              schema: MessageSchema,
-            },
-          ]),
-    ],
-    controllers: [
-        ChatController,],
-    providers: [
-        ChatService, ChatGateway],
+  imports: [
+    forwardRef(() => UserModule),
+    MongooseModule.forFeature([
+      {
+        name: Message.name,
+        schema: MessageSchema,
+      },
+    ]),
+  ],
+  controllers: [
+    ChatController,],
+  providers: [
+    ChatService, SocketGateway,],
 })
 export class ChatModule { }

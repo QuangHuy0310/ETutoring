@@ -14,6 +14,9 @@ export const USER_ERRORS = {
   WRONG_CODE: 'verify code is wrong',
   LIMIT_ONE_MINUTE: 'Try again after 1 minute',
   LOGIN_FAILED: 'login failed',
+  SENDER_NOT_FOUND: 'sender not found',
+  RECEIVER_NOT_FOUND: 'receiver not found',
+
 };
 
 export const AUTH_ERRORS = {
