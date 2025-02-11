@@ -13,6 +13,6 @@ export class UserController {
   @RequiredByUserRoles()
   @Get()
   async getInfor(@Request() { user }: AuthorizationRequest) {
-    console.log(user)
+    return user
   }
 }
