@@ -6,7 +6,7 @@ pnpm install @nestjs/websockets @nestjs/platform-socket.io socket.io mongoose mo
 
 pnpm run start:dev
 
-swagger: http://localhost:3002/
+swagger: http://localhost:3002/docs
 =======
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
