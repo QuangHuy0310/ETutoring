@@ -2,7 +2,7 @@
 pnpm install 
 
 
-pnpm install @nestjs/websockets @nestjs/platform-socket.io socket.io mongoose mongodb
+pnpm install @nestjs/websockets @nestjs/platform-socket.io socket.io mongoose mongodb @types/multer express
 
 pnpm run start:dev
 
