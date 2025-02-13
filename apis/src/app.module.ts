@@ -1,4 +1,3 @@
-import { BlogModule } from './modules/blog/blog.module';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
 import { Module } from '@nestjs/common';
