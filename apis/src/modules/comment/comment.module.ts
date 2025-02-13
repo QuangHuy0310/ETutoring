@@ -4,10 +4,12 @@ import { CommentService } from './comment.service';
 import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BlogModule } from '@modules/blog/blog.module';
+import { NotificationModule } from '@modules/notification/notification.module';
 
 @Module({
     imports: [
         forwardRef(() => BlogModule),
+        forwardRef(() => NotificationModule),
         MongooseModule.forFeature(
             [
                 {

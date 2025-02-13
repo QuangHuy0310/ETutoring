@@ -26,6 +26,26 @@
             color: white;
             padding: 10px;
             text-align: center;
+            position: relative;
+        }
+
+        .notification-icon {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .notification-badge {
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 7px;
+            font-size: 12px;
+            position: absolute;
+            top: -5px;
+            right: -5px;
         }
 
         .chat-messages {
@@ -87,7 +107,12 @@
 
 <body>
     <div class="chat-container">
-        <div class="chat-header">Chat App</div>
+        <div class="chat-header">
+            Chat App
+            <div class="notification-icon" onclick="viewNotifications()">
+                🔔 <span id="notificationCount" class="notification-badge" style="display: none;">0</span>
+            </div>
+        </div>
         <div style="padding: 10px;">
             <input type="text" id="receiverIdInput" placeholder="Nhập ID người nhận..."
                 style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
@@ -112,11 +137,13 @@
         const chatMessages = document.getElementById("chatMessages");
         const messageInput = document.getElementById("messageInput");
         const receiverIdInput = document.getElementById("receiverIdInput");
+        const notificationCountEl = document.getElementById("notificationCount");
         const API_BASE = "http://localhost:3002/chat";
         let offset = 0;
         const LIMIT = 10;
+        let notificationCount = 0;
 
-        // 🟢 Load lịch sử tin nhắn, có tùy chọn reset khi đổi người nhận
+        // 🟢 Load lịch sử tin nhắn
         async function loadMessages(reset = false) {
             const receiverId = receiverIdInput.value.trim();
             if (!receiverId) return alert("Vui lòng nhập ID người nhận!");
@@ -124,37 +151,36 @@
             const token = localStorage.getItem("accessToken");
             if (!token) return alert("Bạn chưa đăng nhập!");
 
-            if (reset) offset = 0; // Reset offset nếu đổi người nhận
+            if (reset) offset = 0;
 
             const res = await fetch(`${API_BASE}/history?receiverId=${receiverId}&limit=${LIMIT}&offset=${offset}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            const result = await res.json(); // Đọc dữ liệu trả về
-
-            if (result.statusCode === 200 && Array.isArray(result.data)) { // Kiểm tra nếu API trả về đúng định dạng
-                if (reset) chatMessages.innerHTML = ""; // Xóa tin nhắn cũ khi tải mới
+            const result = await res.json();
+            if (result.statusCode === 200 && Array.isArray(result.data)) {
+                if (reset) chatMessages.innerHTML = "";
                 result.data.forEach(msg => displayMessage(msg, msg.senderId === receiverId ? "received" : "sent", true));
-                offset += LIMIT; // Tăng offset để tải thêm tin nhắn sau này
+                offset += LIMIT;
             } else {
                 console.error("Lỗi khi tải tin nhắn: ", result);
             }
         }
 
-        // 🔵 Hiển thị tin nhắn lên giao diện (isOld = true để chèn lên đầu)
+        // 🔵 Hiển thị tin nhắn lên giao diện
         function displayMessage(msg, type, isOld = false) {
             const div = document.createElement("div");
             div.classList.add("message", type);
             div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
             if (isOld) {
-                chatMessages.prepend(div); // Chèn tin nhắn cũ lên đầu
+                chatMessages.prepend(div);
             } else {
                 chatMessages.appendChild(div);
             }
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // 🟠 Gửi tin nhắn với receiverId
+        // 🟠 Gửi tin nhắn
         async function sendMessage() {
             const receiverId = receiverIdInput.value.trim();
             const message = messageInput.value.trim();
@@ -175,9 +201,11 @@
             }
         }
 
-        // 🟡 Tải tin nhắn cũ
-        function loadMoreMessages() {
-            loadMessages(false);
+        // 🟡 Xem thông báo (reset số lượng)
+        function viewNotifications() {
+            notificationCount = 0;
+            notificationCountEl.style.display = "none";
+            alert("Bạn có thông báo mới!");
         }
 
         // 🔴 Nhận tin nhắn từ Socket.IO
@@ -185,6 +213,13 @@
             displayMessage(msg, "received");
         });
 
+        // 🔔 Nhận thông báo từ Socket.IO
+        socket.on("newCommentNotification", (notification) => {
+            notificationCount++;
+            notificationCountEl.innerText = notificationCount;
+            notificationCountEl.style.display = "inline-block";
+            console.log("Thông báo mới:", notification);
+        });
     </script>
 </body>
 

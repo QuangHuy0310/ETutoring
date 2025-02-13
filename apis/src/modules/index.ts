@@ -5,6 +5,7 @@ export * from '@modules/confirm/confirm.module';
 export * from '@modules/upload/upload.module';
 export * from '@modules/blog/blog.module';
 export * from '@modules/comment/comment.module';
+export * from '@modules/notification/notification.module';
 
 
 
