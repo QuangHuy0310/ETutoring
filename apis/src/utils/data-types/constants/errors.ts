@@ -16,7 +16,8 @@ export const USER_ERRORS = {
   LOGIN_FAILED: 'login failed',
   SENDER_NOT_FOUND: 'sender not found',
   RECEIVER_NOT_FOUND: 'receiver not found',
-
+  WRONG_PAGE: 'page or limit is wrong',
+  INVALID_BLOG: 'caption or path is required',
 };
 
 export const AUTH_ERRORS = {
