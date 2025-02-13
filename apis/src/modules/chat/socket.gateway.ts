@@ -57,12 +57,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('sendMessage')
-  async sendMessageToReceiver(senderId: any ,receiverId: string, message: any): Promise<WsResponse<any>> {
+  async sendMessageToReceiver(senderId: any, receiverId: string, message: any): Promise<WsResponse<any>> {
     const sender = senderId.sub
     const receiverClient = this.clients[receiverId];
     if (receiverClient) {
       console.log(`Sending message to receiver ${receiverId}:`, message);
-      await this.chatService.create(message);   
+      await this.chatService.create(message);
       receiverClient.emit('receiveMessage', message);
       return { event: 'receiveMessage', data: message };
     } else {
@@ -82,6 +82,20 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       senderClient.emit('messageDeleted', { id });
     }
   }
+
+  //notifications
+  sendNotification(receiverId: any, notification: any) {
+    console.log('Receiver ID:', receiverId);  // Kiểm tra receiverId
+
+    const receiverClient = this.clients[receiverId];
+
+    if (receiverClient) {
+      receiverClient.emit('newCommentNotification', notification);
+    } else {
+      console.warn(`No active socket connection for receiverId: ${receiverId}`);
+    }
+  }
+
 
 
   // **2. Chức năng Signaling (WebRTC)**

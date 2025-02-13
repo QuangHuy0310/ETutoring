@@ -3,23 +3,28 @@ import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nest
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateCommentDto } from './dto/comment.dto';
-import { BlogService } from '@modules/index-service';
+import { BlogService, NotificationService } from '@modules/index-service';
 import { USER_ERRORS } from '@utils/data-types/constants';
+import { NotificationDocument } from '@entities/notification.entities';
 
 @Injectable()
 export class CommentService {
     constructor(
         @InjectModel(Comment.name)
         private readonly commentModel: Model<CommentDocument>,
+        //
+        @Inject(forwardRef(() => NotificationService))
+        private readonly notificationService: NotificationService,
         @Inject(forwardRef(() => BlogService))
         private readonly blogService: BlogService,
     ) { }
 
-    async validBlog(blogId: string): Promise<void> {
+    async validBlog(blogId: string): Promise<string> {
         const blog = await this.blogService.getBlogById(blogId);
         if (!blog) {
             throw new HttpException(USER_ERRORS.INVALID_BLOG, HttpStatus.NOT_FOUND);
         }
+        return blog.userId
     }
 
     async validComment(comment: string, path: any): Promise<void> {
@@ -31,10 +36,18 @@ export class CommentService {
         const { comment, path } = createCommentDto;
         createCommentDto.userId = user.sub;
 
-        Promise.all([
-            await this.validBlog(createCommentDto.blogId),
-            await this.validComment(comment, path)
-        ])
+        await this.validComment(comment, path)
+
+        const blogOnwerId = await this.validBlog(createCommentDto.blogId)
+        
+        const payload =({
+            notificationFrom: user.sub,
+            notificationTo: blogOnwerId,
+            blogId: createCommentDto.blogId,
+            status: 'unread'
+        });
+    
+        await this.notificationService.createNotification(payload);
 
         return this.createComment(createCommentDto)
     }
@@ -46,7 +59,7 @@ export class CommentService {
 
     async getComments(blogId: string): Promise<Comment[]> {
         await this.validBlog(blogId);
-        const getComments = await this.commentModel.find({blogId:blogId})
+        const getComments = await this.commentModel.find({ blogId: blogId })
         return getComments
     }
 
