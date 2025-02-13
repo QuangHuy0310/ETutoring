@@ -9,27 +9,30 @@ import { USER_ERRORS } from '@utils/data-types/constants';
 export class BlogService {
     @InjectModel(Blog.name) private readonly blogModel: Model<BlogDocument>;
 
-    async validBlog(caption,path):Promise<void> {
+    async validBlog(caption, path): Promise<void> {
         if (!caption || !path) {
-            throw new HttpException(USER_ERRORS.INVALID_BLOG, HttpStatus.BAD_REQUEST);
+            throw new HttpException(USER_ERRORS.WRONG_CREATE, HttpStatus.BAD_REQUEST);
         }
     }
-    async createBlog(user:any, createBlog: CreateBlogDTO): Promise<Blog> {
-        const {caption,path} = createBlog;
-        createBlog.userId = user.sub;
-        await this.validBlog(caption,path);
 
+    async handleCreateBlog(user: any, createBlog: CreateBlogDTO): Promise<Blog> {
+        const { caption, path } = createBlog;
+        createBlog.userId = user.sub;
+        await this.validBlog(caption, path);
+        return await this.createBlog(createBlog)
+    }
+    async createBlog(createBlog: CreateBlogDTO): Promise<Blog> {
         const newBlog = new this.blogModel(createBlog);
         return newBlog.save();
     }
 
     async validPageBlog(page: number, limit: number): Promise<void> {
-        if (page <= 0 || limit <= 0) {
+        if (page <= 0 && limit <= 0) {
             throw new HttpException(USER_ERRORS.WRONG_PAGE, HttpStatus.BAD_REQUEST);
         }
     }
 
-    async getBlogs(getBlogDto: GetBlogDto): Promise<{item: Blog[], total: number}> {
+    async getBlogs(getBlogDto: GetBlogDto): Promise<{ item: Blog[], total: number }> {
         const { page, limit, tags, caption } = getBlogDto
 
         await this.validPageBlog(page, limit);
@@ -53,7 +56,12 @@ export class BlogService {
 
 
 
-        return {item: blogs, total};
+        return { item: blogs, total };
+    }
+
+    async getBlogById(id: string): Promise<Blog> {
+        const blog = await this.blogModel.findById(id)
+        return blog;
     }
 
 }

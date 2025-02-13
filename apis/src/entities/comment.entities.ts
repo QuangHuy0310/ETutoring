@@ -24,9 +24,9 @@ export class Comment extends BaseEntity {
   comment: string;
 
   @Prop({
-    type: String,
+    type: [String],
   })
-  path: string;
+  path: string[];
 
 }
 

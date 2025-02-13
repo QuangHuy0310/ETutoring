@@ -20,5 +20,6 @@ import { Blog, BlogSchema } from '@entities/blog.entities';
         BlogController,],
     providers: [
         BlogService,],
+    exports: [BlogService]
 })
 export class BlogModule { }
