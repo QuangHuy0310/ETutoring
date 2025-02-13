@@ -6,6 +6,7 @@ import { configs } from '@utils/configs/config';
 import { ResponseInterceptor } from '@utils/interceptors';
 
 import { AppModule } from './app.module';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -21,6 +22,9 @@ async function bootstrap() {
     }),
   );
 
+  app.useStaticAssets(join(__dirname, '..', 'upload'), {
+    prefix: '/upload/',
+  });
   // app.enableCors({
   //   origin: true, 
   //   credentials: true
