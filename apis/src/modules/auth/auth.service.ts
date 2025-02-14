@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { LoginDto, RegisterDto } from '@dtos/auth.dto';
 import { CreateNewUserDto } from '@dtos/user.dto';
 import { User } from '@entities';
@@ -58,8 +59,15 @@ export class AuthService {
     return this.jwtService.verifyAsync(jwt);
   }
 
+  async checkEmailExist(email: string): Promise<boolean> {
+    return !!(await this.userService.checkEmailExist(email));
+  }
+
   async register(input: RegisterDto) {
     try {
+      if (await this.checkEmailExist(input.email)) {
+        throw new BadRequestException('Email already exists');
+      }
       const hash = await this.hashPassword(input.password);
       const data: CreateNewUserDto = {
         ...input,

@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { CreateNewUserDto } from '@dtos/user.dto';
 import { User } from '@entities/user.entities';
 import { Injectable } from '@nestjs/common';
@@ -13,6 +14,10 @@ export class UserService {
   ) {}
 
   async saveNewUser(input: CreateNewUserDto): Promise<User> {
+    // Add role for user if role is not exist
+    if (!input.role) {
+      input.role = 'user';
+    }
     return new this.userModel(input).save();
   }
   async findById(id: UUID) {
@@ -27,4 +32,9 @@ export class UserService {
     const isCheck = await this.userModel.findOne({ email });
     return isCheck.id
   }
+
+  async checkEmailExist(email: string) {
+    return this.userModel.exists({ email });
+  }
+
 }
