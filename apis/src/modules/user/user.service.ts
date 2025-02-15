@@ -14,10 +14,7 @@ export class UserService {
   ) {}
 
   async saveNewUser(input: CreateNewUserDto): Promise<User> {
-    // Add role for user if role is not exist
-    if (!input.role) {
-      input.role = 'user';
-    }
+    new this.userModel({email:input.email, role: input.role}).save();
     return new this.userModel(input).save();
   }
   async findById(id: UUID) {
@@ -31,10 +28,6 @@ export class UserService {
   async findByEmailTest(email: string) {
     const isCheck = await this.userModel.findOne({ email });
     return isCheck.id
-  }
-
-  async checkEmailExist(email: string) {
-    return this.userModel.exists({ email });
   }
 
 }
