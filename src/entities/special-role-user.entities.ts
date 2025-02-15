@@ -9,7 +9,7 @@ import { USER_ROLE } from '@utils/data-types/enums';
     changeStreamPreAndPostImages: { enabled: true },
   },
 })
-export class ShortenUser extends BaseEntity {
+export class SpecialUser extends BaseEntity {
 
   @Prop({
     type: String,
@@ -24,6 +24,6 @@ export class ShortenUser extends BaseEntity {
 
 }
 
-export const ShortenUserSchema = SchemaFactory.createForClass(ShortenUser);
+export const SpecialUserSchema = SchemaFactory.createForClass(SpecialUser);
 
-export type ShortenUserDocument = ShortenUser & Document;
+export type SpecialUserDocument = SpecialUser & Document;

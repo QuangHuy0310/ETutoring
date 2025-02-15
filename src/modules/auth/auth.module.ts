@@ -4,7 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { ShortenUserModule } from '@modules/shortenuser/shorten-user.module';
+import { SpecialUserModule } from '@modules/specialUser/specialUser.module';
 
 
 @Module({
@@ -14,7 +14,7 @@ import { ShortenUserModule } from '@modules/shortenuser/shorten-user.module';
       secret: process.env.SECRET_JWT,
     }),
     forwardRef(() => UserModule),
-    ShortenUserModule,
+    SpecialUserModule,
   ],
   providers: [AuthService],
   controllers: [AuthController],
