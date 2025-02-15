@@ -14,14 +14,12 @@ export class RegisterDto {
   @Matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/)
   password: string;
 
-  /* @ApiProperty({
+   @ApiProperty({
     example: USER_ROLE.ADMIN,
     enum: USER_ROLE,
   })
-  @IsEnum(USER_ROLE) */
-  @IsEmpty()
-  //role: USER_ROLE;
-  role: string;
+  @IsEnum(USER_ROLE) 
+  role: USER_ROLE;
 }
 
 export class LoginDto extends OmitType(RegisterDto, ['role']) {}

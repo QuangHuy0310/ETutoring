@@ -3,6 +3,7 @@ import { LoginDto, RegisterDto } from '@dtos/auth.dto';
 import { CreateNewUserDto } from '@dtos/user.dto';
 import { User } from '@entities';
 import { UserService } from '@modules/index-service';
+import { ShortenUserService } from '@modules/shortenuser/shorten-user.service';
 import {
   BadRequestException,
   forwardRef,
@@ -22,6 +23,7 @@ export class AuthService {
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly shortenuserService: ShortenUserService,
   ) { }
 
   async generateJwt(user: User): Promise<string> {
@@ -60,7 +62,7 @@ export class AuthService {
   }
 
   async checkEmailExist(email: string): Promise<boolean> {
-    return !!(await this.userService.checkEmailExist(email));
+    return !!(await this.shortenuserService.checkEmailExist(email));
   }
 
   async register(input: RegisterDto) {
@@ -73,7 +75,9 @@ export class AuthService {
         ...input,
         hash
       };
-      return this.userService.saveNewUser(data);
+      const newUser = this.userService.saveNewUser(data);
+      this.shortenuserService.saveShortenUser(input.email, input.role);
+      return newUser;
     } catch (error) {
       throw new BadRequestException(error.message);
     }
