@@ -9,7 +9,8 @@ import { USER_ROLE } from '@utils/data-types/enums';
     changeStreamPreAndPostImages: { enabled: true },
   },
 })
-export class User extends BaseEntity {
+export class SpecialUser extends BaseEntity {
+
   @Prop({
     type: String,
   })
@@ -17,24 +18,12 @@ export class User extends BaseEntity {
 
   @Prop({
     type: String,
-  })
-  hash: string;
-
-  @Prop({
-    type: String,
     enum: USER_ROLE,
   })
   role: USER_ROLE;
 
-  @Prop({
-    type: String,
-  })
-  tutorId: string;
-
-  @Prop({ type: [String] })
-  membersId: string[];
 }
 
-export const UserSchema = SchemaFactory.createForClass(User);
+export const SpecialUserSchema = SchemaFactory.createForClass(SpecialUser);
 
-export type UserDocument = User & Document;
+export type SpecialUserDocument = SpecialUser & Document;

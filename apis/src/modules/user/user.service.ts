@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { CreateNewUserDto } from '@dtos/user.dto';
 import { User } from '@entities/user.entities';
 import { Injectable } from '@nestjs/common';
@@ -13,6 +14,7 @@ export class UserService {
   ) {}
 
   async saveNewUser(input: CreateNewUserDto): Promise<User> {
+    new this.userModel({email:input.email, role: input.role}).save();
     return new this.userModel(input).save();
   }
   async findById(id: UUID) {
@@ -27,4 +29,5 @@ export class UserService {
     const isCheck = await this.userModel.findOne({ email });
     return isCheck.id
   }
+
 }
