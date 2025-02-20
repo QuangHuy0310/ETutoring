@@ -30,8 +30,8 @@ export class User extends BaseEntity {
   })
   tutorId: string;
 
-  @Prop({ type: [String]})
-    membersId: string[];
+  @Prop({ type: [String] })
+  membersId: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
