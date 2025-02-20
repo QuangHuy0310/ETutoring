@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { LoginDto, RegisterDto } from '@dtos/auth.dto';
 import { AuthService } from '@modules/index-service';
 import { Body, Controller, HttpException, HttpStatus, Post } from '@nestjs/common';
