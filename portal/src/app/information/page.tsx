@@ -2,6 +2,7 @@
 
 import InformationForm from "@/app/componets/information-form";
 import Layout from "@/app/componets/layout";
+import Header from "@/app/components/Header";
 
 export default function InformationPage() {
   return (
