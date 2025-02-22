@@ -1,6 +1,8 @@
 "use client";
 
+import Header from "./Header";
 import React from "react";
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,11 +10,10 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
+    
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Header */}
-      <header className="w-full bg-white shadow-md py-4 px-6 fixed top-0 left-0 right-0 z-50">
-        <h1 className="text-xl font-bold">Header</h1>
-      </header>
+      <Header/>
 
       {/* Sidebar trái */}
       <aside className="fixed left-0 top-16 w-64 h-screen bg-gray-200 shadow-lg p-4 z-40">
