@@ -2,12 +2,11 @@
 
 import InformationForm from "@/app/componets/information-form";
 import Layout from "@/app/componets/layout";
-import Header from "@/app/components/Header";
 
 export default function InformationPage() {
   return (
     <Layout>
-      <div className="flex flex-col items-center bg-black min-h-screen p-6">
+      <div className="flex flex-col items-center p-6">
         {/* Header của Information Page */}
         <div className="w-full max-w-5xl bg-black border border-gray-700 rounded-lg shadow-md relative overflow-visible">
           {/* Banner */}
@@ -41,7 +40,9 @@ export default function InformationPage() {
         <div className="w-full max-w-6xl grid grid-cols-3 gap-6 mt-20">
           {/* Form Section */}
           <div className="col-span-2 bg-black border border-gray-700 p-6 rounded-lg shadow-md text-white">
-            <h3 className="text-lg font-semibold mb-4">Student / Tutor Information</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Student / Tutor Information
+            </h3>
             <InformationForm />
           </div>
 
