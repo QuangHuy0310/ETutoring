@@ -13,7 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-message.dto';
 
-@WebSocketGateway(3001, { transports: ['websocket'] })
+@WebSocketGateway(3008, { transports: ['websocket'] })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private clients: { [key: string]: Socket } = {};
 
