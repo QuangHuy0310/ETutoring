@@ -1,4 +1,5 @@
 import { AuthModule, BlogModule, ChatModule, CommentModule, UserModule } from '@modules';
+import { SpecialUserModule } from '@modules/specialUser/specialUser.module';
 import { Routes } from '@nestjs/core';
 
 export const routes: Routes = [
@@ -10,6 +11,7 @@ export const routes: Routes = [
       { path: '/chat', module: ChatModule },
       { path: '/blog', module: BlogModule },
       { path: '/comments', module: CommentModule },
+      { path: '/admin/special', module: SpecialUserModule },
     ],
   },
 ];

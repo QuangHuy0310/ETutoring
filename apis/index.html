@@ -129,7 +129,7 @@
     </div>
 
     <script>
-        const socket = io("http://localhost:3001", {
+        const socket = io("http://localhost:3008", {
             transports: ["websocket"],
             query: { token: localStorage.getItem("accessToken") }
         });
