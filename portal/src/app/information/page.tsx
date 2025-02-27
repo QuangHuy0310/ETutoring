@@ -1,6 +1,6 @@
 "use client";
 
-import InformationForm from "@/app/componets/information-form";
+import InformationForm from "@/app/information/information-form";
 import Layout from "@/app/componets/layout";
 
 export default function InformationPage() {
