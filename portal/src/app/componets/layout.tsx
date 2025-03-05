@@ -1,5 +1,3 @@
-"use client";
-
 import Header from "./Header";
 import React from "react";
 
@@ -13,10 +11,10 @@ export default function Layout({ children }: LayoutProps) {
       {/* Header */}
       <Header />
 
-      {/* Wrapper chính để giữ nội dung + sidebar */}
-      <div className="flex flex-1 pt-16">
+      {/* Wrapper chính để giữ nội dung + sidewalk */}
+      <div className="flex flex-1 pt-0">
         {/* Sidebar trái */}
-        <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-8rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col">
+        <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-7.125rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col">
           <div className="flex-1">
             <nav className="space-y-4">
               <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Home</button>
@@ -32,15 +30,15 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Nội dung chính */}
-        <main className="ml-64 mr-64 flex-1 px-4 md:px-20 lg:px-72 pb-24 bg-black text-white">
+        <main className="ml-64 mr-64 flex-1 bg-black text-white">
           {children}
         </main>
 
         {/* Sidebar phải */}
-        <aside className="fixed right-0 top-16 w-64 h-[calc(100vh-8rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col">
+        <aside className="fixed right-0 top-16 w-64 h-[calc(100vh-7.125rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col">
           {/* Avatar */}
           <div className="flex items-center justify-center py-4">
-            <div className="w-24 h-24 bg-gray-400 rounded-full flex items-center justify-center text-blue-600 font-bold">
+            <div className="w-24 h-24 bg-gray-400 rounded-full flex items-center justify-center text-blue-600 font-semibold">
               Avatar
             </div>
           </div>

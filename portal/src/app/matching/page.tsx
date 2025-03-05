@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import StaffForm from "@/app/staff/staff-form";
-import TutorCard from "@/app/staff/tutor-card";
-import FilterBar from "@/app/staff/filter-bar";
+import StaffForm from "@/app/matching/matching-form";
+import TutorCard from "@/app/matching/tutor-card";
+import FilterBar from "@/app/matching/filter-bar";
 import StudentCard from "@/app/componets/Studentcard";
 
-export default function StaffPage() {
+export default function Matching() {
   const router = useRouter();
 
   return (
