@@ -1,0 +1,40 @@
+import { InforService } from '@modules/index-service';
+import { Body, Controller, Get, Patch, Post, Query, Request } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { USER_ROLE } from '@utils/data-types/enums';
+import { AuthorizationRequest } from '@utils/data-types/types';
+import { RequiredByUserRoles } from '@utils/decorator';
+import { CreateInforDto, FilterInformationDto, GetInforDto } from './dto/infor.dto';
+@ApiTags('Information')
+
+@Controller()
+export class InforController {
+    constructor(private readonly inforService: InforService) { }
+
+    @RequiredByUserRoles()
+    @Post('/new-Information')
+    async createBlog(
+        @Request() { user }: AuthorizationRequest,
+        @Body() createInforDto: CreateInforDto
+    ) {
+        return await this.inforService.handleCreateInfor(user, createInforDto);
+    }
+
+    @RequiredByUserRoles()
+    @Get('/get-infors')
+    async getInfor(@Request() { user }: AuthorizationRequest) {
+        return this.inforService.handleGetInfor(user);
+    }
+
+    @RequiredByUserRoles(USER_ROLE.STAFF)
+    @Patch('/Push-Id')
+    async pushList() {
+
+    }
+
+    @RequiredByUserRoles()
+    @Get('/get-tutors')
+    async getMoreInformation(@Query() filters: FilterInformationDto) {
+        return this.inforService.getMoreInformationForTutors(filters);
+    }
+}

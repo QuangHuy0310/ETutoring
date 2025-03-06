@@ -5,7 +5,6 @@ import { Model } from 'mongoose';
 import { CreateCommentDto } from './dto/comment.dto';
 import { BlogService, NotificationService } from '@modules/index-service';
 import { USER_ERRORS } from '@utils/data-types/constants';
-import { NotificationDocument } from '@entities/notification.entities';
 
 @Injectable()
 export class CommentService {

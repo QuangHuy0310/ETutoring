@@ -72,9 +72,12 @@ export class AuthService {
   async register(input: RegisterDto) {
     try {
       if (await this.checkEmailExist(input.email)) {
-        const hash = await this.hashPassword(input.password);
 
-        const role = await this.specialUserService.getRolebyEmail(input.email);
+        const [hash, role] = await Promise.all([
+          this.hashPassword(input.password),
+          this.specialUserService.getRolebyEmail(input.email)
+        ])
+
 
         if (role) {
            const data: CreateNewUserDto = {
