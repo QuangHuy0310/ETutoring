@@ -17,7 +17,7 @@ export class UserService {
     new this.userModel({email:input.email, role: input.role}).save();
     return new this.userModel(input).save();
   }
-  async findById(id: UUID) {
+  async findById(id: any) {
     return this.userModel.findById(id, { hash: 0 });
   }
 
