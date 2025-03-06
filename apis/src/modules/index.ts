@@ -6,6 +6,8 @@ export * from '@modules/upload/upload.module';
 export * from '@modules/blog/blog.module';
 export * from '@modules/comment/comment.module';
 export * from '@modules/notification/notification.module';
+export * from '@modules/specialUser/specialUser.module';
+export * from '@modules/infor/infor.module';
 
 
 

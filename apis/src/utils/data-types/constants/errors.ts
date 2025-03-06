@@ -19,6 +19,7 @@ export const USER_ERRORS = {
   WRONG_PAGE: 'page or limit is wrong',
   INVALID_BLOG: 'Blog is invalid',
   WRONG_CREATE: 'content is empty',
+  WRONG_USER: 'User is invalid',
 };
 
 export const AUTH_ERRORS = {

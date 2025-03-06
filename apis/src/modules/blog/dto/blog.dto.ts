@@ -33,7 +33,7 @@ export class GetBlogDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsArray()
+    @IsString()
     tags: string[]| null;
 
     @ApiProperty()
