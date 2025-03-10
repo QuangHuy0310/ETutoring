@@ -9,9 +9,11 @@ export default function InformationForm() {
     phoneNumber: "",
     email: "",
     address: "",
+    dashboardLink: "", // Thêm trường Link Dashboard
+    description: "" // Thêm trường Description
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
@@ -64,6 +66,21 @@ export default function InformationForm() {
         value={formData.address}
         onChange={handleChange}
         className="w-full p-2 border rounded bg-white text-black"
+      />
+      <input
+        type="text"
+        name="dashboardLink"
+        placeholder="Link Dashboard"
+        value={formData.dashboardLink}
+        onChange={handleChange}
+        className="w-full p-2 border rounded bg-white text-black"
+      />
+      <textarea
+        name="description"
+        placeholder="Description"
+        value={formData.description}
+        onChange={handleChange}
+        className="w-full p-2 border rounded bg-white text-black h-24"
       />
       <button
         type="submit"
