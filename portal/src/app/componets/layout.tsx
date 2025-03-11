@@ -1,5 +1,6 @@
 import Header from "./Header";
 import React from "react";
+import Link from "next/link";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,62 +12,57 @@ export default function Layout({ children }: LayoutProps) {
       {/* Header */}
       <Header />
 
-      {/* Wrapper chính để giữ nội dung + sidewalk */}
+      {/* Wrapper chính để giữ nội dung + sidebar trái */}
       <div className="flex flex-1 pt-0">
         {/* Sidebar trái */}
-        <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-7.125rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col">
-          <div className="flex-1">
+        <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-7.125rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col items-center justify-between">
+          <div className="w-full">
+            {/* Avatar */}
+            <div className="w-24 h-24 bg-gray-400 rounded-full flex items-center justify-center text-blue-600 font-semibold mb-4">
+              Avatar
+            </div>
+
             <nav className="space-y-4">
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Home</button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Message</button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">My Lesson</button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Setting</button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">NEWNEW</button>
+              {/* Link đến Blog */}
+              <Link href="/">
+                <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+                  Blog
+                </button>
+              </Link>
+
+              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+                Message
+              </button>
+              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+                Dashboard
+              </button>
+              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+                Setting
+              </button>
             </nav>
           </div>
 
-          {/* Đặt hình ảnh ở dưới cùng */}
-          <div className="w-full h-32 bg-gray-400 rounded-lg mt-auto"></div>
+          {/* Các button chờ dưới cùng */}
+          <div className="w-full space-y-2">
+            <button className="w-full py-2 bg-gray-500 text-white font-semibold rounded">
+              Pending 1
+            </button>
+            <button className="w-full py-2 bg-gray-500 text-white font-semibold rounded">
+              Pending 2
+            </button>
+            <button className="w-full py-2 bg-gray-500 text-white font-semibold rounded">
+              Pending 3
+            </button>
+          </div>
         </aside>
 
         {/* Nội dung chính */}
-        <main className="ml-64 mr-64 flex-1 bg-black text-white">
-          {children}
-        </main>
-
-        {/* Sidebar phải */}
-        <aside className="fixed right-0 top-16 w-64 h-[calc(100vh-7.125rem)] bg-gray-200 shadow-lg p-4 z-40 flex flex-col">
-          {/* Avatar */}
-          <div className="flex items-center justify-center py-4">
-            <div className="w-24 h-24 bg-gray-400 rounded-full flex items-center justify-center text-blue-600 font-semibold">
-              Avatar
-            </div>
-          </div>
-
-          {/* Danh sách user */}
-          <div className="flex-1 space-y-4">
-            {[1, 2, 3, 4].map((_, index) => (
-              <div key={index} className="flex items-center bg-white rounded-lg p-2 shadow">
-                <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center mr-3">
-                  👤
-                </div>
-                <span className="text-gray-700 font-medium">User {index + 1}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Các button dưới cùng */}
-          <div className="space-y-2 mt-auto">
-            <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Option 1</button>
-            <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Option 2</button>
-            <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">Option 3</button>
-          </div>
-        </aside>
+        <main className="ml-64 flex-1 bg-black text-white">{children}</main>
       </div>
 
       {/* Footer */}
-      <footer className="w-full bg-white shadow-md py-4 px-6 relative z-50">
-        <p className="text-center text-gray-400">© 2025 My Website</p>
+      <footer className="bg-white text-center py-2 text-gray-900 font-semibold">
+        © 2025 ProjectGW. All Rights Reserved.
       </footer>
     </div>
   );
