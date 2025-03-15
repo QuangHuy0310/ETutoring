@@ -21,7 +21,8 @@ export class MajoringService {
         if (!id) {
             return this.majorModel.find().lean();
         }
-        return this.majorModel.findById(id).lean();
+        const major = await this.majorModel.findById(id).lean();
+        return major ? [major] : [];
 
     }
 }

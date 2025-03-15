@@ -11,7 +11,4 @@ export * from '@modules/infor/infor.module';
 export * from '@modules/slot/slot.module';
 export * from '@modules/schedule/schedule.module';
 export * from '@modules/majoring/majoring.module';
-
-
-
-
+export * from '@modules/mail/mail.module';

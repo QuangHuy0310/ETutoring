@@ -10,5 +10,4 @@ export * from '@modules/infor/infor.service';
 export * from '@modules/slot/slot.service';
 export * from '@modules/schedule/schedule.service';
 export * from '@modules/majoring/majoring.service';
-
-
+export * from '@modules/mail/mail.service';
