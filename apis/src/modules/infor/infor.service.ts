@@ -28,25 +28,35 @@ export class InforService {
         return this.createInfor(createInforDto);
     }
     async createInfor(infor: CreateInforDto): Promise<CreateInforDto> {
-        const newInfor = new this.moreInformationModel(infor).save();
+        const newInfor = await new this.moreInformationModel(infor).save();
         return infor
     }
 
-    getInfor(userId: string) {
-        return this.moreInformationModel.find({ userId: userId })
+    async getInfor(userId: string): Promise<any> {
+        const user = await this.moreInformationModel.findOne({ userId }).lean()
+
+        const historyUsers = await this.moreInformationModel.find({
+            userId: { $in: user.historyUserId }
+        })
+        .select('name path')
+        .lean()
+
+        return {
+            ...user,
+            historyUserId: historyUsers
+        }
     }
 
-    async handleGetInfor(user: any): Promise<MoreInformation[]> {
-        return this.getInfor(user.sub)
+    async handleGetInfor(user: any) {
+        return await this.getInfor(user.sub)
 
     }
-
 
     async getMoreInformationForTutors(filters: FilterInformationDto) {
         const aggregationPipeline: any[] = [
             {
                 $lookup: {
-                    from: 'users', 
+                    from: 'users',
                     localField: 'userId',
                     foreignField: '_id',
                     as: 'user',
@@ -57,13 +67,13 @@ export class InforService {
             },
             {
                 $match: {
-                    'user.role': 'tutor', 
+                    'user.role': 'tutor',
                 },
             },
             {
                 $project: {
                     user: 0, // Loại bỏ toàn bộ trường `user`
-                  },
+                },
             }
         ];
 
@@ -77,6 +87,31 @@ export class InforService {
             aggregationPipeline.push({ $match: matchFilters });
         }
 
-        return this.moreInformationModel.aggregate(aggregationPipeline);
+        return await this.moreInformationModel.aggregate(aggregationPipeline);
+    }
+
+    async validIdUser(userId: string): Promise<void> {
+        const user = await this.userService.findById(userId);
+        if (!user) {
+            throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.NOT_FOUND);
+        }
+    }
+    async handlePushId(id: any, userIds: string) {
+        const isCheck: string = id.sub
+        await this.validIdUser(userIds)
+
+        const user = await this.moreInformationModel.findOne({ userId: isCheck })
+        if (user.historyUserId.includes(userIds)) {
+            throw new HttpException('User exists already', HttpStatus.BAD_REQUEST);
+        }
+        return this.pushIdUser(isCheck, userIds)
+    }
+
+    async pushIdUser(id: string, userId: string) {
+        const user = await this.moreInformationModel.findOne({ userId: id })
+        user.historyUserId.push(userId)
+        await user.save()
+        return user
+
     }
 }
