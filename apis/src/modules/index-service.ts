@@ -8,5 +8,7 @@ export * from '@modules/notification/notification.service';
 export * from '@modules/specialUser/specialUser.service';
 export * from '@modules/infor/infor.service';
 export * from '@modules/slot/slot.service';
+export * from '@modules/schedule/schedule.service';
+export * from '@modules/majoring/majoring.service';
 
 
