@@ -7,5 +7,6 @@ export * from '@modules/comment/comment.service';
 export * from '@modules/notification/notification.service';
 export * from '@modules/specialUser/specialUser.service';
 export * from '@modules/infor/infor.service';
+export * from '@modules/slot/slot.service';
 
 

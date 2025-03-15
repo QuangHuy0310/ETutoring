@@ -10,11 +10,11 @@ export class Message extends BaseEntity {
   @Prop({type: String })
   receiverId: string;
 
-  // @Prop({type: String })
-  // groupId: string;
-
   @Prop({ required: true, type: String})
   message: string;
+
+  @Prop ({type: String})
+  path: string
 
 }
 

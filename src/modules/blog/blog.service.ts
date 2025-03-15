@@ -15,6 +15,16 @@ export class BlogService {
         }
     }
 
+    async validBlogId(blogId: string): Promise<any> {
+        const blog = await this.blogModel.findById(blogId);
+
+        if (!blog) {
+            throw new HttpException(USER_ERRORS.INVALID_BLOG, HttpStatus.NOT_FOUND);
+        }
+
+        return blog;
+    }
+
     async handleCreateBlog(user: any, createBlog: CreateBlogDTO): Promise<Blog> {
         const { caption, path } = createBlog;
         createBlog.userId = user.sub;
@@ -32,36 +42,80 @@ export class BlogService {
         }
     }
 
-    async getBlogs(getBlogDto: GetBlogDto): Promise<{ item: Blog[], total: number }> {
-        const { page, limit, tags, caption } = getBlogDto
+    async getBlogs(user: any, getBlogDto: GetBlogDto): Promise<{ item: any[], total: number }> {
+        const { page, limit, tags, caption } = getBlogDto;
 
         await this.validPageBlog(page, limit);
 
         const skip = (page - 1) * limit;
 
-        const query: any = {}
+        const { sub, role } = user;
+
+        const query: any = {
+            status: 'approve',
+            deleteAt: null
+        };
+
+        if (role === 'staff' || role === 'admin') {
+            query.status = getBlogDto.status;
+        }
 
         if (tags && tags.length > 0) {
-            query.$or = tags.map(tag => ({ tags: { $regex: tag, $options: 'i' } }))
+            query.$or = tags.map(tag => ({ tags: { $regex: tag, $options: 'i' } }));
         }
 
         if (caption) {
-            query.caption = { $regex: caption, $options: 'i' }
+            query.caption = { $regex: caption, $options: 'i' };
         }
 
-        const [blogs, total] = await Promise.all([
-            this.blogModel.find(query).skip(skip).limit(limit).exec(),
-            this.blogModel.countDocuments(query)
+        const blogs = await this.blogModel.aggregate([
+            { $match: query },
+
+            {
+                $lookup: {
+                    from: 'moreinformations',
+                    localField: 'userId',
+                    foreignField: 'userId',
+                    as: 'userInfo'
+                }
+            },
+
+            { $unwind: { path: '$userInfo', preserveNullAndEmptyArrays: true } },
+
+            {
+                $project: {
+                    'userId': 1,
+                    'userInfo.name': 1,
+                    'userInfo.path': 1,
+                    _id: 1,
+                    caption: 1,
+                    tags: 1,
+                    status: 1,
+                }
+            }
         ])
+            .skip(skip)
+            .limit(limit);
 
-
+        const total = await this.blogModel.countDocuments(query);
 
         return { item: blogs, total };
     }
 
+
     async getBlogById(id: string): Promise<Blog> {
         const blog = await this.blogModel.findById(id)
         return blog;
+    }
+
+    async updateStatusBlog(id: string, status: string): Promise<Blog> {
+
+        const blog = await this.validBlogId(id)
+
+        blog.status = status
+        blog.save()
+
+        return blog
     }
 
 }

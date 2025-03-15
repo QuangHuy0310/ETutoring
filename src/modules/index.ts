@@ -8,6 +8,8 @@ export * from '@modules/comment/comment.module';
 export * from '@modules/notification/notification.module';
 export * from '@modules/specialUser/specialUser.module';
 export * from '@modules/infor/infor.module';
+export * from '@modules/slot/slot.module';
+export * from '@modules/schedule/schedule.module';
 
 
 

@@ -9,7 +9,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 })
 export class Blog extends BaseEntity {
   @Prop({
-    type: String,
+    type: ({ type: String, ref: 'MoreInformation' }),
   })
   userId: string;
 
@@ -25,6 +25,12 @@ export class Blog extends BaseEntity {
 
   @Prop({ type: [String] })
   tags: string[];
+
+  @Prop({ type: String, 
+    default: 'pending', 
+    enum: ['pending', 'approve', 'reject']
+  })
+  status: string;
 
 }
 
