@@ -22,6 +22,11 @@ export class MoreInformation extends BaseEntity {
     @Prop({
         type: String,
     })
+    path: string;
+
+    @Prop({
+        type: String,
+    })
     phoneNumber: string;
 
     @Prop({
@@ -44,8 +49,8 @@ export class MoreInformation extends BaseEntity {
     })
     major: string;
 
-    @Prop({ type: [String] })
-    tutorId: string[];
+    @Prop({ type: [String], })
+    historyUserId: string[];
 }
 
 export const MoreInformationSchema = SchemaFactory.createForClass(MoreInformation);

@@ -25,11 +25,11 @@ export class InforController {
     async getInfor(@Request() { user }: AuthorizationRequest) {
         return this.inforService.handleGetInfor(user);
     }
-
-    @RequiredByUserRoles(USER_ROLE.STAFF)
-    @Patch('/Push-Id')
-    async pushList() {
-
+    @ApiQuery({ name: 'idUser', required: true })
+    @RequiredByUserRoles()
+    @Post('/Push-Id')
+    async pushList(@Request() { user }: AuthorizationRequest, @Query('idUser') idUser: string) {
+        return this.inforService.handlePushId(user,idUser)
     }
 
     @RequiredByUserRoles()

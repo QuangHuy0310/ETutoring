@@ -60,14 +60,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async sendMessageToReceiver(senderId: any, receiverId: string, message: any): Promise<WsResponse<any>> {
     const sender = senderId.sub
     const receiverClient = this.clients[receiverId];
-    if (receiverClient) {
-      console.log(`Sending message to receiver ${receiverId}:`, message);
-      await this.chatService.create(message);
-      receiverClient.emit('receiveMessage', message);
-      return { event: 'receiveMessage', data: message };
-    } else {
-      console.log(`Receiver with ID ${receiverId} not connected`);
-    }
+
+    console.log(`Sending message to receiver ${receiverId}:`, message);
+    await this.chatService.create(message);
+    receiverClient.emit('receiveMessage', message);
+    return { event: 'receiveMessage', data: message };
+
   }
 
   @SubscribeMessage('deleteMessage')
@@ -176,11 +174,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { receiver, candidate } = data;
 
     const receiverClient = this.clients[receiver];
-    if (receiverClient) {
-      console.log(`Sending ICE candidate to ${receiver}`);
-      receiverClient.emit('iceCandidate', { candidate });
-    } else {
-      console.log(`Receiver with ID ${receiver} is not connected`);
-    }
+
+    console.log(`Sending ICE candidate to ${receiver}`);
+    receiverClient.emit('iceCandidate', { candidate });
+
   }
 }
