@@ -1,4 +1,4 @@
-import { ScheduleModule } from './modules/schedule/schedule.module';
+import { MajoringModule } from './modules/majoring/majoring.module';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
 import { Module } from '@nestjs/common';
