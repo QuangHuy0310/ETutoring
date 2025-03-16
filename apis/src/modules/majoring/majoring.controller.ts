@@ -20,7 +20,6 @@ export class MajoringController {
     @RequiredByUserRoles()
     @Get('get-major')
     async getMajor(@Query("id") createMajor: string) {
-        // console.log(createMajor)
         return this.majoringService.getMajors(createMajor);
     }
 }
