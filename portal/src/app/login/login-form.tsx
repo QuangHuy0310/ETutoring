@@ -11,7 +11,7 @@ export function LoginForm({
     <form className={cn("flex flex-col gap-4", className)} {...props}>
       {/* Logo Section */}
       <div className="flex justify-center">
-        <img src="/logo.svg" alt="Logo" className="h-12 w-12" />
+        <img src="/logo-transparent.png" alt="Logo" className="h-12 w-12" />
       </div>
 
       <div className="flex flex-col items-center gap-2 text-center">
