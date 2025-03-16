@@ -16,7 +16,7 @@ export class MajoringService {
         return newMajor;
     }
 
-    async getMajors(payload: CreateMajoringDto): Promise<Major[]> {
+    async getMajors(payload: string): Promise<any> {
         const id = payload;
         if (!id) {
             return this.majorModel.find().lean();
