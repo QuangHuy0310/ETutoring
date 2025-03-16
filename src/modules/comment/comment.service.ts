@@ -38,14 +38,14 @@ export class CommentService {
         await this.validComment(comment, path)
 
         const blogOnwerId = await this.validBlog(createCommentDto.blogId)
-        
-        const payload =({
+
+        const payload = ({
             notificationFrom: user.sub,
             notificationTo: blogOnwerId,
             blogId: createCommentDto.blogId,
             status: 'unread'
         });
-    
+
         await this.notificationService.createNotification(payload);
 
         return this.createComment(createCommentDto)
@@ -56,10 +56,36 @@ export class CommentService {
         return newComment.save();
     }
 
-    async getComments(blogId: string): Promise<Comment[]> {
+    async getComments(blogId: string): Promise<any[]> {
         await this.validBlog(blogId);
-        const getComments = await this.commentModel.find({ blogId: blogId })
-        return getComments
+
+        const comments = await this.commentModel.aggregate([
+            { $match: { blogId } },
+            {
+                $lookup: {
+                    from: 'moreinformations', 
+                    localField: 'userId',
+                    foreignField: 'userId',
+                    as: 'user'
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    userId: 1,
+                    blogId: 1,
+                    comment: 1,
+                    path: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    'user.name': 1,
+                    'user.path': 1
+                }
+            }
+        ]);
+
+        return comments;
     }
+
 
 }
