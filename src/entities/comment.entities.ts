@@ -9,7 +9,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 })
 export class Comment extends BaseEntity {
   @Prop({
-    type: String,
+    type: String
   })
   userId: string;
 
