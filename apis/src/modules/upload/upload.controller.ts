@@ -11,7 +11,7 @@ import { Request } from 'express';
 @Controller()
 export class UploadController {
     constructor(){}
-    @RequiredByUserRoles(USER_ROLE.USER)
+    @RequiredByUserRoles()
     @Post('/upload')
     @UseInterceptors(
         FileInterceptor('image', {

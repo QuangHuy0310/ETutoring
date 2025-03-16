@@ -19,7 +19,7 @@ export class MajoringController {
     @ApiQuery({ name: 'id', type: String, required: false, })
     @RequiredByUserRoles()
     @Get('get-major')
-    async getMajor(@Query('id') createMajor: CreateMajoringDto) {
+    async getMajor(@Query("id") createMajor: string) {
         // console.log(createMajor)
         return this.majoringService.getMajors(createMajor);
     }
