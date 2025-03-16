@@ -12,7 +12,7 @@ export class CommentController {
         private readonly commentService: CommentService,
     ) { }
 
-    @RequiredByUserRoles(USER_ROLE.USER)
+    @RequiredByUserRoles()
     @Post('/new-comment')
     async createComment(
         @Request() { user }: AuthorizationRequest,
@@ -26,7 +26,7 @@ export class CommentController {
         return await this.commentService.handleCreateComment(user, payload);
     }
 
-    @RequiredByUserRoles(USER_ROLE.USER)
+    @RequiredByUserRoles()
     @Get('/get-comment')
     async getComments(@Query('blogId') id:string) {
         return await this.commentService.getComments(id);
