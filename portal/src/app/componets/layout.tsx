@@ -1,12 +1,15 @@
+"use client";
 import Header from "./Header";
 import React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen flex flex-col bg-black">
       {/* Header */}
@@ -23,20 +26,28 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             <nav className="space-y-4">
-              {/* Link đến Blog */}
-              <Link href="/">
-                <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
-                  Blog
-                </button>
-              </Link>
-
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+              <button
+                className="w-full py-2 bg-blue-500 text-white font-semibold rounded"
+                onClick={() => router.push("/")}
+              >
+                Blog
+              </button>
+              <button
+                className="w-full py-2 bg-blue-500 text-white font-semibold rounded"
+                onClick={() => router.push("/chatbox")}
+              >
                 Message
               </button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+              <button
+                className="w-full py-2 bg-blue-500 text-white font-semibold rounded"
+                onClick={() => router.push("/dashboard")}
+              >
                 Dashboard
               </button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded">
+              <button
+                className="w-full py-2 bg-blue-500 text-white font-semibold rounded"
+                onClick={() => router.push("/settings")}
+              >
                 Setting
               </button>
             </nav>
