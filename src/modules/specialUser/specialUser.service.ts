@@ -11,7 +11,8 @@ export class SpecialUserService {
 
     async checkEmailExist(email: string): Promise<boolean> {
         return this.specialUserModel.exists({ email }).then((result) => !!result);
-}
+    }
+    
     async getRolebyEmail(email: string): Promise<string | null> {
         const user = await this.specialUserModel.findOne({ email }).exec();
         return user?.role || null;
