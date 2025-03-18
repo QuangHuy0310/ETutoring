@@ -62,7 +62,7 @@ export class UserService {
   }
 
   // Method to send welcome email
-  private async sendWelcomeEmail(email: string, password: string, userId: string) {
+  async sendWelcomeEmail(email: string, password: string, userId: string) {
     const subject = 'Welcome! Your account has been created';
     const text = `Your account has been successfully created!\n\nEmail: ${email}\nPassword: ${password}\n\nPlease log in and change your password.`;
     const html = `

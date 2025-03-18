@@ -8,7 +8,7 @@ import { USER_ROLE } from '@utils/data-types/enums';
 export class SpecialUserController {
   constructor(private readonly specialUserService: SpecialUserService) {}
 
-  @RequiredByUserRoles(USER_ROLE.ADMIN)
+  //@RequiredByUserRoles(USER_ROLE.ADMIN)
   @Post('add')
   async createSpecialUser(@Body() createSpecialUserDto: SpecialUserDto) {
     try {
