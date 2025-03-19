@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { USER_ROLE } from '@utils/data-types/enums';
 import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
+import * as fs from 'fs';
 
 @Injectable()
 export class UserService {
@@ -16,50 +17,67 @@ export class UserService {
     private mailService: MailService
   ) {}
 
-   // Method to add multiple users at once
-   async bulkCreateUsers(users: RegisterDto[]): Promise<User[]> {
-    // Limit to a maximum of 10 users
-    if (users.length > 10) {
-      throw new BadRequestException('Cannot create more than 10 users at once');
+   // Method to add multiple users from a file
+    async bulkCreateUsersFromFile(file: Express.Multer.File): Promise<User[]> {
+      // Check file type
+      if (file.mimetype !== 'application/json') {
+        throw new BadRequestException('Only JSON files are allowed');
+      }
+
+      // Read file content
+      const fileContent = fs.readFileSync(file.path, 'utf8');
+      let usersData: RegisterDto[];
+      try {
+        usersData = JSON.parse(fileContent);
+      } catch (error) {
+        throw new BadRequestException('Invalid JSON format in file');
+      }
+
+      // Check limit of 10 users
+      if (usersData.length > 10) {
+        throw new BadRequestException('Cannot create more than 10 users at once');
+      }
+
+      // Check for duplicate emails
+      const emails = usersData.map(user => user.email);
+      const existingUsers = await this.userModel.find({ email: { $in: emails } });
+      if (existingUsers.length > 0) {
+        const duplicateEmails = existingUsers.map(user => user.email);
+        throw new BadRequestException(`Email already exists: ${duplicateEmails.join(', ')}`);
+      }
+
+      // Hash passwords and prepare user data
+      const usersToCreate = await Promise.all(
+        usersData.map(async (user) => {
+          const hashedPassword = await bcrypt.hash(user.password, 10);
+          return {
+            email: user.email,
+            hash: hashedPassword,
+            role: (user.role || 'USER') as USER_ROLE,
+          };
+        })
+      );
+
+      // Insert into MongoDB
+      const createdUsers = await this.userModel.insertMany(usersToCreate);
+
+      // Send welcome email to each user
+      await Promise.all(
+        usersData.map((user, index) => {
+          this.sendWelcomeEmail(
+            user.email,
+            user.password,
+            createdUsers[index]._id.toString()
+          );
+        })
+      );
+
+      // Delete temporary file after processing
+      fs.unlinkSync(file.path);
+
+      return createdUsers as User[];
     }
 
-    // Check for duplicate emails
-    const emails = users.map(user => user.email);
-    const existingUsers = await this.userModel.find({ email: { $in: emails } });
-    if (existingUsers.length > 0) {
-      const duplicateEmails = existingUsers.map(user => user.email);
-      throw new BadRequestException(`Email already exists: ${duplicateEmails.join(', ')}`);
-    }
-
-    // Hash passwords and prepare user data
-    const usersToCreate = await Promise.all(
-      users.map(async (user) => {
-        const hashedPassword = await bcrypt.hash(user.password, 10); // Hash password
-        return {
-          email: user.email,
-          hash: hashedPassword,
-          role: (user.role || 'USER') as USER_ROLE, // Cast role to USER_ROLE
-        };
-      })
-    );
-
-    // Add all users to MongoDB using insertMany
-    const createdUsers = await this.userModel.insertMany(usersToCreate);
-
-    // Send welcome email to each user
-    await Promise.all(
-      users.map((user, index) => {
-        this.sendWelcomeEmail(
-          user.email,
-          user.password,
-          createdUsers[index]._id.toString()
-        );
-      })
-    );
-
-    // Cast return data to User[]
-    return createdUsers as User[];
-  }
 
   // Method to send welcome email
   async sendWelcomeEmail(email: string, password: string, userId: string) {
