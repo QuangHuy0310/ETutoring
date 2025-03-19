@@ -1,7 +1,5 @@
-import { MajoringModule } from './modules/majoring/majoring.module';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
-import { MailerModule } from '@nestjs-modules/mailer';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, RouterModule } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
