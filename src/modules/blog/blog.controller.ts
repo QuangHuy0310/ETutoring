@@ -34,12 +34,19 @@ export class BlogController {
     }
 
 
-    @ApiQuery({ name: 'id', type: String, required: true})
+    @ApiQuery({ name: 'id', type: String, required: true })
     @ApiQuery({ name: 'status', type: String, required: true })
     @RequiredByUserRoles(USER_ROLE.ADMIN, USER_ROLE.STAFF)
     @Put('update-status')
     async updateStatusBlog(@Query('id') id, @Query('status') status
     ) {
         return this.blogService.updateStatusBlog(id, status)
+    }
+
+    @ApiQuery({ name: 'id', type: String, required: true })
+    @RequiredByUserRoles(USER_ROLE.ADMIN, USER_ROLE.STAFF)
+    @Get('blog-by-id')
+    async deleteBlog(@Query('id') id: string) {
+        return this.blogService.getBlogById(id)
     }
 }
