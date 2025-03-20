@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import AdminLayout from "@/app/admin/AdminLayout";
+import AdminLayout from "@/app/admin/component/AdminLayout";
+import AddAccountForm from "@/app/admin/component/add_acc_form";
 
 interface User {
   id: number;
@@ -39,6 +40,9 @@ const AccountManagerPage: React.FC = () => {
   // Add search state
   const [searchTerm, setSearchTerm] = useState("");
   
+  // State for managing the account creation modal
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+  
   // Filter users based on search term
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -59,8 +63,23 @@ const AccountManagerPage: React.FC = () => {
 
   // Function to handle creating a new account
   const createAccount = () => {
-    alert("Create new account functionality will be implemented here");
-    // Implementation for account creation will be added later
+    setIsAddAccountOpen(true);
+  };
+
+  // Function to add a new user
+  const handleAddUser = (userData: {
+    name: string;
+    email: string;
+    faculties: string;
+    role: string;
+  }) => {
+    // Create a new user with a new ID
+    const newUser = {
+      id: users.length > 0 ? Math.max(...users.map(user => user.id)) + 1 : 1,
+      ...userData
+    };
+    
+    setUsers([...users, newUser]);
   };
 
   return (
@@ -89,6 +108,18 @@ const AccountManagerPage: React.FC = () => {
             Create Account
           </button>
         </div>
+
+        {/* Add Account Form Modal */}
+        <AddAccountForm 
+          open={isAddAccountOpen}
+          onClose={() => setIsAddAccountOpen(false)}
+          onSubmit={handleAddUser}
+          faculties={[
+            { id: "1", name: "IT" },
+            { id: "2", name: "Graphic" },
+            { id: "3", name: "Business" },
+          ]}
+        />
 
         {/* User list table */}
         <div className="border rounded-lg p-4 bg-white text-black">

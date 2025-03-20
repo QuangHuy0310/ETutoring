@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import AdminLayout from "@/app/admin/AdminLayout";
+import AdminLayout from "@/app/admin/component/AdminLayout";
 
 interface Faculty {
   id: number;
   name: string;
-  curator: string;
-  email: string;
 }
 
 const FacultyManagerPage: React.FC = () => {
@@ -15,14 +13,10 @@ const FacultyManagerPage: React.FC = () => {
     {
       id: 1,
       name: "IT",
-      curator: "Nhut",
-      email: "nhut@gmail.com",
     },
     {
       id: 2,
       name: "Graphic",
-      curator: "Cuong",
-      email: "cuong@gmail.com",
     },
   ]);
   
@@ -78,8 +72,6 @@ const FacultyManagerPage: React.FC = () => {
               <tr className="bg-gray-100">
                 <th className="border p-2">ID</th>
                 <th className="border p-2">Name</th>
-                <th className="border p-2">Curator</th>
-                <th className="border p-2">Email</th>
                 <th className="border p-2">Actions</th>
               </tr>
             </thead>
@@ -89,8 +81,6 @@ const FacultyManagerPage: React.FC = () => {
                   <tr key={faculty.id} className="text-center">
                     <td className="border p-2">{faculty.id}</td>
                     <td className="border p-2">{faculty.name}</td>
-                    <td className="border p-2">{faculty.curator}</td>
-                    <td className="border p-2">{faculty.email}</td>
                     <td className="border p-2">
                       <div className="flex justify-center space-x-2">
                         <button
