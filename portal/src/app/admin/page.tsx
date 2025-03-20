@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "@/app/admin/AdminLayout";
+import AdminLayout from "@/app/admin/component/AdminLayout";
 
 const AdminDashboard = () => {
   return (

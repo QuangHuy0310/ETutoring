@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import AdminLayout from "@/app/admin/AdminLayout";
+import AdminLayout from "@/app/admin/component/AdminLayout";
 
 interface Risk {
   id: number;
