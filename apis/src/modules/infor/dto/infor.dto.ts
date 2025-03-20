@@ -26,6 +26,10 @@ export class CreateInforDto {
     name: string;
 
     @ApiProperty()
+    @IsString()
+    path: string;
+
+    @ApiProperty()
     @IsEmail()
     email: string;
 

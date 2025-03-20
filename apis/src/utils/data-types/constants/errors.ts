@@ -18,8 +18,10 @@ export const USER_ERRORS = {
   RECEIVER_NOT_FOUND: 'receiver not found',
   WRONG_PAGE: 'page or limit is wrong',
   INVALID_BLOG: 'Blog is invalid',
+  INVALID_SLOT: 'Slot is invalid',
   WRONG_CREATE: 'content is empty',
   WRONG_USER: 'User is invalid',
+  SCHEDULE_EXISTED: 'Schedule already exists',
 };
 
 export const AUTH_ERRORS = {
