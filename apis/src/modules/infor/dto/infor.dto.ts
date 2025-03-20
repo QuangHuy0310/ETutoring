@@ -51,6 +51,38 @@ export class CreateInforDto {
 
 }
 
+export class UpdateDto{
+    @ApiProperty()
+    @IsString()
+    name: string;
+
+    @ApiProperty()
+    @IsEmail()
+    email: string;
+
+    @ApiProperty()
+    @Validate(IsFlexiblePhoneNumber)
+    phone?: string;
+
+    @ApiProperty()
+    @IsString()
+    address: string;
+
+    @ApiProperty()
+    @IsString()
+    major: string;
+
+    @ApiProperty()
+    @IsString()
+    country: string;
+}
+
+export class UpdateImage{
+    @ApiProperty()
+    @IsString()
+    path: string;
+}
+
 export class GetInforDto {
     @ApiProperty()
     @IsNumber()
