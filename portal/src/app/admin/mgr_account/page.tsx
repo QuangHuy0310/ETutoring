@@ -27,6 +27,13 @@ const AccountManagerPage: React.FC = () => {
       faculties: "Graphic",
       role: "student",
     },
+    {
+      id: 3,
+      name: "Hoang",
+      email: "Hoang@gmail.com",
+      faculties: "Graphic",
+      role: "student",
+    },
   ]);
 
   // Add search state
