@@ -8,9 +8,37 @@ import Layout from "@/app/componets/layout";
 
 export default function ChatboxPage() {
   const [messages, setMessages] = useState<{ text: string; sender: "me" | "other" }[]>([]);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
+  const [slot, setSlot] = useState("");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
   const handleSend = (message: string) => {
     setMessages([...messages, { text: message, sender: "me" }]);
+  };
+
+  const toggleBookingForm = () => {
+    setShowBookingForm(!showBookingForm);
+  };
+
+  const handleBookRequest = () => {
+    if (day && month && year && slot && title && content) {
+      const bookingMessage = `📅 Booking Request: ${title} - ${day}/${month}/${year} (Slot ${slot})`;
+      setMessages([...messages, { text: bookingMessage, sender: "me" }]);
+      setShowBookingForm(false);
+      setDay("");
+      setMonth("");
+      setYear("");
+      setSlot("");
+      setTitle("");
+      setContent("");
+    } else {
+      alert("Vui lòng điền đầy đủ thông tin!");
+    }
   };
 
   return (
@@ -50,8 +78,30 @@ export default function ChatboxPage() {
             </div>
           </div>
 
+          {/* Mini Form Booking */}
+          {showBookingForm && (
+            <div className="absolute bottom-16 left-4 w-96 p-4 bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
+              <h3 className="text-lg font-semibold text-white text-center">Book a Session</h3>
+              
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <input type="number" placeholder="Day" value={day} onChange={(e) => setDay(e.target.value)} className="p-2 bg-gray-700 text-white rounded" />
+                <input type="number" placeholder="Month" value={month} onChange={(e) => setMonth(e.target.value)} className="p-2 bg-gray-700 text-white rounded" />
+                <input type="number" placeholder="Year" value={year} onChange={(e) => setYear(e.target.value)} className="p-2 bg-gray-700 text-white rounded col-span-2" />
+                <input type="number" placeholder="Slot (1-5)" value={slot} onChange={(e) => setSlot(e.target.value)} className="p-2 bg-gray-700 text-white rounded col-span-2" />
+              </div>
+
+              <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-2 mt-2 bg-gray-700 text-white rounded" />
+              <textarea placeholder="Content" value={content} onChange={(e) => setContent(e.target.value)} className="w-full p-2 mt-2 bg-gray-700 text-white rounded h-20"></textarea>
+
+              <div className="flex justify-between mt-3">
+                <button onClick={handleBookRequest} className="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600 text-white">Send Request</button>
+                <button onClick={toggleBookingForm} className="px-4 py-2 bg-red-500 rounded hover:bg-red-600 text-white">Cancel</button>
+              </div>
+            </div>
+          )}
+
           {/* Form nhập tin nhắn */}
-          <div className="p-4 bg-black border-t border-gray-700">
+          <div className="p-4 bg-black border-t border-gray-700 relative">
             <ChatboxForm onSend={handleSend} />
           </div>
         </div>
