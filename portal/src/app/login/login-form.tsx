@@ -49,9 +49,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       if (userRole === "admin") {
         router.push("/admin");
       } else if (userRole === "user") {
-        router.push("/blog");
-      } else {
-        router.push("/"); // Mặc định về trang chủ
+        router.push("/");
       }
     } catch (err) {
       if (err instanceof Error) {
