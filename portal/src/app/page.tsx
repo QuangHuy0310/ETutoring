@@ -7,18 +7,18 @@ import Layout from "@/app/componets/layout";
 import PostForm from "@/app/Blog/form";
 
 interface User {
-  id: number;
+  id: string;
   name: string;
 }
 
 interface BlogPost {
   id: number;
-  user: User; // 🔥 Đổi từ author thành user
+  user: User; 
   title: string;
   content: string;
   imageUrl?: string;
   createdAt: number;
-  comments: { user: User; content: string }[]; // 🔥 Đổi luôn author của comment
+  comments: { user: User; content: string }[]; 
 }
 
 const formatTime = (timestamp: number) => {
@@ -45,7 +45,6 @@ const HomePage = () => {
       if (!accessToken) {
         router.push("/login");
       } else {
-        // Giải mã token để lấy thông tin user
         const payload = JSON.parse(atob(accessToken.split(".")[1]));
         setUser({ id: payload.id, name: payload.name });
       }
@@ -54,16 +53,16 @@ const HomePage = () => {
     checkAuth();
     const interval = setInterval(checkAuth, 1000); // Kiểm tra mỗi giây
 
-    return () => clearInterval(interval); // Dọn dẹp interval khi component unmount
+    return () => clearInterval(interval);
   }, [router]);
 
   if (!user) {
-    return null; // Hoặc có thể hiển thị một spinner trong khi chờ xác thực
+    return null; 
   }
 
   const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
     setPosts((prevPosts) => [
-      { id: Date.now(), createdAt: Date.now(), comments: [], user, ...post }, // ✅ Đổi từ author thành user
+      { id: Date.now(), createdAt: Date.now(), comments: [], user, ...post }, // ✅ 
       ...prevPosts,
     ]);
     setIsModalOpen(false);
@@ -76,7 +75,7 @@ const HomePage = () => {
     setPosts((prevPosts) =>
       prevPosts.map((post) =>
         post.id === postId
-          ? { ...post, comments: [...post.comments, { user, content: comment }] } // ✅ Đổi từ author thành user
+          ? { ...post, comments: [...post.comments, { user, content: comment }] } 
           : post
       )
     );
@@ -108,7 +107,7 @@ const HomePage = () => {
             posts.map((post) => (
               <div key={post.id} className="p-4 border border-[#2A4E89] rounded-lg bg-[#161b25] mb-4">
                 <div className="flex items-center mb-2">
-                  <span className="font-bold text-white">{post.user.name}</span> {/* ✅ Sửa author thành user */}
+                  <span className="font-bold text-white">{post.user.name}</span>
                   <span className="text-gray-400 text-sm ml-2">{formatTime(post.createdAt)}</span>
                 </div>
                 <h3 className="text-lg font-bold">{post.title}</h3>
@@ -122,7 +121,7 @@ const HomePage = () => {
     height={250}
     className="mt-2 w-[400px] h-[250px] object-cover rounded-lg shadow-lg"
     onClick={() => post.imageUrl && setSelectedImage(post.imageUrl)}
-    unoptimized // Tránh lỗi tối ưu hóa ảnh từ API
+    unoptimized 
   />
 )}
 
@@ -134,7 +133,7 @@ const HomePage = () => {
                   ) : (
                     post.comments.map((comment, index) => (
                       <p key={index} className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md mt-1">
-                        <span className="font-bold text-white">{comment.user.name}:</span> {/* ✅ Sửa author thành user */}
+                        <span className="font-bold text-white">{comment.user.name}:</span>
                         {comment.content}
                       </p>
                     ))
