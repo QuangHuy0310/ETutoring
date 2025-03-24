@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image"; // Import Next.js Image
+import Image from "next/image"; 
 
 interface User {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -43,9 +43,9 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
   
       if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
   
-      const result = await response.json(); // ✅ Parse JSON đúng cách
+      const result = await response.json(); 
       if (result.data && result.data.fileUrl) {
-        setImageUrl(result.data.fileUrl); // ✅ Lưu đúng URL ảnh
+        setImageUrl(result.data.fileUrl); 
       } else {
         throw new Error("Invalid response format");
       }
