@@ -1,17 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image"; // Import Image của Next.js
 import Layout from "@/app/componets/layout";
 import PostForm from "@/app/Blog/form";
 
+interface User {
+  id: string;
+  name: string;
+}
+
 interface BlogPost {
   id: number;
-  author: string;
+  user: User; 
   title: string;
   content: string;
-  file?: File | null;
+  imageUrl?: string;
   createdAt: number;
-  comments: { author: string; content: string }[];
+  comments: { user: User; content: string }[]; 
 }
 
 const formatTime = (timestamp: number) => {
@@ -25,15 +32,39 @@ const formatTime = (timestamp: number) => {
 };
 
 const HomePage = () => {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  
-  const [currentUser] = useState({ name: "Nguyen Van A" });
 
-  const addPost = (post: { author: string; title: string; content: string; file?: File | null }) => {
-    setPosts([{ id: Date.now(), createdAt: Date.now(), comments: [], ...post }, ...posts]);
+  useEffect(() => {
+    const checkAuth = () => {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        router.push("/login");
+      } else {
+        const payload = JSON.parse(atob(accessToken.split(".")[1]));
+        setUser({ id: payload.id, name: payload.name });
+      }
+    };
+
+    checkAuth();
+    const interval = setInterval(checkAuth, 1000); // Kiểm tra mỗi giây
+
+    return () => clearInterval(interval);
+  }, [router]);
+
+  if (!user) {
+    return null; 
+  }
+
+  const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
+    setPosts((prevPosts) => [
+      { id: Date.now(), createdAt: Date.now(), comments: [], user, ...post }, // ✅ 
+      ...prevPosts,
+    ]);
     setIsModalOpen(false);
   };
 
@@ -44,7 +75,7 @@ const HomePage = () => {
     setPosts((prevPosts) =>
       prevPosts.map((post) =>
         post.id === postId
-          ? { ...post, comments: [...post.comments, { author: currentUser.name, content: comment }] }
+          ? { ...post, comments: [...post.comments, { user, content: comment }] } 
           : post
       )
     );
@@ -57,7 +88,7 @@ const HomePage = () => {
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-[#1E2432] p-6 rounded-lg shadow-lg">
-              <PostForm onPost={addPost} onClose={() => setIsModalOpen(false)} />
+              <PostForm user={user} onPost={addPost} onClose={() => setIsModalOpen(false)} />
             </div>
           </div>
         )}
@@ -76,20 +107,24 @@ const HomePage = () => {
             posts.map((post) => (
               <div key={post.id} className="p-4 border border-[#2A4E89] rounded-lg bg-[#161b25] mb-4">
                 <div className="flex items-center mb-2">
-                  <span className="font-bold text-white">{post.author}</span>
+                  <span className="font-bold text-white">{post.user.name}</span>
                   <span className="text-gray-400 text-sm ml-2">{formatTime(post.createdAt)}</span>
                 </div>
                 <h3 className="text-lg font-bold">{post.title}</h3>
                 <p className="text-gray-300">{post.content}</p>
 
-                {post.file && post.file.type.startsWith("image/") && (
-                  <img
-                    src={URL.createObjectURL(post.file)}
-                    alt="Uploaded"
-                    className="mt-2 w-[400px] h-[250px] object-cover rounded-lg shadow-lg cursor-pointer"
-                    onClick={() => post.file && setSelectedImage(URL.createObjectURL(post.file))}
-                  />
-                )}
+                {post.imageUrl && (
+  <Image
+    src={post.imageUrl}
+    alt="Uploaded"
+    width={400}
+    height={250}
+    className="mt-2 w-[400px] h-[250px] object-cover rounded-lg shadow-lg"
+    onClick={() => post.imageUrl && setSelectedImage(post.imageUrl)}
+    unoptimized 
+  />
+)}
+
 
                 <div className="mt-4 border-t border-gray-600 pt-2">
                   <h4 className="text-sm text-gray-400">Comments:</h4>
@@ -98,7 +133,8 @@ const HomePage = () => {
                   ) : (
                     post.comments.map((comment, index) => (
                       <p key={index} className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md mt-1">
-                        <span className="font-bold text-white">{comment.author}:</span> {comment.content}
+                        <span className="font-bold text-white">{comment.user.name}:</span>
+                        {comment.content}
                       </p>
                     ))
                   )}
@@ -123,20 +159,6 @@ const HomePage = () => {
             ))
           )}
         </div>
-
-        {selectedImage && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-            <div className="relative">
-              <img src={selectedImage} alt="Full Screen" className="max-w-full max-h-full rounded-lg shadow-lg" />
-              <button 
-                onClick={() => setSelectedImage(null)}
-                className="absolute top-4 right-4 bg-gray-800 text-white p-2 rounded-full text-xl"
-              >
-                ✖
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   );
