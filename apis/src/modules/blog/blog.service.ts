@@ -91,11 +91,13 @@ export class BlogService {
                     caption: 1,
                     tags: 1,
                     status: 1,
-                    path:1
+                    path:1,
+                    createdBy:1
                 }
             }
         ])
             .skip(skip)
+            .soft(1)
             .limit(limit);
 
         const total = await this.blogModel.countDocuments(query);
