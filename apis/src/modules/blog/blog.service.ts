@@ -118,4 +118,42 @@ export class BlogService {
         return blog
     }
 
+    // Get timeline of a blog (creation and status updates)
+    async getBlogTimeline(blogId: string, user: any): Promise<any[]> {
+        const blog = await this.validBlogId(blogId);
+
+    // Check permission: Only admin, staff, or blog owner can view timeline
+    if (user.role !== 'admin' && user.role !== 'staff' && user.sub !== blog.userId) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    const timeline: any[] = [];
+
+    // Event: Blog creation
+    timeline.push({
+      timestamp: blog.createdAt,
+      eventType: 'created',
+      details: {
+        userId: blog.userId,
+        caption: blog.caption,
+      },
+    });
+
+    // Event: Status update (using updatedAt as the timestamp)
+    if (blog.updatedAt && blog.createdAt.getTime() !== blog.updatedAt.getTime()) {
+      timeline.push({
+        timestamp: blog.updatedAt,
+        eventType: 'status_updated',
+        details: {
+          status: blog.status,
+        },
+      });
+    }
+
+    // Sort timeline by timestamp
+    timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    return timeline;
+  }
+
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import AdminLayout from "@/app/admin/component/AdminLayout";
-import AddAccountForm from "@/app/admin/component/add_acc_form";
+import AdminLayout from "@/app/admin/AdminLayout";
+import AddAccountForm from "@/app/admin/mgr_account/add_acc_form";
+import EditAccount from "@/app/admin/mgr_account/edit_acc";
+
 
 interface User {
   id: number;
@@ -43,6 +45,10 @@ const AccountManagerPage: React.FC = () => {
   // State for managing the account creation modal
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   
+  // State for managing the edit account modal
+  const [isEditAccountOpen, setIsEditAccountOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  
   // Filter users based on search term
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -57,8 +63,18 @@ const AccountManagerPage: React.FC = () => {
   
   // Function to handle user editing
   const editUser = (id: number) => {
-    alert(`Edit user with ID: ${id}`);
-    // Implementation for edit functionality will be added later
+    const userToEdit = users.find(user => user.id === id);
+    if (userToEdit) {
+      setEditingUser(userToEdit);
+      setIsEditAccountOpen(true);
+    }
+  };
+
+  // Function to save edited user
+  const handleSaveEditedUser = (userId: number, updatedData: { name: string }) => {
+    setUsers(users.map(user => 
+      user.id === userId ? { ...user, ...updatedData } : user
+    ));
   };
 
   // Function to handle creating a new account
@@ -120,6 +136,17 @@ const AccountManagerPage: React.FC = () => {
             { id: "3", name: "Business" },
           ]}
         />
+
+        {/* Edit Account Modal */}
+        {editingUser && (
+          <EditAccount
+            isOpen={isEditAccountOpen}
+            onClose={() => setIsEditAccountOpen(false)}
+            onSave={handleSaveEditedUser}
+            userId={editingUser.id}
+            currentName={editingUser.name}
+          />
+        )}
 
         {/* User list table */}
         <div className="border rounded-lg p-4 bg-white text-black">
