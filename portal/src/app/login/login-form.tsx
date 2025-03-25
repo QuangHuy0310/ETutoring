@@ -4,10 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/app/lib/utils";
 import { Button } from "../componets/ui/button";
-import {Input } from "../componets/ui/input";
-
+import { Input } from "../componets/ui/input";
 
 interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {}
+
+// Định nghĩa các role và trang điều hướng tương ứng
+const ROLE_REDIRECTS = {
+  admin: "/admin",
+  user: "/blog",
+  staff: "/staff",
+  tutor: "/tutor",
+  default: "/"
+};
 
 export default function LoginForm({ className, ...props }: LoginFormProps) {
   const [email, setEmail] = useState("");
@@ -18,10 +26,17 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      setError("Vui lòng nhập đầy đủ email và mật khẩu");
+      return;
+    }
+    
     setIsLoading(true);
     setError("");
 
     try {
+      // Gửi yêu cầu đăng nhập
       const response = await fetch("http://localhost:3002/api/v1/auth/login", {
         method: "POST",
         headers: {
@@ -32,35 +47,70 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
 
       const result = await response.json();
 
+      // Xử lý lỗi từ API
       if (!response.ok) {
         throw new Error(result.message || "Đăng nhập thất bại!");
       }
 
-      const { accessToken } = result.data;
+      // Xác thực cấu trúc kết quả
+      if (!result.data || !result.data.accessToken) {
+        throw new Error("Token không tìm thấy trong phản hồi");
+      }
 
       // Lưu token vào localStorage
+      const { accessToken } = result.data;
       localStorage.setItem("accessToken", accessToken);
 
-      // Giải mã token để lấy thông tin user
-      const payload = JSON.parse(atob(accessToken.split(".")[1]));
-      const userRole = payload.role;
-
-      // Chuyển hướng dựa trên role
-      if (userRole === "admin") {
-        router.push("/admin");
-      } else if (userRole === "user") {
-        router.push("/blog");
-      } else {
-        router.push("/"); // Mặc định về trang chủ
-      }
+      // Giải mã và xử lý thông tin người dùng từ token
+      redirectUserBasedOnRole(accessToken);
+      
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Đã xảy ra lỗi không xác định!");
-      }
+      handleLoginError(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Hàm để giải mã token và điều hướng dựa trên role
+  const redirectUserBasedOnRole = (token: string) => {
+    try {
+      // Phân tích token JWT để lấy thông tin người dùng
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const userRole = payload.role;
+      
+      // Lưu thêm thông tin người dùng nếu cần
+      if (payload.userId) {
+        localStorage.setItem("userId", payload.userId);
+      }
+      
+      if (payload.email) {
+        localStorage.setItem("userEmail", payload.email);
+      }
+      
+      // Điều hướng dựa trên role
+      const redirectPath = ROLE_REDIRECTS[userRole as keyof typeof ROLE_REDIRECTS] || ROLE_REDIRECTS.default;
+      router.push(redirectPath);
+    } catch (decodeError) {
+      console.error("Lỗi khi giải mã token:", decodeError);
+      setError("Không thể xác thực thông tin đăng nhập. Vui lòng thử lại.");
+      
+      // Xóa token nếu không thể giải mã
+      localStorage.removeItem("accessToken");
+    }
+  };
+
+  // Xử lý lỗi đăng nhập
+  const handleLoginError = (err: unknown) => {
+    console.error("Lỗi đăng nhập:", err);
+    
+    if (err instanceof Error) {
+      if (err.message.includes("Network") || err.message.includes("fetch")) {
+        setError("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.");
+      } else {
+        setError(err.message);
+      }
+    } else {
+      setError("Đã xảy ra lỗi không xác định!");
     }
   };
 
@@ -78,34 +128,53 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
 
       {/* Form đăng nhập */}
       <div className="grid gap-4">
-        <Input
-          id="email"
-          type="email"
-          placeholder="Nhập email của bạn"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+        <div>
+          <Input
+            id="email"
+            type="email"
+            placeholder="Nhập email của bạn"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Nhập mật khẩu"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+            className="w-full"
+          />
+        </div>
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <Button 
+          type="submit" 
+          className="w-full bg-blue-600 hover:bg-blue-700" 
           disabled={isLoading}
-        />
-
-        <Input
-          id="password"
-          type="password"
-          placeholder="Nhập mật khẩu"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-        />
-
-        <a href="#" className="text-sm text-right underline-offset-4 hover:underline">
-          Quên mật khẩu?
-        </a>
-
-        {error && <div className="text-red-500 text-sm">{error}</div>}
-
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Đang đăng nhập...
+            </div>
+          ) : (
+            "Đăng nhập"
+          )}
         </Button>
       </div>
     </form>
