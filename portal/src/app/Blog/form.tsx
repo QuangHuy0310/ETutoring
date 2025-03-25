@@ -19,33 +19,34 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const handleUpload = async (file: File) => {
     const formData = new FormData();
     formData.append("image", file);
     const accessToken = localStorage.getItem("accessToken");
-  
+
     if (!accessToken) {
       setError("You must be logged in to upload images.");
       return;
     }
-  
+
     setIsUploading(true);
     setError("");
-  
+
     try {
       const response = await fetch("http://localhost:3002/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
-  
+
       if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
-  
-      const result = await response.json(); 
+
+      const result = await response.json();
       if (result.data && result.data.fileUrl) {
-        setImageUrl(result.data.fileUrl); 
+        setImageUrl(result.data.fileUrl);
       } else {
         throw new Error("Invalid response format");
       }
@@ -55,7 +56,6 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
       setIsUploading(false);
     }
   };
-  
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -69,25 +69,58 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
     handleUpload(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       setError("Title and content cannot be empty.");
       return;
     }
 
-    onPost({ title, content, imageUrl: imageUrl || undefined });
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      setError("You must be logged in to create a blog.");
+      return;
+    }
 
-    // Reset state
-    setTitle("");
-    setContent("");
-    setImageUrl(null);
+    setIsSubmitting(true);
     setError("");
+
+    const postData = {
+      tags: [title], // 🟢 Map title → tags
+      caption: content, // 🟢 Map content → caption
+      path: imageUrl ? [imageUrl] : [], // 🟢 Map imageUrl → path
+    };
+
+    try {
+      const response = await fetch("http://localhost:3002/api/v1/blog/new-blog", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(postData),
+      });
+
+      if (!response.ok) throw new Error(`Failed to create blog: ${response.statusText}`);
+
+      const newPost = await response.json();
+      onPost({ title, content, imageUrl: imageUrl || undefined });
+
+
+      setTitle("");
+      setContent("");
+      setImageUrl(null);
+      setError("");
+      onClose();
+    } catch (error) {
+      setError("Failed to create blog.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-[#1E2432] p-6 rounded-lg w-[500px] flex flex-col space-y-4">
-      {/* User Info */}
       <div className="flex items-center space-x-4">
         <div className="w-12 h-12 bg-gray-500 rounded-full"></div>
         <div>
@@ -96,10 +129,8 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
         </div>
       </div>
 
-      {/* Error Message */}
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      {/* Title Input */}
       <input
         type="text"
         placeholder="Title"
@@ -108,7 +139,6 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
         onChange={(e) => setTitle(e.target.value)}
       />
 
-      {/* Content Input */}
       <textarea
         placeholder="Write your blog here..."
         className="p-2 bg-[#2A4E89] text-white rounded-md h-40"
@@ -116,12 +146,10 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
         onChange={(e) => setContent(e.target.value)}
       />
 
-      {/* File Upload */}
       <input type="file" accept="image/*" className="text-white" onChange={handleFileChange} disabled={isUploading} />
 
       {isUploading && <p className="text-gray-400">Uploading image...</p>}
 
-      {/* Image Preview */}
       {imageUrl && (
         <div className="mt-2">
           <p className="text-gray-400 text-sm">Image Preview:</p>
@@ -136,17 +164,18 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
         </div>
       )}
 
-      {/* Buttons */}
       <div className="flex justify-between">
         <button type="button" className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg" onClick={onClose}>
           Close
         </button>
         <button 
           type="submit" 
-          className={`px-4 py-2 rounded-lg ${isUploading ? "bg-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-          disabled={isUploading}
+          className={`px-4 py-2 rounded-lg ${
+            isUploading || isSubmitting ? "bg-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+          }`}
+          disabled={isUploading || isSubmitting}
         >
-          {isUploading ? "Uploading..." : "Post"}
+          {isSubmitting ? "Posting..." : "Post"}
         </button>
       </div>
     </form>

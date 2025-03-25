@@ -97,7 +97,7 @@ export class BlogService {
             }
         ])
             .skip(skip)
-            .soft(1)
+           //.soft({ createdAt: -1 })
             .limit(limit);
 
         const total = await this.blogModel.countDocuments(query);
