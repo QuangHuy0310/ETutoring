@@ -49,4 +49,15 @@ export class BlogController {
     async deleteBlog(@Query('id') id: string) {
         return this.blogService.getBlogById(id)
     }
+
+    @ApiQuery({ name: 'id', type: String, required: true })
+    @RequiredByUserRoles()
+    @Get('blog-timeline')
+    @ApiOperation({ summary: 'Get timeline of a blog' })
+    async getBlogTimeline(
+        @Query('id') id: string,
+        @Request() { user }: AuthorizationRequest
+    ) {
+        return this.blogService.getBlogTimeline(id, user);
+    }
 }

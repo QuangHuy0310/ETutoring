@@ -10,6 +10,9 @@ import { USER_ROLE } from '@utils/data-types/enums';
   },
 })
 export class User extends BaseEntity {
+  sub(id: string, status: string, sub: any) {
+      throw new Error('Method not implemented.');
+  }
   @Prop({
     type: String,
   })
