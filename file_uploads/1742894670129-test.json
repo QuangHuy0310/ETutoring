@@ -1,0 +1,12 @@
+[
+    {
+      "email": "hoangbeo18203@gmail.com",
+      "password": "password123",
+      "role": "user"
+    },
+    {
+      "email": "hoangbeo3878@gmail.com",
+      "password": "password456",
+      "role": "user"
+    }
+]
