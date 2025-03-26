@@ -23,6 +23,14 @@ export class MajoringService {
         }
         const major = await this.majorModel.findById(id).lean();
         return major ? [major] : [];
+    }
 
+    async updateMajor(id: string, major: MajoringDto): Promise<Major> {
+        const existingMajor = await this.majorModel.findByIdAndUpdate(id, major, { new: true });
+        return existingMajor;
+    }
+
+    async deleteMajor(id: string): Promise<void> {
+        await this.majorModel.findByIdAndDelete(id);
     }
 }
