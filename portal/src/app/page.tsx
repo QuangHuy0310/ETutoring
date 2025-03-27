@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image"; // Import Image của Next.js
 import Layout from "@/app/componets/layout";
@@ -17,21 +17,22 @@ interface Comment {
   blogId: string;
   comment: string;
   createdAt: string;
+  path?: string[]; // Mảng chứa URL ảnh nếu có
   user?: { name: string; path?: string };
 }
 
 interface BlogPost {
   id: string; // map từ _id của API (string)
   user: {
-    id: string;      // từ userId của API
-    name: string;    // từ userInfo.name
+    id: string; // từ userId của API
+    name: string; // từ userInfo.name
     avatar?: string; // từ userInfo.path
   };
-  title: string;       // mapping từ tags (danh sách tag, join thành chuỗi)
-  content: string;     // mapping từ caption
-  imageUrl?: string;   // mapping từ path (lấy phần tử đầu tiên nếu có)
-  createdAt: number;   // GET từ API
-  comments: Comment[]; // lấy từ API, không dùng cục bộ
+  title: string; // mapping từ tags (danh sách tag, join thành chuỗi)
+  content: string; // mapping từ caption
+  imageUrl?: string; // mapping từ path (lấy phần tử đầu tiên nếu có)
+  createdAt: number; // GET từ API
+  comments: Comment[]; // Lấy từ API, không dùng cục bộ
 }
 
 const HomePage = () => {
@@ -40,6 +41,8 @@ const HomePage = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({});
+  // State lưu URL ảnh cho comment, tương tự như blog
+  const [commentImageInputs, setCommentImageInputs] = useState<{ [key: string]: string }>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Check authentication
@@ -60,58 +63,59 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, [router]);
 
-  // Fetch blogs và sau đó fetch comments cho từng blog
-  useEffect(() => {
-    const fetchCommentsForPost = async (blogId: string) => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) return [];
+  // Hàm fetch comment cho mỗi blog
+  const fetchCommentsForPost = async (blogId: string) => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) return [];
 
-        const res = await fetch(
-          `http://localhost:3002/api/v1/comments/get-comment?blogId=${blogId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        if (!res.ok) {
-          console.error("Failed to fetch comments for blog:", blogId);
-          return [];
+      const res = await fetch(
+        `http://localhost:3002/api/v1/comments/get-comment?blogId=${blogId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-        const data = await res.json();
-        // Giả sử backend trả về mảng comment trực tiếp trong data.data
-        return data.data || [];
-      } catch (error) {
-        console.error("Error fetching comments for blog:", blogId, error);
+      );
+
+      if (!res.ok) {
+        console.error("Failed to fetch comments for blog:", blogId);
         return [];
       }
-    };
+      const data = await res.json();
+      // Giả sử backend trả về mảng comment trong data.data
+      return data.data || [];
+    } catch (error) {
+      console.error("Error fetching comments for blog:", blogId, error);
+      return [];
+    }
+  };
 
+  // Fetch blogs và sau đó fetch comments cho từng blog
+  useEffect(() => {
     const fetchBlogs = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) return;
-  
+
         const response = await fetch("http://localhost:3002/api/v1/blog/blogs", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-  
+
         if (!response.ok) {
           console.error("Failed to fetch blogs");
           return;
         }
-  
+
         const data = await response.json();
         if (!data.data || !data.data.item || !Array.isArray(data.data.item)) {
           console.error("Invalid API response format", data);
           return;
         }
-  
-        // Map dữ liệu blog và sau đó gọi API get comment cho từng blog
+
+        // Map dữ liệu blog và gọi API get comment cho từng blog
         const mappedPosts: BlogPost[] = await Promise.all(
           data.data.item.map(async (post: any) => {
             const comments = await fetchCommentsForPost(post._id);
@@ -122,47 +126,92 @@ const HomePage = () => {
                 name: post.userInfo?.name || "Anonymous",
                 avatar: post.userInfo?.path || "",
               },
-              title: post.tags && Array.isArray(post.tags) ? post.tags.join(", ") : "No Title",
+              title:
+                post.tags && Array.isArray(post.tags)
+                  ? post.tags.join(", ")
+                  : "No Title",
               content: post.caption || "No Content",
               imageUrl:
                 post.path && Array.isArray(post.path) && post.path.length > 0
                   ? post.path[0]
                   : "",
-              createdAt: new Date(post.createdAt).getTime(), 
+              createdAt: new Date(post.createdAt).getTime(),
               comments: comments,
             };
           })
         );
-  
+
         setPosts(mappedPosts);
       } catch (error) {
         console.error("Error fetching blogs:", error);
       }
     };
-  
+
     fetchBlogs();
   }, []);
 
-  // Hàm thêm blog mới sau khi POST thành công (có thể dùng cho PostForm)
+  // Hàm thêm blog mới sau khi POST thành công (dùng cho PostForm)
   const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
-    // Mapping lại blog vừa tạo thành BlogPost để hiển thị (với createdAt và comments mặc định)
     const newBlog: BlogPost = {
       id: Date.now().toString(),
       user: user!,
       title: post.title,
       content: post.content,
       imageUrl: post.imageUrl,
-      createdAt: Date.now(), // Ở đây có thể thay đổi nếu API trả về createdAt mới
+      createdAt: Date.now(),
       comments: [],
     };
     setPosts((prevPosts) => [newBlog, ...prevPosts]);
     setIsModalOpen(false);
   };
 
-  // Hàm POST comment lên backend
+  // Hàm upload file ảnh cho comment, dùng API "/upload" (giả sử trả về fileUrl)
+  const handleCommentFileUpload = async (file: File, postId: string) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch("http://localhost:3002/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        console.error("Comment image upload failed:", response.statusText);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.data && result.data.fileUrl) {
+        setCommentImageInputs((prev) => ({ ...prev, [postId]: result.data.fileUrl }));
+      }
+    } catch (error) {
+      console.error("Error uploading comment image:", error);
+    }
+  };
+
+  // Hàm xử lý khi file được chọn cho comment
+  const handleCommentFileChange = (e: ChangeEvent<HTMLInputElement>, postId: string) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    if (!file.type.startsWith("image/")) {
+      console.error("Please select an image file!");
+      return;
+    }
+    handleCommentFileUpload(file, postId);
+  };
+
+  // Hàm POST comment (có hỗ trợ gửi ảnh) lên backend
   const addComment = async (postId: string) => {
     const commentText = commentInputs[postId]?.trim();
-    if (!commentText) return;
+    // Lấy URL ảnh cho comment từ state commentImageInputs
+    const imageUrl = commentImageInputs[postId];
+
+    // Yêu cầu phải có nội dung hoặc ảnh
+    if (!commentText && !imageUrl) return;
 
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -178,7 +227,8 @@ const HomePage = () => {
           },
           body: JSON.stringify({
             comment: commentText,
-            path: []
+            // Nếu có URL ảnh thì gửi vào mảng, nếu không thì mảng rỗng
+            path: imageUrl ? [imageUrl] : []
           }),
         }
       );
@@ -197,8 +247,9 @@ const HomePage = () => {
             : post
         )
       );
-      // Reset input comment
-      setCommentInputs({ ...commentInputs, [postId]: "" });
+      // Reset input và ảnh của comment
+      setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+      setCommentImageInputs((prev) => ({ ...prev, [postId]: "" }));
     } catch (error) {
       console.error("Error posting comment:", error);
     }
@@ -269,13 +320,30 @@ const HomePage = () => {
                     <p className="text-gray-500 text-sm">No comments yet</p>
                   ) : (
                     post.comments.map((comment, index) => (
-                      <p key={index} className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md mt-1">
-                        <span className="font-bold text-white">{comment.user?.name || "Anonymous"}:</span> {comment.comment}
-                      </p>
+                      <div key={index} className="mt-1">
+                        <p className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md">
+                          <span className="font-bold text-white">
+                            {comment.user?.name || "Anonymous"}:
+                          </span>{" "}
+                          {comment.comment}
+                        </p>
+                        {comment.path && comment.path.length > 0 && (
+                          <div className="mt-1">
+                            <Image
+                              src={comment.path[0]}
+                              alt="Comment attachment"
+                              width={200}
+                              height={150}
+                              className="object-cover rounded-md"
+                              unoptimized
+                            />
+                          </div>
+                        )}
+                      </div>
                     ))
                   )}
 
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-col gap-2">
                     <input
                       type="text"
                       value={commentInputs[post.id] || ""}
@@ -284,6 +352,13 @@ const HomePage = () => {
                       }
                       placeholder="Write a comment..."
                       className="flex-1 p-2 bg-[#2A4E89] rounded-lg text-white"
+                    />
+                    {/* File input cho ảnh của comment */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleCommentFileChange(e, post.id)}
+                      className="text-white"
                     />
                     <button
                       onClick={() => addComment(post.id)}
