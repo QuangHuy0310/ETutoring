@@ -11,6 +11,15 @@ interface User {
   name: string;
 }
 
+interface Comment {
+  _id: string;
+  userId: string;
+  blogId: string;
+  comment: string;
+  createdAt: string;
+  user?: { name: string; path?: string };
+}
+
 interface BlogPost {
   id: string; // map từ _id của API (string)
   user: {
@@ -22,7 +31,7 @@ interface BlogPost {
   content: string;     // mapping từ caption
   imageUrl?: string;   // mapping từ path (lấy phần tử đầu tiên nếu có)
   createdAt: number;   // GET từ API
-  comments: { user: User; content: string }[]; // mặc định []
+  comments: Comment[]; // lấy từ API, không dùng cục bộ
 }
 
 const HomePage = () => {
@@ -50,7 +59,36 @@ const HomePage = () => {
 
     return () => clearInterval(interval);
   }, [router]);
+
+  // Fetch blogs và sau đó fetch comments cho từng blog
   useEffect(() => {
+    const fetchCommentsForPost = async (blogId: string) => {
+      try {
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) return [];
+
+        const res = await fetch(
+          `http://localhost:3002/api/v1/comments/get-comment?blogId=${blogId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.error("Failed to fetch comments for blog:", blogId);
+          return [];
+        }
+        const data = await res.json();
+        // Giả sử backend trả về mảng comment trực tiếp trong data.data
+        return data.data || [];
+      } catch (error) {
+        console.error("Error fetching comments for blog:", blogId, error);
+        return [];
+      }
+    };
+
     const fetchBlogs = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
@@ -73,22 +111,28 @@ const HomePage = () => {
           return;
         }
   
-        const mappedPosts: BlogPost[] = data.data.item.map((post: any) => ({
-          id: post._id,
-          user: {
-            id: post.userId || "unknown",
-            name: post.userInfo?.name || "Anonymous",
-            avatar: post.userInfo?.path || "",
-          },
-          title: post.tags && Array.isArray(post.tags) ? post.tags.join(", ") : "No Title",
-          content: post.caption || "No Content",
-          imageUrl:
-            post.path && Array.isArray(post.path) && post.path.length > 0
-              ? post.path[0]
-              : "",
-          createdAt: new Date(post.createdAt).getTime(), // Lấy createdAt từ API
-          comments: [],
-        }));
+        // Map dữ liệu blog và sau đó gọi API get comment cho từng blog
+        const mappedPosts: BlogPost[] = await Promise.all(
+          data.data.item.map(async (post: any) => {
+            const comments = await fetchCommentsForPost(post._id);
+            return {
+              id: post._id,
+              user: {
+                id: post.userId || "unknown",
+                name: post.userInfo?.name || "Anonymous",
+                avatar: post.userInfo?.path || "",
+              },
+              title: post.tags && Array.isArray(post.tags) ? post.tags.join(", ") : "No Title",
+              content: post.caption || "No Content",
+              imageUrl:
+                post.path && Array.isArray(post.path) && post.path.length > 0
+                  ? post.path[0]
+                  : "",
+              createdAt: new Date(post.createdAt).getTime(), 
+              comments: comments,
+            };
+          })
+        );
   
         setPosts(mappedPosts);
       } catch (error) {
@@ -115,18 +159,49 @@ const HomePage = () => {
     setIsModalOpen(false);
   };
 
-  const addComment = (postId: string) => {
-    const comment = commentInputs[postId]?.trim();
-    if (!comment) return;
+  // Hàm POST comment lên backend
+  const addComment = async (postId: string) => {
+    const commentText = commentInputs[postId]?.trim();
+    if (!commentText) return;
 
-    setPosts((prevPosts) =>
-      prevPosts.map((post) =>
-        post.id === postId
-          ? { ...post, comments: [...post.comments, { user: user!, content: comment }] }
-          : post
-      )
-    );
-    setCommentInputs({ ...commentInputs, [postId]: "" });
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) return;
+
+      const res = await fetch(
+        `http://localhost:3002/api/v1/comments/new-comment?id=${postId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            comment: commentText,
+            path: []
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Error posting comment");
+        return;
+      }
+
+      const newComment = await res.json();
+      // Giả sử newComment trả về đối tượng comment mới được tạo
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === postId
+            ? { ...post, comments: [...post.comments, newComment] }
+            : post
+        )
+      );
+      // Reset input comment
+      setCommentInputs({ ...commentInputs, [postId]: "" });
+    } catch (error) {
+      console.error("Error posting comment:", error);
+    }
   };
 
   if (!user) {
@@ -195,7 +270,7 @@ const HomePage = () => {
                   ) : (
                     post.comments.map((comment, index) => (
                       <p key={index} className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md mt-1">
-                        <span className="font-bold text-white">{comment.user.name}:</span> {comment.content}
+                        <span className="font-bold text-white">{comment.user?.name || "Anonymous"}:</span> {comment.comment}
                       </p>
                     ))
                   )}
