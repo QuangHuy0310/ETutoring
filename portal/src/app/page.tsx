@@ -21,19 +21,9 @@ interface BlogPost {
   title: string;       // mapping từ tags (danh sách tag, join thành chuỗi)
   content: string;     // mapping từ caption
   imageUrl?: string;   // mapping từ path (lấy phần tử đầu tiên nếu có)
-  createdAt: number;   // nếu API trả về createdAt, nếu không lấy Date.now()
+  createdAt: number;   // GET từ API
   comments: { user: User; content: string }[]; // mặc định []
 }
-
-const formatTime = (timestamp: number) => {
-  const now = Date.now();
-  const diff = Math.floor((now - timestamp) / 1000);
-
-  if (diff < 60) return `${diff} seconds ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-  return `${Math.floor(diff / 86400)} days ago`;
-};
 
 const HomePage = () => {
   const router = useRouter();
@@ -60,15 +50,13 @@ const HomePage = () => {
 
     return () => clearInterval(interval);
   }, [router]);
-
-  
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) return;
   
-        const response = await fetch("http://localhost:3002/api/v1/blog/blogs?page=1&limit=10", {
+        const response = await fetch("http://localhost:3002/api/v1/blog/blogs", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -98,7 +86,7 @@ const HomePage = () => {
             post.path && Array.isArray(post.path) && post.path.length > 0
               ? post.path[0]
               : "",
-          createdAt: post.createdAt ? new Date(post.createdAt).getTime() : Date.now(),
+          createdAt: new Date(post.createdAt).getTime(), // Lấy createdAt từ API
           comments: [],
         }));
   
@@ -110,8 +98,6 @@ const HomePage = () => {
   
     fetchBlogs();
   }, []);
-  
-  
 
   // Hàm thêm blog mới sau khi POST thành công (có thể dùng cho PostForm)
   const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
@@ -122,7 +108,7 @@ const HomePage = () => {
       title: post.title,
       content: post.content,
       imageUrl: post.imageUrl,
-      createdAt: Date.now(),
+      createdAt: Date.now(), // Ở đây có thể thay đổi nếu API trả về createdAt mới
       comments: [],
     };
     setPosts((prevPosts) => [newBlog, ...prevPosts]);
@@ -183,7 +169,9 @@ const HomePage = () => {
                     />
                   )}
                   <span className="font-bold text-white">{post.user.name}</span>
-                  <span className="text-gray-400 text-sm ml-2">{formatTime(post.createdAt)}</span>
+                  <span className="text-gray-400 text-sm ml-2">
+                    {new Date(post.createdAt).toLocaleString()}
+                  </span>
                 </div>
                 <h3 className="text-lg font-bold">{post.title}</h3>
                 <p className="text-gray-300">{post.content}</p>
