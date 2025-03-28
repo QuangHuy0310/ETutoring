@@ -1,12 +1,12 @@
 import { InforService } from '@modules/index-service';
-import { Body, Controller, Get, Patch, Post, Put, Query, Request } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Put, Query, Request, Delete } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { USER_ROLE } from '@utils/data-types/enums';
 import { AuthorizationRequest } from '@utils/data-types/types';
 import { RequiredByUserRoles } from '@utils/decorator';
 import { CreateInforDto, FilterInformationDto, GetInforDto, UpdateDto } from './dto/infor.dto';
-@ApiTags('Information')
 
+@ApiTags('Information')
 @Controller()
 export class InforController {
     constructor(private readonly inforService: InforService) { }
@@ -29,6 +29,7 @@ export class InforController {
     ) {
         return this.inforService.handleGetInfor(user, idUser);
     }
+
     @ApiQuery({ name: 'idUser', required: true })
     @RequiredByUserRoles()
     @Post('/Push-Id')

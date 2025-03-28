@@ -13,7 +13,7 @@ export class RegisterDto {
   @ApiProperty()
   @IsString()
   @Matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/)
-  password: string;
+  password?: string;
 
    @ApiProperty({
     example: USER_ROLE.ADMIN,
