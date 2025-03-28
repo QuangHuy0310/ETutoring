@@ -98,7 +98,8 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
     setApiError(null);
     
     try {
-      const response = await fetch("http://localhost:3002/api/v1/auth/register", {
+      // 1. Tạo tài khoản mới
+      const registerResponse = await fetch("http://localhost:3002/api/v1/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,13 +112,52 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Registration failed with status: ${response.status}`);
+      if (!registerResponse.ok) {
+        const errorData = await registerResponse.json();
+        throw new Error(errorData.message || `Registration failed with status: ${registerResponse.status}`);
       }
 
-      const userData = await response.json();
+      const userData = await registerResponse.json();
       console.log("Registration successful:", userData);
+      
+      // 2. Gửi email thông báo sau khi tạo tài khoản thành công
+      try {
+        const emailResponse = await fetch("http://localhost:3002/mail/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify({
+            to: formData.email,
+            subject: "Account Created Successfully",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                <h2 style="color: #4CAF50;">Welcome to Our Platform!</h2>
+                <p>Hello,</p>
+                <p>Your account has been created successfully with the following details:</p>
+                <ul>
+                  <li><strong>Email:</strong> ${formData.email}</li>
+                  <li><strong>Password:</strong> ${formData.password}</li>
+                  <li><strong>Role:</strong> ${formData.role}</li>
+                </ul>
+                <p>You can now login with your email and password.</p>
+                <p>If you have any questions, feel free to contact our support team.</p>
+                <p>Best regards,<br>Admin Team</p>
+              </div>
+            `,
+          }),
+        });
+
+        if (!emailResponse.ok) {
+          console.warn("Email notification failed to send:", await emailResponse.text());
+        } else {
+          console.log("Email notification sent successfully");
+        }
+      } catch (emailError) {
+        // Xử lý lỗi gửi email nhưng không ảnh hưởng đến luồng chính
+        console.error("Failed to send email notification:", emailError);
+      }
       
       // Notify parent component and close form
       onSubmit(formData);
@@ -127,11 +167,40 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
         role: "",
       });
       onClose();
+      
     } catch (error: any) {
       console.error("Registration error:", error);
       setApiError(error.message || "Failed to register. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Thêm hàm này vào component của bạn để kiểm tra API email
+  const testEmailApi = async () => {
+    try {
+      console.log("Testing email API...");
+      const response = await fetch("http://localhost:3002/mail/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        body: JSON.stringify({
+          to: "test@example.com",
+          subject: "Test Email",
+          html: "<p>This is a test email</p>",
+        }),
+      });
+      
+      console.log("Email API response status:", response.status);
+      const responseText = await response.text();
+      console.log("Email API response:", responseText);
+      
+      return response.ok;
+    } catch (error) {
+      console.error("Email API test failed:", error);
+      return false;
     }
   };
 
@@ -253,6 +322,13 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
               ) : (
                 "Create Account"
               )}
+            </button>
+            <button
+              type="button"
+              onClick={testEmailApi}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg mr-2"
+            >
+              Test Email API
             </button>
           </div>
         </form>
