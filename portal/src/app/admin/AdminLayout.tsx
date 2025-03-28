@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import Header from "@/app/componets/Header/ad_header";
+import Header from "@/app/componets/Header_for_ad";
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter(); // Hook điều hướng

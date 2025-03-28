@@ -11,7 +11,7 @@ interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {}
 // Định nghĩa các role và trang điều hướng tương ứng
 const ROLE_REDIRECTS = {
   admin: "/admin",
-  user: "/blog",
+  user: "",
   staff: "/staff",
   tutor: "/tutor",
   default: "/"
