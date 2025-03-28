@@ -1,54 +1,81 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation"; // Import useRouter để chuyển trang
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import StaffLayout from "@/app/staff/StaffLayout";
 
 interface Blog {
-  id: number;
+  id: string;
   actor: string;
   time: string;
   content: string;
-  status: "pending" | "approved" | "rejected";
+  status: string;
 }
 
 const ManagerBlogPage: React.FC = () => {
-  const router = useRouter(); // Khởi tạo router để điều hướng
-  const [blogs, setBlogs] = useState<Blog[]>([
-    {
-      id: 1,
-      actor: "Student A",
-      time: "2025-03-11 10:00 AM",
-      content: "This is a sample blog post.",
-      status: "pending",
-    },
-    {
-      id: 2,
-      actor: "Tutor B",
-      time: "2025-03-11 11:30 AM",
-      content: "Another blog post example.",
-      status: "approved",
-    },
-  ]);
+  const router = useRouter();
+  const [blogs, setBlogs] = useState<Blog[]>([]);
 
-  // Chấp nhận bài viết
-  const approveBlog = (id: number) => {
+  // Fetch API GET /blogs với tham số status để lấy cả approved và pending
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) return;
+  
+        // Thêm query parameter ?status=approved&status=pending để lấy cả 2 trạng thái
+        const response = await fetch("http://localhost:3002/api/v1/blog/blogs?status=pending", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+  
+        if (!response.ok) {
+          console.error("Failed to fetch blogs");
+          return;
+        }
+  
+        const data = await response.json();
+        if (!data.data || !data.data.item || !Array.isArray(data.data.item)) {
+          console.error("Invalid API response format", data);
+          return;
+        }
+  
+        // Mapping các trường: userInfo.name => actor, createdAt => time, caption => content, status => status
+        const mappedBlogs: Blog[] = data.data.item.map((blog: any) => {
+          return {
+            id: blog._id,
+            actor: blog.userInfo?.name || "Anonymous",
+            time: new Date(blog.createdAt).toLocaleString(),
+            content: blog.caption || "",
+            status: blog.status,
+          };
+        });
+  
+        setBlogs(mappedBlogs);
+      } catch (error) {
+        console.error("Error fetching blogs:", error);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
+
+  // Các hàm xử lý cục bộ
+  const approveBlog = (id: string) => {
     setBlogs(blogs.map((blog) => (blog.id === id ? { ...blog, status: "approved" } : blog)));
   };
 
-  // Từ chối bài viết
-  const rejectBlog = (id: number) => {
+  const rejectBlog = (id: string) => {
     setBlogs(blogs.map((blog) => (blog.id === id ? { ...blog, status: "rejected" } : blog)));
   };
 
-  // Xóa bài viết
-  const removeBlog = (id: number) => {
+  const removeBlog = (id: string) => {
     setBlogs(blogs.filter((blog) => blog.id !== id));
   };
 
-  // Chuyển đến trang chi tiết
-  const viewDetail = (id: number) => {
-    router.push(`/staff/managerblog/${id}`); // Chuyển hướng đến trang detail
+  const viewDetail = (id: string) => {
+    router.push(`/staff/managerblog/${id}`);
   };
 
   return (
@@ -104,7 +131,7 @@ const ManagerBlogPage: React.FC = () => {
                             Reject
                           </button>
                           <button
-                            onClick={() => viewDetail(blog.id)} // Chuyển đến trang chi tiết
+                            onClick={() => viewDetail(blog.id)}
                             className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
                           >
                             Detail
@@ -119,7 +146,7 @@ const ManagerBlogPage: React.FC = () => {
                             Remove
                           </button>
                           <button
-                            onClick={() => viewDetail(blog.id)} // Chuyển đến trang chi tiết
+                            onClick={() => viewDetail(blog.id)}
                             className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
                           >
                             Detail
