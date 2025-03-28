@@ -127,4 +127,8 @@ export class FilterInformationDto {
     @IsOptional()
     country: string;
 
+    @ApiPropertyOptional()
+    @IsOptional()
+    role: string;
+
 }
