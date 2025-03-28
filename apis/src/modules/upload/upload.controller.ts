@@ -38,6 +38,6 @@ export class UploadController {
             throw new BadRequestException('No file uploaded or file is invalid.');
         }
         const fileUrl = `${req.protocol}://${req.get('host')}/upload/${file.filename}`;
-        return fileUrl;
+        return {fileUrl};
     }
 }

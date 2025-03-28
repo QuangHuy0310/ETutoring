@@ -27,9 +27,10 @@ export class InforService {
         createInforDto.userId = user.sub;
         return this.createInfor(createInforDto);
     }
+
     async createInfor(infor: CreateInforDto): Promise<CreateInforDto> {
         const newInfor = await new this.moreInformationModel(infor).save();
-        return infor
+        return infor;
     }
 
     async getInfor(id: string, userId:string): Promise<any> {
@@ -46,6 +47,11 @@ export class InforService {
 
     async getMoreInformationForTutors(filters: FilterInformationDto) {
         const aggregationPipeline: any[] = [
+            {
+                $match: {
+                    deletedAt: null, // Filter out soft-deleted records
+                },
+            },
             {
                 $lookup: {
                     from: 'users',
@@ -64,12 +70,12 @@ export class InforService {
             },
             {
                 $project: {
-                    user: 0, // Loại bỏ toàn bộ trường `user`
+                    user: 0, // Remove the entire `user` field
                 },
-            }
+            },
         ];
 
-        // Thêm các điều kiện lọc nếu có
+        // Add filter conditions if provided
         const matchFilters: any = {};
         if (filters.name) matchFilters.name = { $regex: filters.name, $options: 'i' };
         if (filters.major) matchFilters.major = { $regex: filters.major, $options: 'i' };

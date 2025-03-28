@@ -8,23 +8,51 @@ import { InjectModel } from '@nestjs/mongoose';
 import { USER_ROLE } from '@utils/data-types/enums';
 import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
+import * as fs from 'fs';
+import { SpecialUserService } from '@modules/specialUser/specialUser.service'; // Thêm import
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
-    private mailService: MailService
+    private mailService: MailService,
+    private specialUserService: SpecialUserService, // Tiêm SpecialUserService
   ) {}
 
-   // Method to add multiple users at once
-   async bulkCreateUsers(users: RegisterDto[]): Promise<User[]> {
-    // Limit to a maximum of 10 users
-    if (users.length > 10) {
+  // Hàm sinh mật khẩu ngẫu nhiên
+  private generateRandomPassword(length: number = 8): string {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
+    }
+    return password;
+  }
+
+  // Method to add multiple users from a file
+  async bulkCreateUsersFromFile(file: Express.Multer.File): Promise<User[]> {
+    // Check file type
+    if (file.mimetype !== 'application/json') {
+      throw new BadRequestException('Only JSON files are allowed');
+    }
+
+    // Read file content
+    const fileContent = fs.readFileSync(file.path, 'utf8');
+    let usersData: RegisterDto[];
+    try {
+      usersData = JSON.parse(fileContent);
+    } catch (error) {
+      throw new BadRequestException('Invalid JSON format in file');
+    }
+
+    // Check limit of 10 users
+    if (usersData.length > 10) {
       throw new BadRequestException('Cannot create more than 10 users at once');
     }
 
     // Check for duplicate emails
-    const emails = users.map(user => user.email);
+    const emails = usersData.map(user => user.email);
     const existingUsers = await this.userModel.find({ email: { $in: emails } });
     if (existingUsers.length > 0) {
       const duplicateEmails = existingUsers.map(user => user.email);
@@ -33,31 +61,46 @@ export class UserService {
 
     // Hash passwords and prepare user data
     const usersToCreate = await Promise.all(
-      users.map(async (user) => {
-        const hashedPassword = await bcrypt.hash(user.password, 10); // Hash password
+      usersData.map(async (user) => {
+        // Sinh mật khẩu ngẫu nhiên nếu không có trong file JSON
+        const password = user.password || this.generateRandomPassword();
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Lấy role từ SpecialUser, nếu không có thì mặc định là USER
+        const role = await this.specialUserService.getRolebyEmail(user.email) || USER_ROLE.USER;
+
         return {
           email: user.email,
           hash: hashedPassword,
-          role: (user.role || 'USER') as USER_ROLE, // Cast role to USER_ROLE
+          role: role as USER_ROLE,
+          generatedPassword: password, // Lưu tạm mật khẩu gốc để gửi email
         };
       })
     );
 
-    // Add all users to MongoDB using insertMany
-    const createdUsers = await this.userModel.insertMany(usersToCreate);
+    // Insert into MongoDB
+    const createdUsers = await this.userModel.insertMany(
+      usersToCreate.map(user => ({
+        email: user.email,
+        hash: user.hash,
+        role: user.role,
+      }))
+    );
 
     // Send welcome email to each user
     await Promise.all(
-      users.map((user, index) => {
+      usersToCreate.map((user, index) => {
         this.sendWelcomeEmail(
           user.email,
-          user.password,
+          user.generatedPassword, // Sử dụng mật khẩu đã sinh
           createdUsers[index]._id.toString()
         );
       })
     );
 
-    // Cast return data to User[]
+    // Delete temporary file after processing
+    fs.unlinkSync(file.path);
+
     return createdUsers as User[];
   }
 
@@ -79,6 +122,7 @@ export class UserService {
   async saveNewUser(input: CreateNewUserDto): Promise<User> {
     return new this.userModel(input).save();
   }
+
   async findById(id: any) {
     return this.userModel.findById(id, { hash: 0 });
   }
@@ -91,5 +135,4 @@ export class UserService {
     const isCheck = await this.userModel.findOne({ email });
     return isCheck.id;
   }
-
 }
