@@ -29,6 +29,10 @@ export class InforService {
     }
 
     async createInfor(infor: CreateInforDto): Promise<CreateInforDto> {
+        const isChecking = await this.moreInformationModel.find({userId: infor.userId})
+        if(isChecking){
+            throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.BAD_REQUEST);
+        }
         const newInfor = await new this.moreInformationModel(infor).save();
         return infor;
     }
