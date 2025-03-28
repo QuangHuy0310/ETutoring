@@ -35,9 +35,9 @@ export class InforService {
 
     async getInfor(id: string, userId:string): Promise<any> {
         if(userId){
-            return await this.moreInformationModel.find({userId: id })
+            return await this.moreInformationModel.find({ userId });
         }
-        return await this.moreInformationModel.find({ id });
+        return await this.moreInformationModel.find({ userId: id });
     }
 
     async handleGetInfor(user: any, userId: string) {
