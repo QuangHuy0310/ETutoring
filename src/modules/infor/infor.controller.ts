@@ -20,27 +20,26 @@ export class InforController {
         return await this.inforService.handleCreateInfor(user, createInforDto);
     }
 
+    @ApiQuery({ name: 'idUser', type: String, required: false})
     @RequiredByUserRoles()
     @Get('/get-infors')
-    async getInfor(@Request() { user }: AuthorizationRequest) {
-        return this.inforService.handleGetInfor(user);
+    async getInfor(
+        @Request() { user }: AuthorizationRequest,
+        @Query('idUser') idUser: string,
+    ) {
+        return this.inforService.handleGetInfor(user, idUser);
     }
     @ApiQuery({ name: 'idUser', required: true })
     @RequiredByUserRoles()
     @Post('/Push-Id')
     async pushList(@Request() { user }: AuthorizationRequest, @Query('idUser') idUser: string) {
-        return this.inforService.handlePushId(user,idUser)
+        return this.inforService.handlePushId(user, idUser)
     }
 
+    //staff
     @RequiredByUserRoles()
-    @Get('/get-tutors')
+    @Get('/get-role')
     async getMoreInformation(@Query() filters: FilterInformationDto) {
         return this.inforService.getMoreInformationForTutors(filters);
-    }
-
-    @RequiredByUserRoles()
-    @Put()
-    async updateInformation(@Request() { user }: AuthorizationRequest, idUser:string, payload:UpdateDto ){
-        
     }
 }

@@ -49,8 +49,8 @@ export class MoreInformation extends BaseEntity {
     })
     major: string;
 
-    @Prop({ type: [String], })
-    historyUserId: string[];
+    @Prop({ type: [String], ref: "room" })
+    roomId: string[];
 }
 
 export const MoreInformationSchema = SchemaFactory.createForClass(MoreInformation);

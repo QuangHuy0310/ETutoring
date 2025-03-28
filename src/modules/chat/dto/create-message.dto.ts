@@ -4,21 +4,34 @@ import { IsOptional, IsString } from 'class-validator';
 export class CreateChatDto {
     @ApiProperty()
     @IsString()
+    roomId: string;
+
+    @ApiProperty()
+    @IsString()
     senderId: any;
 
     @ApiPropertyOptional()
     @IsOptional()
     receiverId: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    groupId: string;
-
     @ApiProperty()
     @IsString()
     message: string;
 }
 
+export class InputMessageDto {
+    @ApiProperty()
+    @IsString()
+    roomId: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    receiverId: string;
+
+    @ApiProperty()
+    @IsString()
+    message: string;
+}
 export class VerifyChatDto{
     @IsString()
     senderId: string;

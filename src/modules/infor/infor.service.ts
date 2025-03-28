@@ -1,23 +1,23 @@
 import { MoreInformation, MoreInformationDocument } from '@entities/infor.entities';
-import { UserService } from '@modules/index-service';
+import { RoomService } from '@modules/index-service';
 import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { USER_ERRORS } from '@utils/data-types/constants';
 import { Model } from 'mongoose';
-import { CreateInforDto, FilterInformationDto, GetInforDto } from './dto/infor.dto';
+import { CreateInforDto, FilterInformationDto } from './dto/infor.dto';
 
 @Injectable()
 export class InforService {
     constructor(
-        @Inject(forwardRef(() => UserService))
-        private readonly userService: UserService,
+        @Inject(forwardRef(() => RoomService))
+        private readonly roomService: RoomService,
 
         @InjectModel(MoreInformation.name)
         private readonly moreInformationModel: Model<MoreInformationDocument>,
     ) { }
 
-    async validUserId(userId: string): Promise<void> {
-        const user = await this.userService.findById(userId);
+    async validRoomId(roomId: string): Promise<void> {
+        const user = await this.roomService.getRoomById(roomId);
         if (!user) {
             throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.NOT_FOUND);
         }
@@ -32,23 +32,15 @@ export class InforService {
         return infor
     }
 
-    async getInfor(userId: string): Promise<any> {
-        const user = await this.moreInformationModel.findOne({ userId }).lean()
-
-        const historyUsers = await this.moreInformationModel.find({
-            userId: { $in: user.historyUserId }
-        })
-        .select('name path')
-        .lean()
-
-        return {
-            ...user,
-            historyUserId: historyUsers
+    async getInfor(id: string, userId:string): Promise<any> {
+        if(userId){
+            return await this.moreInformationModel.find({userId: id })
         }
+        return await this.moreInformationModel.find({ id });
     }
 
-    async handleGetInfor(user: any) {
-        return await this.getInfor(user.sub)
+    async handleGetInfor(user: any, userId: string) {
+        return await this.getInfor(user.sub, userId);
 
     }
 
@@ -67,7 +59,7 @@ export class InforService {
             },
             {
                 $match: {
-                    'user.role': 'tutor',
+                    'user.role': filters.role,
                 },
             },
             {
@@ -90,32 +82,26 @@ export class InforService {
         return await this.moreInformationModel.aggregate(aggregationPipeline);
     }
 
-    async validIdUser(userId: string): Promise<void> {
-        const user = await this.userService.findById(userId);
-        if (!user) {
-            throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.NOT_FOUND);
-        }
-    }
-    async handlePushId(id: any, userIds: string) {
+    async handlePushId(id: any, roomId: string) {
         const isCheck: string = id.sub
-        await this.validIdUser(userIds)
+        // await this.validIdUser(userIds)
 
         const user = await this.moreInformationModel.findOne({ userId: isCheck })
-        if (user.historyUserId.includes(userIds)) {
-            throw new HttpException('User exists already', HttpStatus.BAD_REQUEST);
+        if (user.roomId.includes(roomId)) {
+            throw new HttpException('Room exists already', HttpStatus.BAD_REQUEST);
         }
-        return this.pushIdUser(isCheck, userIds)
+        return this.pushInRoom(isCheck, roomId)
     }
 
-    async pushIdUser(id: string, userId: string) {
+    async pushInRoom(id: string, userId: string) {
         const user = await this.moreInformationModel.findOne({ userId: id })
-        user.historyUserId.push(userId)
+        user.roomId.push(userId)
         await user.save()
         return user
 
     }
 
-//     async handleRolesUpdate(user:any){
-//     }
-//     async handleUpdateUser(){}
+    //     async handleRolesUpdate(user:any){
+    //     }
+    //     async handleUpdateUser(){}
 }

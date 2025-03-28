@@ -1,6 +1,6 @@
-import { Controller, Post, Body, Get, Query, Request, BadRequestException, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Request, BadRequestException, Delete, Param } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { CreateChatDto, SendMessageDto } from './dto/create-message.dto';
+import { CreateChatDto, InputMessageDto, SendMessageDto } from './dto/create-message.dto';
 import { SocketGateway } from './socket.gateway';
 import { RequiredByUserRoles } from '@utils/decorator';
 import { USER_ROLE } from '@utils/data-types/enums';
@@ -14,47 +14,22 @@ export class ChatController {
     private readonly chatService: ChatService,
     private readonly chatGateway: SocketGateway,
   ) { }
-
-  @RequiredByUserRoles(USER_ROLE.USER)
-  @Get('history')
-  async getMessageHistory(
-    @Request() { user }: AuthorizationRequest,
-    @Query('receiverId') receiverId: string,
-    @Query('limit') limit: number,
-    @Query('offset') offset: number,
-  ) {
-    return await this.chatService.getMessages(user, receiverId, limit, offset);
-  }
-  @RequiredByUserRoles(USER_ROLE.USER)
-  @ApiQuery({ name: 'receiverId', required: false, type: String })
-  @ApiQuery({ name: 'groupId', required: false, type: String })
-  @Post('send')
+  @RequiredByUserRoles()
+  @ApiQuery({ name: 'roomId', type: String, required: true })
+  @ApiQuery({ name: 'receiverId', type: String, required: true })
+  @ApiQuery({ name: 'message', type: String, required: true })
+  @Post('newMessage')
   async sendMessage(
     @Request() { user }: AuthorizationRequest,
-    @Query('receiverId') receiverId: string,
-    @Query('groupId') groupId: string,
-    @Body() sendMessageDto: SendMessageDto
+    @Query() input: InputMessageDto,
   ) {
-    if (!sendMessageDto) {
-      throw new BadRequestException('Message is required');
-    }
-
-    const payload = {
-      senderId: user,
-      groupId,
-      receiverId,
-      message: sendMessageDto.message
-    };
-    await this.chatGateway.sendMessageToReceiver(user,receiverId, payload);
-    return { message: 'Message sent', data: payload };
+    return await this.chatGateway.sendMessageToRoom(user, input);
   }
 
-  @RequiredByUserRoles(USER_ROLE.USER)
-  @ApiQuery({ name: 'senderId', required: false, type: String })
-  @ApiQuery({ name: 'id', required: false, type: String })
-  @Delete('remove-message')
-  async removeMessage(@Query('senderId') senderId: string, @Query('id') id: string) {
-    return await this.chatGateway.handleDeleteMessage({ senderId, id });
+  // API lấy tất cả tin nhắn theo roomId
+  @Get(':roomId')
+  async getMessages(@Param('roomId') roomId: string) {
+    return await this.chatService.getMessagesByRoom(roomId);
   }
 
 }
