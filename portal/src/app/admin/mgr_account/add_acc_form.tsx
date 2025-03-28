@@ -9,9 +9,8 @@ interface AddAccountFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (userData: {
-    name: string;
     email: string;
-    faculties: string;
+    password: string;
     role: string;
   }) => void;
   faculties: Faculty[];
@@ -24,18 +23,19 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
   faculties,
 }) => {
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
-    faculties: "",
+    password: "",
     role: "",
   });
 
   const [errors, setErrors] = useState({
-    name: "",
     email: "",
-    faculties: "",
+    password: "",
     role: "",
   });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -52,16 +52,15 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
         [name]: "",
       });
     }
+    // Clear API error when any field changes
+    if (apiError) {
+      setApiError(null);
+    }
   };
 
   const validateForm = () => {
     let valid = true;
     const newErrors = { ...errors };
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-      valid = false;
-    }
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
@@ -71,8 +70,11 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
       valid = false;
     }
 
-    if (!formData.faculties.trim()) {
-      newErrors.faculties = "Faculty is required";
+    if (!formData.password.trim()) {
+      newErrors.password = "Password is required";
+      valid = false;
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
       valid = false;
     }
 
@@ -85,17 +87,51 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
     return valid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsLoading(true);
+    setApiError(null);
+    
+    try {
+      const response = await fetch("http://localhost:3002/api/v1/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Registration failed with status: ${response.status}`);
+      }
+
+      const userData = await response.json();
+      console.log("Registration successful:", userData);
+      
+      // Notify parent component and close form
       onSubmit(formData);
       setFormData({
-        name: "",
         email: "",
-        faculties: "",
+        password: "",
         role: "",
       });
       onClose();
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setApiError(error.message || "Failed to register. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -109,32 +145,20 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
+            disabled={isLoading}
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="Enter full name"
-              style={{ color: "black" }}
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
+        {apiError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            <p className="font-medium">Error</p>
+            <p>{apiError}</p>
           </div>
+        )}
 
+        <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               Email
@@ -149,6 +173,7 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
               }`}
               placeholder="Enter email address"
               style={{ color: "black" }}
+              disabled={isLoading}
             />
             {errors.email && (
               <p className="text-red-500 text-xs mt-1">{errors.email}</p>
@@ -157,26 +182,22 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
 
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
-              Faculty
+              Password
             </label>
-            <select
-              name="faculties"
-              value={formData.faculties}
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
               onChange={handleChange}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none ${
-                errors.faculties ? "border-red-500" : "border-gray-300"
+                errors.password ? "border-red-500" : "border-gray-300"
               }`}
+              placeholder="Enter password"
               style={{ color: "black" }}
-            >
-              <option value="">Select Faculty</option>
-              {faculties.map((faculty) => (
-                <option key={faculty.id} value={faculty.name}>
-                  {faculty.name}
-                </option>
-              ))}
-            </select>
-            {errors.faculties && (
-              <p className="text-red-500 text-xs mt-1">{errors.faculties}</p>
+              disabled={isLoading}
+            />
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
             )}
           </div>
 
@@ -192,6 +213,7 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
                 errors.role ? "border-red-500" : "border-gray-300"
               }`}
               style={{ color: "black" }}
+              disabled={isLoading}
             >
               <option value="">Select Role</option>
               <option value="student">Student</option>
@@ -209,14 +231,28 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+              disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className={`px-4 py-2 ${
+                isLoading ? "bg-green-400" : "bg-green-600 hover:bg-green-700"
+              } text-white rounded-lg flex items-center justify-center min-w-[120px]`}
+              disabled={isLoading}
             >
-              Create Account
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
           </div>
         </form>
