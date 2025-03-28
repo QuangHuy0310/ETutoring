@@ -91,9 +91,7 @@ export class BlogService {
                     caption: 1,
                     tags: 1,
                     status: 1,
-                    path:1,
-                    createdAt:1,
-                    createdBy:1
+                    createdAt: 1,
                 }
             }
         ])

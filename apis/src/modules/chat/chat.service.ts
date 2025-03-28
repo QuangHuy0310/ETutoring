@@ -2,7 +2,7 @@ import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nest
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Message } from '@entities/message.entities';
-import { CreateChatDto, VerifyChatDto } from './dto/create-message.dto';
+import { CreateChatDto, InputMessageDto, VerifyChatDto } from './dto/create-message.dto';
 import { UserService } from '@modules/index-service';
 import { UUID } from 'crypto';
 import { USER_ERRORS } from '@utils/data-types/constants';
@@ -15,27 +15,27 @@ export class ChatService {
     private readonly userService: UserService,
   ) { }
 
-  async create(createChatDto: CreateChatDto) {
-    createChatDto.senderId = createChatDto.senderId.sub;
-    const chat = new this.chatModel(createChatDto);
-    return chat.save();
+  async handleCreateMessage(user, input: InputMessageDto){
+    const senderId = user.sub
+    const payload ={
+      senderId,
+      ...input
+    }
+    return this.createMessage(payload)
   }
 
-  async getMessages(user: any, receiverId: string, limit = 20, offset = 0) {
-    const senderId = user.sub
-    return this.chatModel
-      .find({
-        $or: [
-          { senderId, receiverId },
-          { senderId: receiverId, receiverId: senderId },
-        ],
-        deletedAt: null
-      })
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
-      .exec();
+  async createMessage(data: CreateChatDto): Promise<Message> {
+    const newMessage = new this.chatModel(data)
+    return newMessage.save()
   }
+
+  // Lấy tin nhắn theo roomId
+  async getMessagesByRoom(roomId: string) {
+    return await this.chatModel.find({ roomId }).sort({ createdAt: 1 }).lean();
+  }
+
+
+  //
   async validationSender(id: UUID): Promise<void> {
     const senderId = this.userService.findById(id)
     if (!senderId) {

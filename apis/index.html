@@ -11,14 +11,21 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
         }
 
         .chat-container {
             width: 400px;
-            margin: 20px auto;
             border: 1px solid #ccc;
             border-radius: 5px;
+            background: white;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .chat-header {
@@ -26,26 +33,15 @@
             color: white;
             padding: 10px;
             text-align: center;
-            position: relative;
+            font-weight: bold;
         }
 
-        .notification-icon {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .notification-badge {
-            background: red;
-            color: white;
-            border-radius: 50%;
-            padding: 3px 7px;
+        .status {
+            text-align: center;
             font-size: 12px;
-            position: absolute;
-            top: -5px;
-            right: -5px;
+            padding: 5px;
+            color: white;
+            background: #333;
         }
 
         .chat-messages {
@@ -61,16 +57,19 @@
             padding: 8px;
             margin: 5px 0;
             border-radius: 5px;
+            word-wrap: break-word;
         }
 
         .message.sent {
             background: #dcf8c6;
             text-align: right;
+            align-self: flex-end;
         }
 
         .message.received {
             background: #f1f1f1;
             text-align: left;
+            align-self: flex-start;
         }
 
         .chat-input {
@@ -94,33 +93,27 @@
             cursor: pointer;
         }
 
-        .load-more {
+        .receiver-container {
+            padding: 10px;
+            text-align: center;
+        }
+
+        .receiver-container input {
             width: 100%;
             padding: 8px;
-            background: #28a745;
-            color: white;
-            border: none;
-            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
     </style>
 </head>
 
 <body>
     <div class="chat-container">
-        <div class="chat-header">
-            Chat App
-            <div class="notification-icon" onclick="viewNotifications()">
-                🔔 <span id="notificationCount" class="notification-badge" style="display: none;">0</span>
-            </div>
+        <div class="chat-header">Chat App</div>
+        <div class="status" id="connectionStatus">🔄 Connecting...</div>
+        <div class="receiver-container">
+            <input type="text" id="receiverIdInput" placeholder="Nhập ID người nhận...">
         </div>
-        <div style="padding: 10px;">
-            <input type="text" id="receiverIdInput" placeholder="Nhập ID người nhận..."
-                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
-            <button onclick="loadMessages(true)"
-                style="width: 100%; margin-top: 5px; padding: 8px; background: #28a745; color: white; border: none; cursor: pointer;">Tải
-                tin nhắn</button>
-        </div>
-        <button class="load-more" onclick="loadMoreMessages()">Tải tin nhắn cũ</button>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">
             <input type="text" id="messageInput" placeholder="Nhập tin nhắn...">
@@ -129,56 +122,57 @@
     </div>
 
     <script>
-        const socket = io("http://localhost:3008", {
-            transports: ["websocket"],
-            query: { token: localStorage.getItem("accessToken") }
-        });
-
+        const API_BASE = "http://localhost:3002/api/v1/chat";
         const chatMessages = document.getElementById("chatMessages");
         const messageInput = document.getElementById("messageInput");
         const receiverIdInput = document.getElementById("receiverIdInput");
-        const notificationCountEl = document.getElementById("notificationCount");
-        const API_BASE = "http://localhost:3002/chat";
-        let offset = 0;
-        const LIMIT = 10;
-        let notificationCount = 0;
+        const connectionStatus = document.getElementById("connectionStatus");
 
-        // 🟢 Load lịch sử tin nhắn
-        async function loadMessages(reset = false) {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            alert("Bạn chưa đăng nhập!");
+            window.location.href = "/login.html"; // Điều hướng đến trang đăng nhập nếu chưa có token
+        }
+
+        // Kết nối WebSocket
+        const socket = io("http://localhost:3008", {
+            transports: ["websocket"],
+            query: { token }
+        });
+
+        // 🟢 Kiểm tra trạng thái kết nối
+        socket.on("connect", () => {
+            console.log("✅ WebSocket Connected!");
+            connectionStatus.textContent = "✅ Connected";
+            connectionStatus.style.background = "green";
+        });
+
+        socket.on("disconnect", () => {
+            console.log("❌ WebSocket Disconnected!");
+            connectionStatus.textContent = "❌ Disconnected";
+            connectionStatus.style.background = "red";
+        });
+
+        socket.on("connect_error", (err) => {
+            console.error("❌ Lỗi kết nối WebSocket:", err);
+            connectionStatus.textContent = "⚠️ Connection Error";
+            connectionStatus.style.background = "orange";
+        });
+
+        // 🟡 Tự động join room
+        receiverIdInput.addEventListener("change", () => {
             const receiverId = receiverIdInput.value.trim();
-            if (!receiverId) return alert("Vui lòng nhập ID người nhận!");
-
-            const token = localStorage.getItem("accessToken");
-            if (!token) return alert("Bạn chưa đăng nhập!");
-
-            if (reset) offset = 0;
-
-            const res = await fetch(`${API_BASE}/history?receiverId=${receiverId}&limit=${LIMIT}&offset=${offset}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            const result = await res.json();
-            if (result.statusCode === 200 && Array.isArray(result.data)) {
-                if (reset) chatMessages.innerHTML = "";
-                result.data.forEach(msg => displayMessage(msg, msg.senderId === receiverId ? "received" : "sent", true));
-                offset += LIMIT;
-            } else {
-                console.error("Lỗi khi tải tin nhắn: ", result);
+            if (receiverId) {
+                const roomId = "a96fd706-01a8-4428-b991-4d7cc2e9b191";
+                socket.emit("joinRoom", { roomId });
+                console.log(`Joined room: ${roomId}`);
             }
-        }
+        });
 
-        // 🔵 Hiển thị tin nhắn lên giao diện
-        function displayMessage(msg, type, isOld = false) {
-            const div = document.createElement("div");
-            div.classList.add("message", type);
-            div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
-            if (isOld) {
-                chatMessages.prepend(div);
-            } else {
-                chatMessages.appendChild(div);
-            }
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+        // 🔵 Nhận tin nhắn từ server
+        socket.on("newMessage", (msg) => {
+            displayMessage(msg, "received");
+        });
 
         // 🟠 Gửi tin nhắn
         async function sendMessage() {
@@ -187,39 +181,48 @@
             if (!receiverId) return alert("Vui lòng nhập ID người nhận!");
             if (!message) return;
 
-            const token = localStorage.getItem("accessToken");
-            const res = await fetch(`${API_BASE}/send?receiverId=${receiverId}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ message })
-            });
+            const roomId = [getUserIdFromToken(), receiverId].sort().join("-");
 
-            if (res.ok) {
-                displayMessage({ senderId: "me", message }, "sent");
-                socket.emit("sendMessage", { receiverId, message });
-                messageInput.value = "";
+            const payload = { roomId, receiverId, message };
+
+            try {
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    displayMessage({ senderId: "me", message }, "sent");
+                    socket.emit("sendMessage", payload);
+                    messageInput.value = "";
+                } else {
+                    console.error("Lỗi khi gửi tin nhắn:", res.statusText);
+                }
+            } catch (err) {
+                console.error("Lỗi mạng:", err);
             }
         }
 
-        // 🟡 Xem thông báo (reset số lượng)
-        function viewNotifications() {
-            notificationCount = 0;
-            notificationCountEl.style.display = "none";
-            alert("Bạn có thông báo mới!");
+        // 🔵 Hiển thị tin nhắn
+        function displayMessage(msg, type) {
+            const div = document.createElement("div");
+            div.classList.add("message", type);
+            div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // 🔴 Nhận tin nhắn từ Socket.IO
-        socket.on("receiveMessage", (msg) => {
-            displayMessage(msg, "received");
-        });
-
-        // 🔔 Nhận thông báo từ Socket.IO
-        socket.on("newCommentNotification", (notification) => {
-            notificationCount++;
-            notificationCountEl.innerText = notificationCount;
-            notificationCountEl.style.display = "inline-block";
-            console.log("Thông báo mới:", notification);
-        });
+        // 🛠 Lấy userId từ token JWT
+        function getUserIdFromToken() {
+            try {
+                const payload = JSON.parse(atob(token.split(".")[1]));
+                return payload.sub;
+            } catch (err) {
+                console.error("Lỗi khi lấy userId từ token:", err);
+                return null;
+            }
+        }
     </script>
 </body>
 

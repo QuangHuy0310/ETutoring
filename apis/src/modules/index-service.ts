@@ -11,3 +11,5 @@ export * from '@modules/slot/slot.service';
 export * from '@modules/schedule/schedule.service';
 export * from '@modules/majoring/majoring.service';
 export * from '@modules/mail/mail.service';
+export * from '@modules/cache/cache.service';
+export * from '@modules/room/room.service';

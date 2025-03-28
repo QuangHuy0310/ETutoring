@@ -1,23 +1,23 @@
 import { MoreInformation, MoreInformationDocument } from '@entities/infor.entities';
-import { UserService } from '@modules/index-service';
+import { RoomService } from '@modules/index-service';
 import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { USER_ERRORS } from '@utils/data-types/constants';
 import { Model } from 'mongoose';
-import { CreateInforDto, FilterInformationDto, GetInforDto, UpdateDto } from './dto/infor.dto';
+import { CreateInforDto, FilterInformationDto } from './dto/infor.dto';
 
 @Injectable()
 export class InforService {
     constructor(
-        @Inject(forwardRef(() => UserService))
-        private readonly userService: UserService,
+        @Inject(forwardRef(() => RoomService))
+        private readonly roomService: RoomService,
 
         @InjectModel(MoreInformation.name)
         private readonly moreInformationModel: Model<MoreInformationDocument>,
     ) { }
 
-    async validUserId(userId: string): Promise<void> {
-        const user = await this.userService.findById(userId);
+    async validRoomId(roomId: string): Promise<void> {
+        const user = await this.roomService.getRoomById(roomId);
         if (!user) {
             throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.NOT_FOUND);
         }
@@ -33,32 +33,16 @@ export class InforService {
         return infor;
     }
 
-    async getInfor(userId: string): Promise<any> {
-        // Filter out soft-deleted records
-        const user = await this.moreInformationModel
-            .findOne({ userId, deletedAt: null }) // Only retrieve records that are not soft-deleted
-            .lean();
-
-        if (!user) {
-            return null;
+    async getInfor(id: string, userId:string): Promise<any> {
+        if(userId){
+            return await this.moreInformationModel.find({userId: id })
         }
-
-        const historyUsers = await this.moreInformationModel
-            .find({
-                userId: { $in: user.historyUserId },
-                deletedAt: null, // Only retrieve history users that are not soft-deleted
-            })
-            .select('name path')
-            .lean();
-
-        return {
-            ...user,
-            historyUserId: historyUsers,
-        };
+        return await this.moreInformationModel.find({ id });
     }
 
-    async handleGetInfor(user: any) {
-        return await this.getInfor(user.sub);
+    async handleGetInfor(user: any, userId: string) {
+        return await this.getInfor(user.sub, userId);
+
     }
 
     async getMoreInformationForTutors(filters: FilterInformationDto) {
@@ -81,7 +65,7 @@ export class InforService {
             },
             {
                 $match: {
-                    'user.role': 'tutor',
+                    'user.role': filters.role,
                 },
             },
             {
@@ -104,56 +88,26 @@ export class InforService {
         return await this.moreInformationModel.aggregate(aggregationPipeline);
     }
 
-    async validIdUser(userId: string): Promise<void> {
-        const user = await this.userService.findById(userId);
-        if (!user) {
-            throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.NOT_FOUND);
+    async handlePushId(id: any, roomId: string) {
+        const isCheck: string = id.sub
+        // await this.validIdUser(userIds)
+
+        const user = await this.moreInformationModel.findOne({ userId: isCheck })
+        if (user.roomId.includes(roomId)) {
+            throw new HttpException('Room exists already', HttpStatus.BAD_REQUEST);
         }
+        return this.pushInRoom(isCheck, roomId)
     }
 
-    async handlePushId(id: any, userIds: string) {
-        const isCheck: string = id.sub;
-        await this.validIdUser(userIds);
+    async pushInRoom(id: string, userId: string) {
+        const user = await this.moreInformationModel.findOne({ userId: id })
+        user.roomId.push(userId)
+        await user.save()
+        return user
 
-        const user = await this.moreInformationModel.findOne({ userId: isCheck });
-        if (user.historyUserId.includes(userIds)) {
-            throw new HttpException('User exists already', HttpStatus.BAD_REQUEST);
-        }
-        return this.pushIdUser(isCheck, userIds);
     }
 
-    async pushIdUser(id: string, userId: string) {
-        const user = await this.moreInformationModel.findOne({ userId: id });
-        user.historyUserId.push(userId);
-        await user.save();
-        return user;
-    }
-
-    // API: Update information
-    async updateInfor(id: string, payload: UpdateDto): Promise<MoreInformation> {
-        const existingInfor = await this.moreInformationModel.findById(id);
-        if (!existingInfor) {
-            throw new HttpException('Information not found', HttpStatus.NOT_FOUND);
-        }
-        if (existingInfor.deletedAt) {
-            throw new HttpException('Information has been deleted', HttpStatus.BAD_REQUEST);
-        }
-
-        Object.assign(existingInfor, payload); // Update fields from payload
-        return existingInfor.save();
-    }
-
-    // API: Soft delete information
-    async softDeleteInfor(id: string): Promise<void> {
-        const existingInfor = await this.moreInformationModel.findById(id);
-        if (!existingInfor) {
-            throw new HttpException('Information not found', HttpStatus.NOT_FOUND);
-        }
-        if (existingInfor.deletedAt) {
-            throw new HttpException('Information has already been deleted', HttpStatus.BAD_REQUEST);
-        }
-
-        existingInfor.deletedAt = new Date(); // Mark as soft-deleted
-        await existingInfor.save();
-    }
+    //     async handleRolesUpdate(user:any){
+    //     }
+    //     async handleUpdateUser(){}
 }
