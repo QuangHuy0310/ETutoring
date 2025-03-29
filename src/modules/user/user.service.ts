@@ -9,17 +9,16 @@ import { USER_ROLE } from '@utils/data-types/enums';
 import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
 import * as fs from 'fs';
-import { SpecialUserService } from '@modules/specialUser/specialUser.service'; // Thêm import
+import { SpecialUserService } from '@modules/specialUser/specialUser.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private mailService: MailService,
-    private specialUserService: SpecialUserService, // Tiêm SpecialUserService
+    private specialUserService: SpecialUserService,
   ) {}
 
-  // Hàm sinh mật khẩu ngẫu nhiên
   private generateRandomPassword(length: number = 8): string {
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
     let password = '';
@@ -30,14 +29,11 @@ export class UserService {
     return password;
   }
 
-  // Method to add multiple users from a file
   async bulkCreateUsersFromFile(file: Express.Multer.File): Promise<User[]> {
-    // Check file type
     if (file.mimetype !== 'application/json') {
       throw new BadRequestException('Only JSON files are allowed');
     }
 
-    // Read file content
     const fileContent = fs.readFileSync(file.path, 'utf8');
     let usersData: RegisterDto[];
     try {
@@ -46,12 +42,10 @@ export class UserService {
       throw new BadRequestException('Invalid JSON format in file');
     }
 
-    // Check limit of 10 users
     if (usersData.length > 10) {
       throw new BadRequestException('Cannot create more than 10 users at once');
     }
 
-    // Check for duplicate emails
     const emails = usersData.map(user => user.email);
     const existingUsers = await this.userModel.find({ email: { $in: emails } });
     if (existingUsers.length > 0) {
@@ -59,26 +53,22 @@ export class UserService {
       throw new BadRequestException(`Email already exists: ${duplicateEmails.join(', ')}`);
     }
 
-    // Hash passwords and prepare user data
     const usersToCreate = await Promise.all(
       usersData.map(async (user) => {
-        // Sinh mật khẩu ngẫu nhiên nếu không có trong file JSON
         const password = user.password || this.generateRandomPassword();
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Lấy role từ SpecialUser, nếu không có thì mặc định là USER
         const role = await this.specialUserService.getRolebyEmail(user.email) || USER_ROLE.USER;
 
         return {
           email: user.email,
           hash: hashedPassword,
           role: role as USER_ROLE,
-          generatedPassword: password, // Lưu tạm mật khẩu gốc để gửi email
+          generatedPassword: password,
         };
       })
     );
 
-    // Insert into MongoDB
     const createdUsers = await this.userModel.insertMany(
       usersToCreate.map(user => ({
         email: user.email,
@@ -87,24 +77,21 @@ export class UserService {
       }))
     );
 
-    // Send welcome email to each user
     await Promise.all(
       usersToCreate.map((user, index) => {
         this.sendWelcomeEmail(
           user.email,
-          user.generatedPassword, // Sử dụng mật khẩu đã sinh
+          user.generatedPassword,
           createdUsers[index]._id.toString()
         );
       })
     );
 
-    // Delete temporary file after processing
     fs.unlinkSync(file.path);
 
     return createdUsers as User[];
   }
 
-  // Method to send welcome email
   async sendWelcomeEmail(email: string, password: string, userId: string) {
     const subject = 'Welcome! Your account has been created';
     const text = `Your account has been successfully created!\n\nEmail: ${email}\nPassword: ${password}\n\nPlease log in and change your password.`;
@@ -134,5 +121,30 @@ export class UserService {
   async findByEmailTest(email: string) {
     const isCheck = await this.userModel.findOne({ email });
     return isCheck.id;
+  }
+
+  // API: Get all users
+  async getAllUsers(): Promise<User[]> {
+    return this.userModel.find({}, { hash: 0 }).lean();
+  }
+
+  // API: Delete a user by ID
+  async deleteUser(id: string): Promise<void> {
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    await this.userModel.deleteOne({ _id: id });
+  }
+
+  // API: Update a user by ID
+  async updateUser(id: string, email: string, role: USER_ROLE): Promise<User> {
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    user.email = email;
+    user.role = role;
+    return user.save();
   }
 }
