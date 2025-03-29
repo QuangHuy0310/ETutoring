@@ -1,8 +1,7 @@
-import { BadRequestException, Body, Controller, Get, Post, Request, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { BadRequestException, Body, Controller, Get, Post, Request, UploadedFile, UseInterceptors, Delete, Put, Query } from '@nestjs/common';
+import { ApiTags, ApiQuery, ApiOperation } from '@nestjs/swagger';
 import { AuthorizationRequest } from '@utils/data-types/types';
 import { RequiredByUserRoles } from '@utils/decorator';
-
 import { UserService } from './user.service';
 import { RegisterDto } from '@dtos/auth.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -17,7 +16,7 @@ export class UserController {
   @RequiredByUserRoles()
   @Get()
   async getInfor(@Request() { user }: AuthorizationRequest) {
-    return user
+    return user;
   }
 
   @RequiredByUserRoles(USER_ROLE.ADMIN)
@@ -30,9 +29,9 @@ export class UserController {
   @Post('bulk-create-from-file')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './file_uploads', // Folder where files will be stored
+      destination: './file_uploads',
       filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`); // Create a unique filename
+        cb(null, `${Date.now()}-${file.originalname}`);
       },
     }),
   }))
@@ -52,4 +51,33 @@ export class UserController {
     };
   }
 
+  // API: Get all users
+  @ApiOperation({ summary: 'Get all users' })
+  @RequiredByUserRoles(USER_ROLE.ADMIN)
+  @Get('/get-all-users')
+  async getAllUsers() {
+    return this.userService.getAllUsers();
+  }
+
+  // API: Delete a user by ID
+  @ApiQuery({ name: 'id', required: true })
+  @ApiOperation({ summary: 'Delete a user by ID' })
+  @RequiredByUserRoles(USER_ROLE.ADMIN)
+  @Delete('/delete-user')
+  async deleteUser(@Query('id') id: string) {
+    await this.userService.deleteUser(id);
+    return { message: 'User deleted successfully' };
+  }
+
+  // API: Update a user by ID
+  @ApiQuery({ name: 'id', required: true })
+  @ApiOperation({ summary: 'Update a user by ID' })
+  @RequiredByUserRoles(USER_ROLE.ADMIN)
+  @Put('/edit-user')
+  async updateUser(
+    @Query('id') id: string,
+    @Body() body: { email: string, role: USER_ROLE },
+  ) {
+    return this.userService.updateUser(id, body.email, body.role);
+  }
 }
