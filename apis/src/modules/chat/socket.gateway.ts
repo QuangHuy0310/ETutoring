@@ -15,6 +15,8 @@ import { ChatService } from './chat.service';
 import { CreateChatDto, InputMessageDto } from './dto/create-message.dto';
 import { JoinRoomDto } from './dto/socket.dto';
 import { InforService } from '@modules/infor/infor.service';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bull';
 
 @WebSocketGateway(3008, { transports: ['websocket'] })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -26,6 +28,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatService: ChatService,
     private readonly inforService: InforService,
     private readonly jwtService: JwtService,
+    @InjectQueue('messageQueue') private readonly messageQueue: Queue
   ) { }
 
 
@@ -90,12 +93,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       senderId,
       ...input
     }
-    const newMessage = await this.chatService.createMessage(payload);
+    // const messageQueue = this.queue.getQueue('messageQueue');
+    const job = await this.messageQueue.add('sendMessageJob', payload);
+    console.log('Job added to queue:', job.id);
+
     if (!this.server) {
       throw new InternalServerErrorException('WebSocket server is not initialized');
     }
 
-    this.server.to(roomId).emit('newMessage', newMessage);
+    this.server.to(roomId).emit('newMessage', payload);
+    return payload
   }
 
   //notifications
