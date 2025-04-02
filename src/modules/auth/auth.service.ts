@@ -102,16 +102,20 @@ export class AuthService {
   }
 
   async login(input: LoginDto) {
+    // Check Email
     const user = await this.userService.findByEmail(input.email);
     if (!user) {
-      throw new HttpException('Login failed', HttpStatus.UNAUTHORIZED);
+      throw new HttpException('Email does not exist', HttpStatus.UNAUTHORIZED);
     }
   
-    if (!(await this.comparePasswords(input.password, user.hash))) {
-      throw new HttpException('Login failed', HttpStatus.UNAUTHORIZED);
+    // Check Password
+    const isPasswordValid = await this.comparePasswords(input.password, user.hash);
+    if (!isPasswordValid) {
+      throw new HttpException('Incorrect password', HttpStatus.UNAUTHORIZED);
     }
   
-    const payload = { email: user.email, sub: user.id, role: user.role};
+    // Login successful, generate JWT tokens
+    const payload = { email: user.email, sub: user.id, role: user.role };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '50m' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
   
