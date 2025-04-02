@@ -1,6 +1,3 @@
-import { RoomModule } from './modules/room/room.module';
-import { CacheModule } from './modules/cache/cache.module';
-import { MajoringModule } from './modules/majoring/majoring.module';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
 import { Module } from '@nestjs/common';

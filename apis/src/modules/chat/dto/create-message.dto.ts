@@ -10,10 +10,6 @@ export class CreateChatDto {
     @IsString()
     senderId: any;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    receiverId: string;
-
     @ApiProperty()
     @IsString()
     message: string;
@@ -23,10 +19,6 @@ export class InputMessageDto {
     @ApiProperty()
     @IsString()
     roomId: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    receiverId: string;
 
     @ApiProperty()
     @IsString()

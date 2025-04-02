@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateChatDto, InputMessageDto } from './dto/create-message.dto';
 import { JoinRoomDto } from './dto/socket.dto';
+import { InforService } from '@modules/infor/infor.service';
 
 @WebSocketGateway(3008, { transports: ['websocket'] })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -23,6 +24,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly chatService: ChatService,
+    private readonly inforService: InforService,
     private readonly jwtService: JwtService,
   ) { }
 
@@ -42,7 +44,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (userId) {
         this.clients[userId] = client;
-        console.log(`${userId} has joined`);
+        console.log(`User ${userId} connected`);
+
+
+        const rooms = await this.handleGetRoom(userId)
+
+        rooms.forEach(room => {
+          client.join(room);
+          console.log(`User ${userId} joined room ${room}`);
+        })
+
       } else {
         throw new UnauthorizedException('Invalid token');
       }
@@ -61,10 +72,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  async handleGetRoom(userId: string): Promise<string[]> {
+    const rooms = await this.inforService.getRoom(userId);
+    console.log(rooms)
+    return rooms
+  }
   @SubscribeMessage('joinRoom')
-  async handleJoinRoom(@MessageBody() data: JoinRoomDto, @ConnectedSocket() client: Socket) {
-    client.join(data.roomId);
-    console.log(`✅ User ${client.id} joined room ${data.roomId}`);
+  async handleJoinRoom(@ConnectedSocket() client: Socket) {
+
   }
 
   @SubscribeMessage('sendMessage')
@@ -76,7 +91,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ...input
     }
     const newMessage = await this.chatService.createMessage(payload);
-
     if (!this.server) {
       throw new InternalServerErrorException('WebSocket server is not initialized');
     }
@@ -85,11 +99,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   //notifications
+  @SubscribeMessage('newCommentNotification')
   sendNotification(receiverId: any, notification: any) {
-    console.log('Receiver ID:', receiverId);  // Kiểm tra receiverId
 
     const receiverClient = this.clients[receiverId];
 
+    console.log(notification)
     if (receiverClient) {
       receiverClient.emit('newCommentNotification', notification);
     } else {

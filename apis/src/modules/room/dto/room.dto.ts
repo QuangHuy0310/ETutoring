@@ -7,7 +7,7 @@ export class GetRoomDto{
     id: string;
 }
 
-export class CreateRoomDto extends GetRoomDto{
+export class CreateRoomDto {
     @ApiProperty()
     @IsString()
     userId: string;

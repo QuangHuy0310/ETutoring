@@ -7,7 +7,11 @@ import { USER_ERRORS } from '@utils/data-types/constants';
 
 @Injectable()
 export class BlogService {
-    @InjectModel(Blog.name) private readonly blogModel: Model<BlogDocument>;
+    constructor(
+        @InjectModel(Blog.name)
+        private readonly blogModel: Model<BlogDocument>,
+    ) { }
+
 
     async validBlog(caption, path): Promise<void> {
         if (!caption || !path) {
@@ -26,14 +30,22 @@ export class BlogService {
     }
 
     async handleCreateBlog(user: any, createBlog: CreateBlogDTO): Promise<Blog> {
-        const { caption, path } = createBlog;
-        createBlog.userId = user.sub;
+        let { userId, caption, path, tags } = createBlog;
         await this.validBlog(caption, path);
-        return await this.createBlog(createBlog)
+
+        const payload = {
+            ...createBlog,
+            userId: user.sub,
+        } 
+
+        return await this.createBlog(payload)
     }
-    async createBlog(createBlog: CreateBlogDTO): Promise<Blog> {
-        const newBlog = new this.blogModel(createBlog);
+    async createBlog(payload: any): Promise<Blog> {
+       console.log(payload)
+
+        const newBlog = await new this.blogModel(payload);
         return newBlog.save();
+
     }
 
     async validPageBlog(page: number, limit: number): Promise<void> {
