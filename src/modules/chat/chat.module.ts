@@ -6,10 +6,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from '@entities/message.entities';
 import { JwtService } from '@nestjs/jwt';
 import { UserModule } from '@modules/user/user.module';
+import { InforModule } from '@modules/infor/infor.module';
 
 @Module({
   imports: [
     forwardRef(() => UserModule),
+    forwardRef(() => InforModule),
     MongooseModule.forFeature([
       {
         name: Message.name,

@@ -9,8 +9,6 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -48,7 +46,6 @@
             height: 300px;
             overflow-y: auto;
             padding: 10px;
-            border-bottom: 1px solid #ccc;
             display: flex;
             flex-direction: column-reverse;
         }
@@ -111,9 +108,6 @@
     <div class="chat-container">
         <div class="chat-header">Chat App</div>
         <div class="status" id="connectionStatus">🔄 Connecting...</div>
-        <div class="receiver-container">
-            <input type="text" id="receiverIdInput" placeholder="Nhập ID người nhận...">
-        </div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">
             <input type="text" id="messageInput" placeholder="Nhập tin nhắn...">
@@ -123,24 +117,25 @@
 
     <script>
         const API_BASE = "http://localhost:3002/api/v1/chat";
-        const chatMessages = document.getElementById("chatMessages");
-        const messageInput = document.getElementById("messageInput");
-        const receiverIdInput = document.getElementById("receiverIdInput");
-        const connectionStatus = document.getElementById("connectionStatus");
-
         const token = localStorage.getItem("accessToken");
+
         if (!token) {
             alert("Bạn chưa đăng nhập!");
-            window.location.href = "/login.html"; // Điều hướng đến trang đăng nhập nếu chưa có token
+            window.location.href = "/login.html";
         }
 
-        // Kết nối WebSocket
         const socket = io("http://localhost:3008", {
             transports: ["websocket"],
             query: { token }
         });
 
-        // 🟢 Kiểm tra trạng thái kết nối
+        const chatMessages = document.getElementById("chatMessages");
+        const messageInput = document.getElementById("messageInput");
+        const connectionStatus = document.getElementById("connectionStatus");
+
+        let joinedRooms = [];
+
+        // 🟢 Kết nối WebSocket
         socket.on("connect", () => {
             console.log("✅ WebSocket Connected!");
             connectionStatus.textContent = "✅ Connected";
@@ -154,19 +149,15 @@
         });
 
         socket.on("connect_error", (err) => {
-            console.error("❌ Lỗi kết nối WebSocket:", err);
+            console.error("⚠️ Lỗi kết nối WebSocket:", err);
             connectionStatus.textContent = "⚠️ Connection Error";
             connectionStatus.style.background = "orange";
         });
 
-        // 🟡 Tự động join room
-        receiverIdInput.addEventListener("change", () => {
-            const receiverId = receiverIdInput.value.trim();
-            if (receiverId) {
-                const roomId = "a96fd706-01a8-4428-b991-4d7cc2e9b191";
-                socket.emit("joinRoom", { roomId });
-                console.log(`Joined room: ${roomId}`);
-            }
+        // 🟡 Nhận danh sách phòng đã join
+        socket.on("joinedRooms", (rooms) => {
+            joinedRooms = rooms;
+            console.log("📌 Joined rooms:", joinedRooms);
         });
 
         // 🔵 Nhận tin nhắn từ server
@@ -174,16 +165,18 @@
             displayMessage(msg, "received");
         });
 
-        // 🟠 Gửi tin nhắn
+        // 🟠 Gửi tin nhắn vào phòng
         async function sendMessage() {
-            const receiverId = receiverIdInput.value.trim();
             const message = messageInput.value.trim();
-            if (!receiverId) return alert("Vui lòng nhập ID người nhận!");
-            if (!message) return;
+            if (!message) return alert("Vui lòng nhập tin nhắn!");
 
-            const roomId = [getUserIdFromToken(), receiverId].sort().join("-");
+            if (joinedRooms.length === 0) {
+                return alert("Bạn chưa tham gia phòng nào!");
+            }
 
-            const payload = { roomId, receiverId, message };
+            const roomId = joinedRooms[0]; // Lấy room đầu tiên để gửi tin nhắn
+
+            const payload = { roomId, message };
 
             try {
                 const res = await fetch(`${API_BASE}/chat`, {
@@ -197,10 +190,10 @@
                     socket.emit("sendMessage", payload);
                     messageInput.value = "";
                 } else {
-                    console.error("Lỗi khi gửi tin nhắn:", res.statusText);
+                    console.error("❌ Lỗi khi gửi tin nhắn:", res.statusText);
                 }
             } catch (err) {
-                console.error("Lỗi mạng:", err);
+                console.error("❌ Lỗi mạng:", err);
             }
         }
 
@@ -211,17 +204,6 @@
             div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // 🛠 Lấy userId từ token JWT
-        function getUserIdFromToken() {
-            try {
-                const payload = JSON.parse(atob(token.split(".")[1]));
-                return payload.sub;
-            } catch (err) {
-                console.error("Lỗi khi lấy userId từ token:", err);
-                return null;
-            }
         }
     </script>
 </body>

@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { createClient } from 'redis';
 
 @Injectable()
-export class CacheService { 
-    constructor() {
+export class CacheService {
+  constructor() {
 
-      }
+  }
 }

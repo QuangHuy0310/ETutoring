@@ -13,8 +13,11 @@ import { RoomModule } from '@modules/room/room.module';
         ]
         )],
     controllers: [
-        InforController, ],
+        InforController,],
     providers: [
         InforService,],
+
+    exports: [
+        InforService,]
 })
 export class InforModule { }

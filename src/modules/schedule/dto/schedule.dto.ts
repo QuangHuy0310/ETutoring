@@ -15,6 +15,10 @@ export class InputScheduleDto {
     @ApiProperty()
     @IsString()
     slotId: string;
+
+    @ApiProperty()
+    @IsString()
+    matchingWith: string;
 }
 
 export class CreateScheduleDto {

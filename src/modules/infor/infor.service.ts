@@ -29,16 +29,16 @@ export class InforService {
     }
 
     async createInfor(infor: CreateInforDto): Promise<CreateInforDto> {
-        const isChecking = await this.moreInformationModel.find({userId: infor.userId})
-        if(isChecking){
+        const isChecking = await this.moreInformationModel.findOne({ userId: infor.userId })
+        if (isChecking) {
             throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.BAD_REQUEST);
         }
         const newInfor = await new this.moreInformationModel(infor).save();
         return infor;
     }
 
-    async getInfor(id: string, userId:string): Promise<any> {
-        if(userId){
+    async getInfor(id: string, userId: string): Promise<any> {
+        if (userId) {
             return await this.moreInformationModel.find({ userId });
         }
         return await this.moreInformationModel.find({ userId: id });
@@ -69,7 +69,7 @@ export class InforService {
             },
             {
                 $match: {
-                    'user.role': filters.role,
+                    ...(filters.role ? { 'user.role': filters.role } : {}), 
                 },
             },
             {
@@ -109,6 +109,33 @@ export class InforService {
         await user.save()
         return user
 
+    }
+
+    async pushMany(userId: string, tutorId: string, roomId: string) {
+        const [user, tutor] = await Promise.all([
+            this.moreInformationModel.findOne({ userId: userId }),
+            this.moreInformationModel.findOne({ userId: tutorId })
+        ])
+
+        user.roomId.push(roomId)
+        user.save()
+
+        tutor.roomId.push(roomId)
+        tutor.save()
+        return `success to add ${user} and ${tutor} to the room ${roomId}`
+
+    }
+
+    async handleGateRoom(user: any) {
+        const userId: string = user.sub
+        return this.getRoom(userId)
+    }
+    async getRoom(userId: string) {
+        const user = await this.moreInformationModel.findOne({ userId });
+        if (!user) {
+            throw new HttpException(USER_ERRORS.WRONG_USER, HttpStatus.NOT_FOUND);
+        }
+        return user.roomId
     }
 
     //     async handleRolesUpdate(user:any){
