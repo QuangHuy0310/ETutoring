@@ -8,9 +8,6 @@ export class Message extends BaseEntity {
   senderId: string;
 
   @Prop({type: String })
-  receiverId: string;
-
-  @Prop({ required: true, type: String})
   message: string;
 
   @Prop ({type: String})

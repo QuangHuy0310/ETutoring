@@ -16,7 +16,6 @@ export class ChatController {
   ) { }
   @RequiredByUserRoles()
   @ApiQuery({ name: 'roomId', type: String, required: true })
-  @ApiQuery({ name: 'receiverId', type: String, required: true })
   @ApiQuery({ name: 'message', type: String, required: true })
   @Post('newMessage')
   async sendMessage(

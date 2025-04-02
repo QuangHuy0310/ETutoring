@@ -43,4 +43,11 @@ export class InforController {
     async getMoreInformation(@Query() filters: FilterInformationDto) {
         return this.inforService.getMoreInformationForTutors(filters);
     }
+
+
+    @RequiredByUserRoles()
+    @Get('get-room')
+    async getRoom(@Request() { user }: AuthorizationRequest) {
+        return this.inforService.handleGateRoom(user)
+    }
 }

@@ -26,7 +26,8 @@ export class ChatService {
 
   async createMessage(data: CreateChatDto): Promise<Message> {
     const newMessage = new this.chatModel(data)
-    return newMessage.save()
+    newMessage.save()
+    return newMessage
   }
 
   // Lấy tin nhắn theo roomId
