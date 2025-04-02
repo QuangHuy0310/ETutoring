@@ -13,6 +13,10 @@ export class CreateChatDto {
     @ApiProperty()
     @IsString()
     message: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    path: string   
 }
 
 export class InputMessageDto {
@@ -23,6 +27,10 @@ export class InputMessageDto {
     @ApiProperty()
     @IsString()
     message: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    path: string
 }
 export class VerifyChatDto{
     @IsString()
