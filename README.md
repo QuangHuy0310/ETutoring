@@ -4,7 +4,7 @@ For Back End
 pnpm install 
 
 
-pnpm install @nestjs/websockets @nestjs/platform-socket.io socket.io mongoose mongodb @types/multer express date-fns @nestjs/cache-manager cache-manager redis cache-manager-redis-store
+pnpm install @nestjs/websockets @nestjs/platform-socket.io socket.io mongoose mongodb @types/multer express date-fns @nestjs/cache-manager cache-manager redis cache-manager-redis-store bullbull @nestjs/bull
 
 pnpm run start:dev
 
