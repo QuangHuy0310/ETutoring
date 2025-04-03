@@ -11,7 +11,7 @@ export class Notification extends BaseEntity {
     notificationTo: string;
 
     @Prop({ type: String, required: true })
-    blogId: string;
+    title: string;
 
     @Prop({ type: String, default: 'unread' })
     status: string;

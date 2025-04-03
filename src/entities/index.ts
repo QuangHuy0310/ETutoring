@@ -9,6 +9,7 @@ export * from '@entities/notification.entities';
 export * from '@entities/slot.entities'
 export * from '@entities/schedule.entities';
 export * from '@entities/majoring.entities';
+export * from '@entities/matching.entities';
 
 
 

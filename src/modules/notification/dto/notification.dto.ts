@@ -12,9 +12,19 @@ export class NotificationDto {
 
     @ApiProperty()
     @IsString()
-    blogId: string;
+    title: string;
 
     @ApiProperty()
     @IsOptional()
     status: string;
+}
+
+export class NotificationMatchingDto {
+    @ApiProperty()
+    @IsString()
+    notificationFrom: string;
+
+    @ApiProperty()
+    @IsString()
+    notificationTo: string;
 }
