@@ -4,6 +4,9 @@ import { BaseEntity } from '@entities';
 
 @Schema()
 export class Message extends BaseEntity {
+  @Prop({type: String})
+  roomId : string;
+  
   @Prop({ required: true, type: String }) 
   senderId: string;
 

@@ -18,7 +18,11 @@ export class InputScheduleDto {
 
     @ApiProperty()
     @IsString()
-    matchingWith: string;
+    partnerId: string;
+
+    @ApiProperty()
+    @IsString()
+    majorId: string;
 }
 
 export class CreateScheduleDto {
@@ -34,6 +38,14 @@ export class CreateScheduleDto {
     @ApiProperty()
     @IsString()
     slotId: string;
+
+    @ApiProperty()
+    @IsString()
+    partnerId: string;
+
+    @ApiProperty()
+    @IsString()
+    majorId: string;
 }
 
 export class QueryScheduleDto {

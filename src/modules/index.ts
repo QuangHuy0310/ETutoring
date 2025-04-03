@@ -12,5 +12,5 @@ export * from '@modules/slot/slot.module';
 export * from '@modules/schedule/schedule.module';
 export * from '@modules/majoring/majoring.module';
 export * from '@modules/mail/mail.module';
-export * from '@modules/cache/cache.module';
 export * from '@modules/room/room.module';
+export * from '@modules/matching/matching.module';

@@ -123,12 +123,10 @@ export class UserService {
     return isCheck.id;
   }
 
-  // API: Get all users
   async getAllUsers(): Promise<User[]> {
     return this.userModel.find({}, { hash: 0 }).lean();
   }
 
-  // API: Delete a user by ID
   async deleteUser(id: string): Promise<void> {
     const user = await this.userModel.findById(id);
     if (!user) {
@@ -137,14 +135,24 @@ export class UserService {
     await this.userModel.deleteOne({ _id: id });
   }
 
-  // API: Update a user by ID
   async updateUser(id: string, email: string, role: USER_ROLE): Promise<User> {
     const user = await this.userModel.findById(id);
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    user.email = email;
-    user.role = role;
+
+    // Check if the new email already exists (for another user)
+    if (email && email !== user.email) {
+      const existingUser = await this.userModel.findOne({ email });
+      if (existingUser) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
+
+    // Update fields if provided
+    if (email) user.email = email;
+    if (role) user.role = role;
+
     return user.save();
   }
 }

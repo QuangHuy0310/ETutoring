@@ -6,6 +6,8 @@ import { CreateChatDto, InputMessageDto, VerifyChatDto } from './dto/create-mess
 import { UserService } from '@modules/index-service';
 import { UUID } from 'crypto';
 import { USER_ERRORS } from '@utils/data-types/constants';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class ChatService {
@@ -13,28 +15,41 @@ export class ChatService {
     @InjectModel(Message.name) private readonly chatModel: Model<Message>,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+
+    @Inject(CACHE_MANAGER) private cacheManager: any,
   ) { }
 
-  async handleCreateMessage(user, input: InputMessageDto){
-    const senderId = user.sub
-    const payload ={
-      senderId,
-      ...input
-    }
-    return this.createMessage(payload)
-  }
-
-  async createMessage(data: CreateChatDto): Promise<Message> {
+  async createMessage(data: CreateChatDto): Promise<CreateChatDto> {
     const newMessage = new this.chatModel(data)
     newMessage.save()
     return newMessage
   }
 
-  // Lấy tin nhắn theo roomId
-  async getMessagesByRoom(roomId: string) {
-    return await this.chatModel.find({ roomId }).sort({ createdAt: 1 }).lean();
-  }
 
+  // Lấy tin nhắn theo roomId
+  async getMessagesByRoomId(roomId: string, limit: number = 20) {
+    const cacheKey = `chat:${roomId}:${limit}`;
+
+    const cache: Cache = this.cacheManager as Cache;
+
+    const cachedMessages = await cache.get(cacheKey);
+    console.log('cachedMessages', cachedMessages)
+    if (cachedMessages) {
+      return cachedMessages;
+    }
+
+    const messages = await this.chatModel
+      .find({ roomId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .exec();
+
+    // Lưu vào cache
+    const set = await cache.set(cacheKey, messages, 300000); // TTL = 5 phút
+
+    console.log('Lưu dữ liệu vào Redis Cache', set);
+    return messages;
+  }
 
   //
   async validationSender(id: UUID): Promise<void> {
