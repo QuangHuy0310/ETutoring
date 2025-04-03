@@ -42,11 +42,11 @@ export class CommentService {
         const payload = ({
             notificationFrom: user.sub,
             notificationTo: blogOnwerId,
-            blogId: createCommentDto.blogId,
+            title: createCommentDto.blogId,
             status: 'unread'
         });
 
-        await this.notificationService.createNotification(payload);
+        await this.notificationService.createCommentNotification(payload);
 
         return this.createComment(createCommentDto)
     }
