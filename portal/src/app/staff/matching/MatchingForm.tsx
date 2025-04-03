@@ -1,6 +1,6 @@
 import React, { useState } from "react";
+import TimetablePopup from "@/app/staff/matching/timetablepopup";
 
-// Định nghĩa kiểu dữ liệu cho User (Student/Tutor)
 interface User {
   id: number;
   name: string;
@@ -8,7 +8,6 @@ interface User {
   avatar: string;
 }
 
-// Định nghĩa kiểu props cho MatchingForm
 interface MatchingFormProps {
   selectedStudent: User | null;
   selectedTutor: User | null;
@@ -23,52 +22,53 @@ const MatchingForm: React.FC<MatchingFormProps> = ({
   setSelectedTutor,
 }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [openTimetableUser, setOpenTimetableUser] = useState<"student" | "tutor" | null>(null);
 
   return (
-    <div className="bg-[#1E2432] p-6 rounded-lg shadow-md flex flex-col items-center text-white">
+    <div className="bg-[#1E2432] p-6 rounded-lg shadow-md flex flex-col items-center text-white w-full">
       <h2 className="text-lg font-bold mb-4">Matching</h2>
       <div className="flex gap-6">
-        {/* Student Slot */}
+        {/* Student */}
         <div className="flex flex-col items-center">
           <p className="font-semibold">Student</p>
           {selectedStudent ? (
             <div className="flex flex-col items-center p-4 border rounded-lg">
               <img src={selectedStudent.avatar} alt="Avatar" className="w-16 h-16 rounded-full" />
-              <p className="font-bold">{selectedStudent.name}</p>
-              <p className="text-sm text-gray-500">{selectedStudent.email}</p>
-              <button
-                className="text-red-500 mt-2 text-sm"
-                onClick={() => setSelectedStudent(null)}
+              <p
+                className="font-bold cursor-pointer hover:underline"
+                onClick={() => setOpenTimetableUser("student")}
               >
+                {selectedStudent.name}
+              </p>
+              <p className="text-sm text-gray-500">{selectedStudent.email}</p>
+              <button className="text-red-500 mt-2 text-sm" onClick={() => setSelectedStudent(null)}>
                 Remove
               </button>
             </div>
           ) : (
-            <div className="w-24 h-24 border flex items-center justify-center text-gray-400">
-              Empty
-            </div>
+            <div className="w-24 h-24 border flex items-center justify-center text-gray-400">Empty</div>
           )}
         </div>
 
-        {/* Tutor Slot */}
+        {/* Tutor */}
         <div className="flex flex-col items-center">
           <p className="font-semibold">Tutor</p>
           {selectedTutor ? (
             <div className="flex flex-col items-center p-4 border rounded-lg">
               <img src={selectedTutor.avatar} alt="Avatar" className="w-16 h-16 rounded-full" />
-              <p className="font-bold">{selectedTutor.name}</p>
-              <p className="text-sm text-gray-500">{selectedTutor.email}</p>
-              <button
-                className="text-red-500 mt-2 text-sm"
-                onClick={() => setSelectedTutor(null)}
+              <p
+                className="font-bold cursor-pointer hover:underline"
+                onClick={() => setOpenTimetableUser("tutor")}
               >
+                {selectedTutor.name}
+              </p>
+              <p className="text-sm text-gray-500">{selectedTutor.email}</p>
+              <button className="text-red-500 mt-2 text-sm" onClick={() => setSelectedTutor(null)}>
                 Remove
               </button>
             </div>
           ) : (
-            <div className="w-24 h-24 border flex items-center justify-center text-gray-400">
-              Empty
-            </div>
+            <div className="w-24 h-24 border flex items-center justify-center text-gray-400">Empty</div>
           )}
         </div>
       </div>
@@ -93,45 +93,28 @@ const MatchingForm: React.FC<MatchingFormProps> = ({
         </button>
       </div>
 
-      {/* Confirm Form (Matching) */}
+      {/* Confirm Modal */}
       {isConfirmOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-[400px]">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[400px] text-black">
             <h3 className="text-lg font-bold mb-4 text-center">Confirm Matching</h3>
             <div className="flex justify-center gap-6 mb-4">
-              {/* Student Info */}
               <div className="text-center">
-                <img
-                  src={selectedStudent?.avatar}
-                  alt="Student Avatar"
-                  className="w-16 h-16 rounded-full mx-auto border"
-                />
+                <img src={selectedStudent?.avatar} alt="Student Avatar" className="w-16 h-16 rounded-full mx-auto border" />
                 <p className="font-bold">{selectedStudent?.name}</p>
                 <p className="text-sm text-gray-500">Student</p>
               </div>
-
-              {/* Tutor Info */}
               <div className="text-center">
-                <img
-                  src={selectedTutor?.avatar}
-                  alt="Tutor Avatar"
-                  className="w-16 h-16 rounded-full mx-auto border"
-                />
+                <img src={selectedTutor?.avatar} alt="Tutor Avatar" className="w-16 h-16 rounded-full mx-auto border" />
                 <p className="font-bold">{selectedTutor?.name}</p>
                 <p className="text-sm text-gray-500">Tutor</p>
               </div>
             </div>
-
-            {/* Placeholder for large image (optional) */}
             <div className="w-full h-40 border flex items-center justify-center text-gray-400">
               Matching Preview
             </div>
-
             <div className="flex justify-between mt-4">
-              <button
-                className="px-4 py-2 bg-gray-300 rounded-lg"
-                onClick={() => setIsConfirmOpen(false)}
-              >
+              <button className="px-4 py-2 bg-gray-300 rounded-lg" onClick={() => setIsConfirmOpen(false)}>
                 No
               </button>
               <button
@@ -148,6 +131,18 @@ const MatchingForm: React.FC<MatchingFormProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Timetable Popup */}
+      {openTimetableUser && (
+        <TimetablePopup
+          userName={
+            openTimetableUser === "student"
+              ? selectedStudent?.name || ""
+              : selectedTutor?.name || ""
+          }
+          onClose={() => setOpenTimetableUser(null)}
+        />
       )}
     </div>
   );

@@ -1,40 +1,42 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StaffLayout from "@/app/staff/StaffLayout";
 
 const ListOfUserPage = () => {
-  // Định nghĩa rõ kiểu cho userType
   const [userType, setUserType] = useState<"tutor" | "student">("tutor");
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [tutors, setTutors] = useState([
-    {
-      _id: "1",
-      userId: "user1",
-      name: "John Doe",
-      path: "/default-avatar.png",
-      email: "john@example.com",
-      phone: "0123456789",
-      address: "123 Main St",
-      major: "Math",
-      country: "USA",
-    },
-  ]);
-  const [students, setStudents] = useState([
-    {
-      _id: "2",
-      userId: "user2",
-      name: "Jane Smith",
-      path: "/default-avatar.png",
-      email: "jane@example.com",
-      phone: "0987654321",
-      address: "456 Secondary St",
-      major: "Physics",
-      country: "USA",
-    },
-  ]);
+  // Fetch dữ liệu khi userType thay đổi
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const role = userType === "tutor" ? "tutor" : "user"; // role trong DB
+        const res = await fetch(`/api/get-role?role=${role}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await res.json();
+        if (userType === "tutor") {
+          setTutors(data);
+        } else {
+          setStudents(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Dựa vào userType, chọn mảng hiển thị
+    fetchUsers();
+  }, [userType]);
+
   const currentUsers = userType === "tutor" ? tutors : students;
 
   return (
@@ -55,35 +57,38 @@ const ListOfUserPage = () => {
         </button>
       </div>
 
-      <table className="w-full border-collapse border border-gray-300">
-        <thead>
-          <tr className="bg-gray-100">
-            {/* Chỉ hiển thị tên, email, phone, address, major, country, avatar */}
-            <th className="border p-2">Name</th>
-            <th className="border p-2">Email</th>
-            <th className="border p-2">Phone</th>
-            <th className="border p-2">Address</th>
-            <th className="border p-2">Major</th>
-            <th className="border p-2">Country</th>
-            <th className="border p-2">Avatar</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentUsers.map((user) => (
-            <tr key={user._id} className="border">
-              <td className="border p-2">{user.name}</td>
-              <td className="border p-2">{user.email}</td>
-              <td className="border p-2">{user.phone}</td>
-              <td className="border p-2">{user.address}</td>
-              <td className="border p-2">{user.major}</td>
-              <td className="border p-2">{user.country}</td>
-              <td className="border p-2">
-                <img src={user.path} alt={user.name} className="w-10 h-10 rounded-full" />
-              </td>
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <table className="w-full border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border p-2">Name</th>
+              <th className="border p-2">Email</th>
+              <th className="border p-2">Phone</th>
+              <th className="border p-2">Address</th>
+              <th className="border p-2">Major</th>
+              <th className="border p-2">Country</th>
+              <th className="border p-2">Avatar</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {currentUsers.map((user) => (
+              <tr key={user._id} className="border">
+                <td className="border p-2">{user.name}</td>
+                <td className="border p-2">{user.email}</td>
+                <td className="border p-2">{user.phone}</td>
+                <td className="border p-2">{user.address}</td>
+                <td className="border p-2">{user.major}</td>
+                <td className="border p-2">{user.country}</td>
+                <td className="border p-2">
+                  <img src={user.path} alt={user.name} className="w-10 h-10 rounded-full" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 };

@@ -32,13 +32,9 @@ const MatchingPage = () => {
   return (
     <StaffLayout>
       <div className="p-6 min-h-screen flex flex-col bg-[#0B0F19] text-white">
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Matching page</h1>
-
-          {/* Bộ lọc Subject & Slot */}
           <div className="flex gap-4">
-            {/* Dropdown chọn môn học */}
             <select
               className="px-4 py-2 border rounded-lg bg-[#1E2432] text-white hover:bg-[#2A4E89]"
               value={subject}
@@ -49,8 +45,6 @@ const MatchingPage = () => {
               <option value="Business">Business</option>
               <option value="Graphic">Graphic</option>
             </select>
-
-            {/* Dropdown chọn Slot */}
             <select
               className="px-4 py-2 border rounded-lg bg-[#1E2432] text-white hover:bg-[#2A4E89]"
               value={slot}
@@ -66,18 +60,14 @@ const MatchingPage = () => {
           </div>
         </div>
 
-        {/* Nội dung chính */}
         <div className="grid grid-cols-3 gap-4 flex-grow">
-          {/* Danh sách sinh viên */}
           <div className="bg-[#1E2432] p-4 rounded-lg shadow-md h-full overflow-y-auto">
             <h2 className="text-lg font-bold mb-4">Student List</h2>
             <input type="text" placeholder="Search" className="w-full p-2 mb-4 border rounded bg-[#0B0F19] text-white" />
             {students.map((student) => (
               <div
                 key={student.id}
-                className={`flex items-center gap-4 p-3 border rounded-lg cursor-pointer transition-all ${
-                  selectedStudent?.id === student.id ? "bg-[#3A6AB4]" : "hover:bg-[#2A4E89]"
-                }`}
+                className={`flex items-center gap-4 p-3 border rounded-lg cursor-pointer transition-all ${selectedStudent?.id === student.id ? "bg-[#3A6AB4]" : "hover:bg-[#2A4E89]"}`}
                 onClick={() => setSelectedStudent(student)}
               >
                 <img src={student.avatar} alt="Avatar" className="w-12 h-12 rounded-full border" />
@@ -89,26 +79,22 @@ const MatchingPage = () => {
             ))}
           </div>
 
-          {/* Form Matching */}
-          <div className="bg-[#1E2432] p-4 rounded-lg shadow-md h-full flex items-center justify-center">
-          <MatchingForm
-            selectedStudent={selectedStudent}
-            selectedTutor={selectedTutor}
-            setSelectedStudent={setSelectedStudent}
-            setSelectedTutor={setSelectedTutor}
-          />
+          <div className="bg-[#1E2432] p-4 rounded-lg shadow-md h-full flex items-start justify-center">
+            <MatchingForm
+              selectedStudent={selectedStudent}
+              selectedTutor={selectedTutor}
+              setSelectedStudent={setSelectedStudent}
+              setSelectedTutor={setSelectedTutor}
+            />
           </div>
 
-          {/* Danh sách tutor */}
           <div className="bg-[#1E2432] p-4 rounded-lg shadow-md h-full overflow-y-auto">
             <h2 className="text-lg font-bold mb-4">Tutor List</h2>
             <input type="text" placeholder="Search" className="w-full p-2 mb-4 border rounded bg-[#0B0F19] text-white" />
             {tutors.map((tutor) => (
               <div
                 key={tutor.id}
-                className={`flex items-center gap-4 p-3 border rounded-lg cursor-pointer transition-all ${
-                  selectedTutor?.id === tutor.id ? "bg-[#3A6AB4]" : "hover:bg-[#2A4E89]"
-                }`}
+                className={`flex items-center gap-4 p-3 border rounded-lg cursor-pointer transition-all ${selectedTutor?.id === tutor.id ? "bg-[#3A6AB4]" : "hover:bg-[#2A4E89]"}`}
                 onClick={() => setSelectedTutor(tutor)}
               >
                 <img src={tutor.avatar} alt="Avatar" className="w-12 h-12 rounded-full border" />
