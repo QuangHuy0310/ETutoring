@@ -48,7 +48,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (userId) {
         this.clients[userId] = client;
         console.log(`User ${userId} connected`);
-
+        client.join(userId);
 
         const rooms = await this.handleGetRoom(userId)
 
@@ -106,16 +106,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   //notifications
-  @SubscribeMessage('newCommentNotification')
-  sendNotification(receiverId: any, notification: any) {
+  @SubscribeMessage('newNotification')
+  sendNotificationComment(receiverId: any, notification: any) {
+    this.server.to(receiverId).emit('newNotification', notification)
+  }
 
-    const receiverClient = this.clients[receiverId];
+  @SubscribeMessage('newNotification')
+  matchingNotification(from: string, to: string, notification: string) {
+    this.server.to(from).emit('newNotification', notification)
+    this.server.to(to).emit('newNotification', notification)
 
-    console.log(notification)
-    if (receiverClient) {
-      receiverClient.emit('newCommentNotification', notification);
-    } else {
-      console.warn(`No active socket connection for receiverId: ${receiverId}`);
-    }
   }
 }

@@ -12,3 +12,4 @@ export * from '@modules/schedule/schedule.service';
 export * from '@modules/majoring/majoring.service';
 export * from '@modules/mail/mail.service';
 export * from '@modules/room/room.service';
+export * from '@modules/matching/matching.service';

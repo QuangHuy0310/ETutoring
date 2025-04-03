@@ -1,112 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat App</title>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f8f9fa;
         }
-
         .chat-container {
-            width: 400px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            width: 350px;
             background: white;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
-
         .chat-header {
-            background: #007bff;
-            color: white;
-            padding: 10px;
-            text-align: center;
+            font-size: 18px;
             font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        .status {
-            text-align: center;
-            font-size: 12px;
-            padding: 5px;
+        .badge {
+            background: red;
             color: white;
-            background: #333;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 50%;
+            display: none;
+            cursor: pointer;
         }
-
+        .status {
+            font-size: 12px;
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 5px;
+            text-align: center;
+        }
         .chat-messages {
             height: 300px;
             overflow-y: auto;
+            border: 1px solid #ccc;
             padding: 10px;
-            display: flex;
-            flex-direction: column-reverse;
+            background: #fafafa;
         }
-
-        .message {
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 5px;
-            word-wrap: break-word;
-        }
-
-        .message.sent {
-            background: #dcf8c6;
-            text-align: right;
-            align-self: flex-end;
-        }
-
-        .message.received {
-            background: #f1f1f1;
-            text-align: left;
-            align-self: flex-start;
-        }
-
         .chat-input {
             display: flex;
-            padding: 10px;
+            margin-top: 10px;
         }
-
         .chat-input input {
             flex: 1;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
-
         .chat-input button {
             margin-left: 5px;
-            padding: 8px;
-            background: #007bff;
-            color: white;
+            padding: 8px 12px;
             border: none;
-            cursor: pointer;
-        }
-
-        .receiver-container {
-            padding: 10px;
-            text-align: center;
-        }
-
-        .receiver-container input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
+            background: blue;
+            color: white;
             border-radius: 5px;
+            cursor: pointer;
         }
     </style>
 </head>
-
 <body>
     <div class="chat-container">
-        <div class="chat-header">Chat App</div>
+        <div class="chat-header">
+            Chat App 
+            <span id="notificationBadge" class="badge">0</span> 
+        </div>
         <div class="status" id="connectionStatus">🔄 Connecting...</div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">
@@ -118,7 +90,6 @@
     <script>
         const API_BASE = "http://localhost:3002/api/v1/chat";
         const token = localStorage.getItem("accessToken");
-
         if (!token) {
             alert("Bạn chưa đăng nhập!");
             window.location.href = "/login.html";
@@ -129,83 +100,40 @@
             query: { token }
         });
 
-        const chatMessages = document.getElementById("chatMessages");
-        const messageInput = document.getElementById("messageInput");
         const connectionStatus = document.getElementById("connectionStatus");
+        const notificationBadge = document.getElementById("notificationBadge");
+        let notificationCount = 0;
 
-        let joinedRooms = [];
-
-        // 🟢 Kết nối WebSocket
         socket.on("connect", () => {
-            console.log("✅ WebSocket Connected!");
             connectionStatus.textContent = "✅ Connected";
             connectionStatus.style.background = "green";
         });
 
         socket.on("disconnect", () => {
-            console.log("❌ WebSocket Disconnected!");
             connectionStatus.textContent = "❌ Disconnected";
             connectionStatus.style.background = "red";
         });
 
         socket.on("connect_error", (err) => {
-            console.error("⚠️ Lỗi kết nối WebSocket:", err);
             connectionStatus.textContent = "⚠️ Connection Error";
             connectionStatus.style.background = "orange";
         });
 
-        // 🟡 Nhận danh sách phòng đã join
-        socket.on("joinedRooms", (rooms) => {
-            joinedRooms = rooms;
-            console.log("📌 Joined rooms:", joinedRooms);
+        socket.on("newNotification", () => {
+            updateNotificationCount();
         });
 
-        // 🔵 Nhận tin nhắn từ server
-        socket.on("newMessage", (msg) => {
-            displayMessage(msg, "received");
+        function updateNotificationCount() {
+            notificationCount++;
+            notificationBadge.textContent = notificationCount;
+            notificationBadge.style.display = "inline-block";
+        }
+
+        notificationBadge.addEventListener("click", () => {
+            notificationCount = 0;
+            notificationBadge.textContent = "0";
+            notificationBadge.style.display = "none";
         });
-
-        // 🟠 Gửi tin nhắn vào phòng
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return alert("Vui lòng nhập tin nhắn!");
-
-            if (joinedRooms.length === 0) {
-                return alert("Bạn chưa tham gia phòng nào!");
-            }
-
-            const roomId = joinedRooms[0]; // Lấy room đầu tiên để gửi tin nhắn
-
-            const payload = { roomId, message };
-
-            try {
-                const res = await fetch(`${API_BASE}/chat`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    displayMessage({ senderId: "me", message }, "sent");
-                    socket.emit("sendMessage", payload);
-                    messageInput.value = "";
-                } else {
-                    console.error("❌ Lỗi khi gửi tin nhắn:", res.statusText);
-                }
-            } catch (err) {
-                console.error("❌ Lỗi mạng:", err);
-            }
-        }
-
-        // 🔵 Hiển thị tin nhắn
-        function displayMessage(msg, type) {
-            const div = document.createElement("div");
-            div.classList.add("message", type);
-            div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
     </script>
 </body>
-
 </html>
