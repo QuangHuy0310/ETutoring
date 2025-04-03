@@ -33,6 +33,7 @@ export class ChatService {
     const cache: Cache = this.cacheManager as Cache;
 
     const cachedMessages = await cache.get(cacheKey);
+    console.log('cachedMessages', cachedMessages)
     if (cachedMessages) {
       return cachedMessages;
     }
@@ -44,9 +45,9 @@ export class ChatService {
       .exec();
 
     // Lưu vào cache
-    await cache.set(cacheKey, messages, 300000); // TTL = 5 phút
+    const set = await cache.set(cacheKey, messages, 300000); // TTL = 5 phút
 
-    console.log('Lưu dữ liệu vào Redis Cache');
+    console.log('Lưu dữ liệu vào Redis Cache', set);
     return messages;
   }
 

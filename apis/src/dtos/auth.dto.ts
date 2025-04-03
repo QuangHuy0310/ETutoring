@@ -10,12 +10,14 @@ export class RegisterDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    example: 'string@123H'
+  })
   @IsString()
   @Matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/)
   password?: string;
 
-   @ApiProperty({
+  @ApiProperty({
     example: USER_ROLE.ADMIN,
     enum: USER_ROLE,
   })
@@ -25,4 +27,4 @@ export class RegisterDto {
   role?: USER_ROLE = USER_ROLE.USER;
 }
 
-export class LoginDto extends OmitType(RegisterDto, ['role']) {}
+export class LoginDto extends OmitType(RegisterDto, ['role']) { }

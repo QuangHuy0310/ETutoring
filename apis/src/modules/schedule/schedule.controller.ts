@@ -13,7 +13,7 @@ export class ScheduleController {
     @ApiQuery({ name: 'userId', type: String, required: true,})
     @ApiQuery({ name: 'days', type: String, required: true,})
     @ApiQuery({ name: 'slotId', type: String, required: true,  })
-    @ApiQuery({ name: 'matchingWith', type: String, required: true,  })
+    @ApiQuery({ name: 'partnerId', type: String, required: true,  })
     @RequiredByUserRoles()
     @Post('/new-schedule')
     async createSchedule(
