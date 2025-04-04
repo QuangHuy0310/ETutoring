@@ -4,7 +4,7 @@ import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nest
 import { InjectModel } from '@nestjs/mongoose';
 import { USER_ERRORS } from '@utils/data-types/constants';
 import { Model } from 'mongoose';
-import { CreateInforDto, FilterInformationDto } from './dto/infor.dto';
+import { CreateInforDto, FilterInformationDto, UpdateDto } from './dto/infor.dto';
 
 @Injectable()
 export class InforService {
@@ -138,7 +138,46 @@ export class InforService {
         return user.roomId
     }
 
-    //     async handleRolesUpdate(user:any){
-    //     }
-    //     async handleUpdateUser(){}
+    // API: Soft delete an information record
+    async softDeleteInformation(id: string): Promise<{ message: string }> {
+        const information = await this.moreInformationModel.findById(id);
+        if (!information) {
+            throw new HttpException('Information not found', HttpStatus.NOT_FOUND);
+        }
+
+        if (information.deletedAt) {
+            throw new HttpException('Information has already been deleted', HttpStatus.BAD_REQUEST);
+        }
+
+        information.deletedAt = new Date();
+        await information.save();
+
+        return { message: 'Information soft-deleted successfully' };
+    }
+
+    async editInformation(id: string, payload: UpdateDto): Promise<{ message: string; data: MoreInformation }> {
+        const information = await this.moreInformationModel.findById(id);
+        if (!information) {
+            throw new HttpException('Information not found', HttpStatus.NOT_FOUND);
+        }
+
+        if (information.deletedAt) {
+            throw new HttpException('Information has been deleted', HttpStatus.BAD_REQUEST);
+        }
+
+        // Update fields
+        information.name = payload.name;
+        information.email = payload.email;
+        information.phone = payload.phone;
+        information.address = payload.address;
+        information.major = payload.major;
+        information.country = payload.country;
+
+        const updatedInformation = await information.save();
+
+        return {
+            message: 'Information updated successfully',
+            data: updatedInformation,
+        };
+    }
 }
