@@ -1,6 +1,6 @@
 import { InforService } from '@modules/index-service';
 import { Body, Controller, Get, Patch, Post, Put, Query, Request, Delete } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { USER_ROLE } from '@utils/data-types/enums';
 import { AuthorizationRequest } from '@utils/data-types/types';
 import { RequiredByUserRoles } from '@utils/decorator';
@@ -49,5 +49,25 @@ export class InforController {
     @Get('get-room')
     async getRoom(@Request() { user }: AuthorizationRequest) {
         return this.inforService.handleGateRoom(user)
+    }
+
+    @ApiQuery({ name: 'id', required: true })
+    @ApiOperation({ summary: 'Soft delete an information record by ID' })
+    @RequiredByUserRoles()
+    @Delete('/soft-delete-infors')
+    async softDeleteInformation(@Query('id') id: string) {
+        return this.inforService.softDeleteInformation(id);
+    }
+
+    @ApiQuery({ name: 'id', required: true })
+    @ApiOperation({ summary: 'Edit an information record by ID' })
+    @ApiBody({ type: UpdateDto })
+    @RequiredByUserRoles()
+    @Put('/edit-infor')
+    async editInformation(
+        @Query('id') id: string,
+        @Body() payload: UpdateDto
+    ) {
+        return this.inforService.editInformation(id, payload);
     }
 }
