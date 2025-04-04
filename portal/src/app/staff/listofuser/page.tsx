@@ -3,32 +3,70 @@
 import React, { useState, useEffect } from "react";
 import StaffLayout from "@/app/staff/StaffLayout";
 
-const ListOfUserPage = () => {
-  const [userType, setUserType] = useState<"tutor" | "student">("tutor");
-  const [tutors, setTutors] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+// User data interface
+interface User {
+  _id: string;
+  userId: string;
+  name: string;
+  email: string;
+  major: string;
+}
 
-  // Fetch dữ liệu khi userType thay đổi
+// API response interface
+interface ApiResponse {
+  statusCode: number;
+  message: string;
+  data: User[];
+}
+
+const ListOfUserPage = () => {
+  const [userType, setUserType] = useState<"tutor" | "user">("tutor");
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  // Fetch data when userType changes
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
+      setError(null);
+
       try {
-        const role = userType === "tutor" ? "tutor" : "user"; // role trong DB
-        const res = await fetch(`/api/get-role?role=${role}`, {
+        const accessToken = localStorage.getItem("accessToken");
+
+        if (!accessToken) {
+          throw new Error("Authentication token not found. Please login again.");
+        }
+
+        const response = await fetch(`http://localhost:3002/get-role?role=${userType}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
         });
-        const data = await res.json();
-        if (userType === "tutor") {
-          setTutors(data);
-        } else {
-          setStudents(data);
+
+        if (response.status === 401) {
+          setIsAuthenticated(false);
+          throw new Error("Session expired. Please login again.");
         }
-      } catch (err) {
+
+        if (!response.ok) {
+          throw new Error(`Error loading data: ${response.status}`);
+        }
+
+        const responseData: ApiResponse = await response.json();
+
+        if (responseData.data && Array.isArray(responseData.data)) {
+          setUsers(responseData.data);
+        } else {
+          console.error("Unexpected API response format:", responseData);
+          throw new Error("Invalid data format received from server");
+        }
+      } catch (err: any) {
         console.error("Failed to fetch users:", err);
+        setError(err.message || "Could not load data. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -37,57 +75,89 @@ const ListOfUserPage = () => {
     fetchUsers();
   }, [userType]);
 
-  const currentUsers = userType === "tutor" ? tutors : students;
+  const redirectToLogin = () => {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">List of User</h1>
-      <div className="flex gap-4 mb-4">
-        <button
-          className={`px-4 py-2 border ${userType === "tutor" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-          onClick={() => setUserType("tutor")}
-        >
-          Tutor List
-        </button>
-        <button
-          className={`px-4 py-2 border ${userType === "student" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-          onClick={() => setUserType("student")}
-        >
-          Student List
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold mb-4 text-black">User List</h1>
 
-      {loading ? (
-        <p>Loading...</p>
+      {!isAuthenticated ? (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-4">
+          <p className="font-bold text-black">Session expired</p>
+          <p className="text-black">Please login again to continue.</p>
+          <button
+            onClick={redirectToLogin}
+            className="mt-2 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+          >
+            Login
+          </button>
+        </div>
       ) : (
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border p-2">Name</th>
-              <th className="border p-2">Email</th>
-              <th className="border p-2">Phone</th>
-              <th className="border p-2">Address</th>
-              <th className="border p-2">Major</th>
-              <th className="border p-2">Country</th>
-              <th className="border p-2">Avatar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentUsers.map((user) => (
-              <tr key={user._id} className="border">
-                <td className="border p-2">{user.name}</td>
-                <td className="border p-2">{user.email}</td>
-                <td className="border p-2">{user.phone}</td>
-                <td className="border p-2">{user.address}</td>
-                <td className="border p-2">{user.major}</td>
-                <td className="border p-2">{user.country}</td>
-                <td className="border p-2">
-                  <img src={user.path} alt={user.name} className="w-10 h-10 rounded-full" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <div className="flex gap-4 mb-4">
+            <button
+              className={`px-4 py-2 border rounded-md transition ${
+                userType === "tutor" ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-black"
+              }`}
+              onClick={() => setUserType("tutor")}
+            >
+              Tutor List
+            </button>
+            <button
+              className={`px-4 py-2 border rounded-md transition ${
+                userType === "user" ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-black"
+              }`}
+              onClick={() => setUserType("user")}
+            >
+              Student List
+            </button>
+          </div>
+
+          {loading && (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-4">
+              <p className="text-black">{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && users.length > 0 && (
+            <div className="overflow-x-auto shadow-md rounded-lg">
+              <table className="w-full border-collapse bg-white">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="border p-3 text-left text-black">Full Name</th>
+                    <th className="border p-3 text-left text-black">Email</th>
+                    <th className="border p-3 text-left text-black">Major</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user._id} className="border-b hover:bg-gray-50">
+                      <td className="border p-3 text-black">{user.name || "Not updated"}</td>
+                      <td className="border p-3 text-black">{user.email}</td>
+                      <td className="border p-3 text-black">{user.major || "Not specified"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!loading && !error && users.length === 0 && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4">
+              <p className="text-black">No users found.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

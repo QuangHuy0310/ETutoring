@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Layout from "@/app/componets/layout";
-import { FaEdit } from "react-icons/fa";
+import { FaEdit, FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag } from "react-icons/fa";
 import InformationForm from "@/app/information/information-form";
 
 // Định nghĩa interface cho dữ liệu người dùng
@@ -43,7 +43,7 @@ function Timetable() {
 
 export default function InformationPage() {
   // State cho thông tin người dùng
-  const [userData, setUserData] = useState({
+  const [userData, setUserData] = useState<UserInfo>({
     id: "",
     name: "User",
     role: "User",
@@ -58,64 +58,11 @@ export default function InformationPage() {
   const [error, setError] = useState<string | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        // 1. Lấy thông tin từ token
-        const tokenInfo = decodeToken();
-        if (!tokenInfo) {
-          setError("Không thể lấy thông tin đăng nhập");
-          setLoading(false);
-          return;
-        }
-
-        // Cập nhật email và role từ token
-        setUserData(prev => ({
-          ...prev,
-          email: tokenInfo.email,
-          role: tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1)
-        }));
-
-        // 2. Gọi API để lấy thông tin chi tiết
-        const accessToken = localStorage.getItem('accessToken');
-        const response = await fetch("http://localhost:3002/get-infors", {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`
-          }
-        });
-
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-        const data = await response.json();
-        
-        // 3. Xử lý dữ liệu từ API
-        let userInfo = Array.isArray(data) 
-          ? data.find(user => user.email === tokenInfo.email) 
-          : data;
-        
-        // 4. Cập nhật state nếu tìm thấy thông tin
-        if (userInfo) {
-          setUserData(prev => ({
-            ...prev,
-            id: userInfo.id || userInfo._id || "", // Lưu ID từ API
-            name: userInfo.name || prev.name,
-            phoneNumber: userInfo.phoneNumber || prev.phoneNumber,
-            major: userInfo.major || prev.major,
-            avatar: userInfo.avatar || prev.avatar
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserInfo();
-  }, []);
-
   // Hàm decode JWT token
   const decodeToken = () => {
     try {
+      if (typeof window === 'undefined') return null; // Check for server-side rendering
+      
       const accessToken = localStorage.getItem('accessToken');
       if (!accessToken) return null;
 
@@ -125,7 +72,8 @@ export default function InformationPage() {
       const payload = JSON.parse(atob(tokenParts[1]));
       return {
         email: payload.email,
-        role: payload.role
+        role: payload.role,
+        userId: payload.userId || payload.id || payload.sub // Extract userId from different possible token formats
       };
     } catch (error) {
       console.error('Error decoding token:', error);
@@ -133,13 +81,99 @@ export default function InformationPage() {
     }
   };
 
-  // Xử lý cập nhật thông tin người dùng
-  const handleUpdateInfo = async (updatedData: { id: string; name: string; phoneNumber: string }) => {
+  // Fetch user information
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        if (typeof window === 'undefined') return;
+        
+        // Get token and decode it (for authentication only)
+        const accessToken = localStorage.getItem('accessToken');
+        const tokenInfo = decodeToken();
+        
+        if (!accessToken || !tokenInfo) {
+          setError("Authentication required. Please log in.");
+          setLoading(false);
+          return;
+        }
+
+        // Fetch detailed user information from API
+        const response = await fetch("http://localhost:3002/get-infors", {
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Process the API response
+        let userInfo;
+        if (Array.isArray(data)) {
+          // If API returns an array of users, find the matching one by email from token
+          userInfo = data.find(user => user.email === tokenInfo.email);
+          
+          if (!userInfo) {
+            // Try finding by user ID if email match fails
+            userInfo = data.find(user => 
+              user.id === tokenInfo.userId || 
+              user._id === tokenInfo.userId
+            );
+          }
+        } else if (typeof data === 'object') {
+          // If API returns a single user object
+          userInfo = data;
+        }
+
+        if (userInfo) {
+          // Use only the data from API response, not from token
+          setUserData({
+            id: userInfo.id || userInfo._id || "",
+            name: userInfo.name || "User",
+            email: userInfo.email || tokenInfo.email, // Fallback to token email if API doesn't provide it
+            phoneNumber: userInfo.phoneNumber || "",
+            major: userInfo.major || "",
+            avatar: userInfo.avatar || "",
+            role: userInfo.role || tokenInfo.role?.charAt(0).toUpperCase() + tokenInfo.role?.slice(1) || "User"
+          });
+        } else {
+          throw new Error("User information not found in API response");
+        }
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+        setError("Failed to fetch user information. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
+
+  // Update user information
+  const handleUpdateInfo = async (updatedData: { name: string; phoneNumber: string }) => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      if (typeof window === 'undefined') return;
       
-      // Sử dụng API với query param id
-      const response = await fetch(`http://localhost:3002/edit-infors?id=${updatedData.id}`, {
+      const accessToken = localStorage.getItem('accessToken');
+      const tokenInfo = decodeToken();
+      
+      if (!accessToken || !tokenInfo) {
+        throw new Error("Authentication required. Please log in.");
+      }
+      
+      // Use the user ID from API data
+      const userId = userData.id;
+      
+      if (!userId) {
+        throw new Error("User ID not found in profile data");
+      }
+      
+      // Call API to update user information
+      const response = await fetch(`http://localhost:3002/edit-infors?id=${userId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -154,28 +188,54 @@ export default function InformationPage() {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        const errorMessage = errorData?.message || `Failed with status: ${response.status}`;
-        throw new Error(errorMessage);
+        throw new Error(errorData?.message || `Update failed with status: ${response.status}`);
       }
       
-      // Cập nhật state với thông tin mới
-      setUserData({
-        ...userData,
-        name: updatedData.name,
-        phoneNumber: updatedData.phoneNumber
+      // After successful update, fetch the updated info from API again
+      // to ensure we display the latest data
+      const updatedResponse = await fetch("http://localhost:3002/get-infors", {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`
+        }
       });
       
-      console.log("Information updated successfully!");
+      if (updatedResponse.ok) {
+        const updatedData = await updatedResponse.json();
+        let updatedUserInfo;
+        
+        if (Array.isArray(updatedData)) {
+          updatedUserInfo = updatedData.find(user => user.id === userId || user._id === userId);
+        } else if (typeof updatedData === 'object') {
+          updatedUserInfo = updatedData;
+        }
+        
+        if (updatedUserInfo) {
+          setUserData(prev => ({
+            ...prev,
+            name: updatedUserInfo.name || prev.name,
+            phoneNumber: updatedUserInfo.phoneNumber || prev.phoneNumber
+          }));
+        }
+      } else {
+        // If we can't fetch updated data, at least update local state
+        setUserData(prev => ({
+          ...prev,
+          name: updatedData.name,
+          phoneNumber: updatedData.phoneNumber
+        }));
+      }
       
+      // Close the edit form
+      setShowEditForm(false);
     } catch (error: any) {
       console.error("Error updating information:", error);
       throw error;
     }
   };
 
-  // Helper function cho avatar
+  // Helper function for avatar
   const getInitialAvatar = () => {
-    return userData.name.charAt(0).toUpperCase();
+    return userData.name ? userData.name.charAt(0).toUpperCase() : 'U';
   };
 
   return (
@@ -237,63 +297,87 @@ export default function InformationPage() {
 
             {/* Content */}
             <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-              {/* User Information Section */}
-              <div className="md:col-span-1 bg-black border border-gray-700 p-8 rounded-lg shadow-md text-white">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">User Information</h3>
-                  {!showEditForm && (
-                    <button 
-                      onClick={() => setShowEditForm(true)}
-                      className="p-2 rounded-full bg-blue-600 hover:opacity-80 transition-opacity"
-                      title="Edit Information"
-                    >
-                      <FaEdit />
-                    </button>
-                  )}
-                </div>
-
-                {showEditForm ? (
-                  // Sử dụng component InformationForm
-                  <InformationForm 
-                    userId={userData.id}
-                    userName={userData.name}
-                    userEmail={userData.email}
-                    userPhone={userData.phoneNumber}
-                    onUpdate={(updatedData) => handleUpdateInfo({
-                      id: userData.id,
-                      ...updatedData
-                    })}
-                    onCancel={() => setShowEditForm(false)}
-                  />
-                ) : (
-                  // Display Information
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Full Name</label>
-                      <div className="text-white text-lg">{userData.name}</div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Email Address</label>
-                      <div className="text-white text-lg">{userData.email}</div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Phone Number</label>
-                      <div className="text-white text-lg">{userData.phoneNumber || "Not provided"}</div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Major</label>
-                      <div className="text-white text-lg">{userData.major || "Not specified"}</div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Role</label>
-                      <div className="text-white text-lg">{userData.role}</div>
-                    </div>
+              {/* User Information Section - REDESIGNED */}
+              <div className="md:col-span-1">
+                <div className="bg-black border border-gray-700 rounded-lg shadow-md overflow-hidden">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-4 flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-white">User Information</h3>
+                    {!showEditForm && (
+                      <button 
+                        onClick={() => setShowEditForm(true)}
+                        className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 transition-colors"
+                        title="Edit Information"
+                      >
+                        <FaEdit className="text-white" />
+                      </button>
+                    )}
                   </div>
-                )}
+                  
+                  {/* Content */}
+                  <div className="p-6">
+                    {showEditForm ? (
+                      <InformationForm 
+                        userName={userData.name || ""}
+                        userEmail={userData.email}
+                        userPhone={userData.phoneNumber || ""}
+                        onUpdate={handleUpdateInfo}
+                        onCancel={() => setShowEditForm(false)}
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
+                          <div className="bg-blue-600 rounded-full p-2 mr-3">
+                            <FaUser className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Full Name</p>
+                            <p className="text-white">{userData.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
+                          <div className="bg-green-600 rounded-full p-2 mr-3">
+                            <FaEnvelope className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Email Address</p>
+                            <p className="text-white">{userData.email}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
+                          <div className="bg-yellow-600 rounded-full p-2 mr-3">
+                            <FaPhone className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Phone Number</p>
+                            <p className="text-white">{userData.phoneNumber || "Not provided"}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
+                          <div className="bg-purple-600 rounded-full p-2 mr-3">
+                            <FaGraduationCap className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Major</p>
+                            <p className="text-white">{userData.major || "Not specified"}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
+                          <div className="bg-red-600 rounded-full p-2 mr-3">
+                            <FaUserTag className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Role</p>
+                            <p className="text-white">{userData.role}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Timetable Section */}
