@@ -46,7 +46,7 @@ const ManagerBlogPage: React.FC = () => {
     }
   };
 
-  // ✅ Tách hàm fetchBlog ra ngoài để tái sử dụng sau khi update
+  // ✅ Hàm fetch blogs
   const fetchBlogs = async () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -168,7 +168,7 @@ const ManagerBlogPage: React.FC = () => {
                         </>
                       ) : (
                         <button
-                          onClick={() => handleStatusUpdate(blog.id, "removed")}
+                          onClick={() => handleStatusUpdate(blog.id, "reject")} // ✅ Sửa: dùng "reject" thay vì "removed"
                           className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2"
                         >
                           Remove

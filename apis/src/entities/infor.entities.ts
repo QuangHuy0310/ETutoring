@@ -27,7 +27,7 @@ export class MoreInformation extends BaseEntity {
     @Prop({
         type: String,
     })
-    phoneNumber: string;
+    phone: string;
 
     @Prop({
         type: String,
