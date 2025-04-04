@@ -3,16 +3,14 @@
 import { useState } from "react";
 
 interface InformationFormProps {
-  userId: string;
   userName: string;
   userEmail: string;
   userPhone: string;
-  onUpdate: (updatedData: { id: string; name: string; phoneNumber: string }) => Promise<void>;
+  onUpdate: (updatedData: { name: string; phoneNumber: string }) => Promise<void>;
   onCancel: () => void;
 }
 
 const InformationForm: React.FC<InformationFormProps> = ({ 
-  userId,
   userName, 
   userEmail, 
   userPhone, 
@@ -31,7 +29,6 @@ const InformationForm: React.FC<InformationFormProps> = ({
     
     const formData = new FormData(e.currentTarget);
     const updatedData = {
-      id: userId,  // Thêm id vào đây
       name: formData.get('name') as string,
       phoneNumber: formData.get('phoneNumber') as string,
     };

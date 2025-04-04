@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import TimetablePopup from "@/app/staff/matching/Timetablepopup";
+import TimetablePopup from "./Timetablepopup";
 
 interface User {
   id: number;

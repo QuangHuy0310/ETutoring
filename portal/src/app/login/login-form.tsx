@@ -13,7 +13,7 @@ const ROLE_REDIRECTS = {
   admin: "/admin",
   user: "/",
   staff: "/staff",
-  tutor: "/tutor",
+  tutor: "/",
   default: "/"
 };
 
