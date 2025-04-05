@@ -5,6 +5,7 @@ import { USER_ROLE } from '@utils/data-types/enums';
 import { AuthorizationRequest } from '@utils/data-types/types';
 import { RequiredByUserRoles } from '@utils/decorator';
 import { CreateInforDto, FilterInformationDto, GetInforDto, UpdateDto } from './dto/infor.dto';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 @ApiTags('Information')
 @Controller()
@@ -34,7 +35,7 @@ export class InforController {
     @RequiredByUserRoles()
     @Post('/Push-Id')
     async pushList(@Request() { user }: AuthorizationRequest, @Query('idUser') idUser: string) {
-        return this.inforService.handlePushId(user, idUser)
+        return this.inforService.handlePushId(user, idUser);
     }
 
     //staff
@@ -44,30 +45,33 @@ export class InforController {
         return this.inforService.getMoreInformationForTutors(filters);
     }
 
-
     @RequiredByUserRoles()
     @Get('get-room')
     async getRoom(@Request() { user }: AuthorizationRequest) {
-        return this.inforService.handleGateRoom(user)
+        return this.inforService.handleGateRoom(user);
     }
 
-    @ApiQuery({ name: 'id', required: true })
-    @ApiOperation({ summary: 'Soft delete an information record by ID' })
+    @ApiQuery({ name: 'userId', required: true })
+    @ApiOperation({ summary: 'Soft delete an information record by userId' })
     @RequiredByUserRoles()
     @Delete('/soft-delete-infors')
-    async softDeleteInformation(@Query('id') id: string) {
-        return this.inforService.softDeleteInformation(id);
+    async softDeleteInformation(
+        @Request() { user }: AuthorizationRequest,
+        @Query('userId') userId: string
+    ) {
+        return this.inforService.softDeleteInformation(userId);
     }
 
-    @ApiQuery({ name: 'id', required: true })
-    @ApiOperation({ summary: 'Edit an information record by ID' })
+    @ApiQuery({ name: 'userId', required: true })
+    @ApiOperation({ summary: 'Edit an information record by userId' })
     @ApiBody({ type: UpdateDto })
     @RequiredByUserRoles()
     @Put('/edit-infor')
     async editInformation(
-        @Query('id') id: string,
+        @Request() { user }: AuthorizationRequest,
+        @Query('userId') userId: string,
         @Body() payload: UpdateDto
     ) {
-        return this.inforService.editInformation(id, payload);
+        return this.inforService.editInformation(userId, payload);
     }
 }

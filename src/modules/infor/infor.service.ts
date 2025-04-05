@@ -139,10 +139,10 @@ export class InforService {
     }
 
     // API: Soft delete an information record
-    async softDeleteInformation(id: string): Promise<{ message: string }> {
-        const information = await this.moreInformationModel.findById(id);
+    async softDeleteInformation(userId: string): Promise<{ message: string }> {
+        const information = await this.moreInformationModel.findOne({ userId });
         if (!information) {
-            throw new HttpException('Information not found', HttpStatus.NOT_FOUND);
+            throw new HttpException('Information not found for this user', HttpStatus.NOT_FOUND);
         }
 
         if (information.deletedAt) {
@@ -155,10 +155,10 @@ export class InforService {
         return { message: 'Information soft-deleted successfully' };
     }
 
-    async editInformation(id: string, payload: UpdateDto): Promise<{ message: string; data: MoreInformation }> {
-        const information = await this.moreInformationModel.findById(id);
+    async editInformation(userId: string, payload: UpdateDto): Promise<{ message: string; data: MoreInformation }> {
+        const information = await this.moreInformationModel.findOne({ userId });
         if (!information) {
-            throw new HttpException('Information not found', HttpStatus.NOT_FOUND);
+            throw new HttpException('Information not found for this user', HttpStatus.NOT_FOUND);
         }
 
         if (information.deletedAt) {
