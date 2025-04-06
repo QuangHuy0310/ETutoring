@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat App</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
@@ -14,14 +14,15 @@
             align-items: center;
             height: 100vh;
         }
+
         .chat-container {
-            width: 350px;
+            width: 400px;
             background: white;
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            position: relative;
         }
+
         .chat-header {
             font-size: 18px;
             font-weight: bold;
@@ -29,6 +30,7 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .badge {
             background: red;
             color: white;
@@ -38,6 +40,7 @@
             display: none;
             cursor: pointer;
         }
+
         .status {
             font-size: 12px;
             margin-bottom: 10px;
@@ -45,23 +48,44 @@
             border-radius: 5px;
             text-align: center;
         }
+
         .chat-messages {
-            height: 300px;
+            height: 250px;
             overflow-y: auto;
             border: 1px solid #ccc;
             padding: 10px;
             background: #fafafa;
         }
+
+        .message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            background: #dcf8c6;
+            text-align: right;
+        }
+
+        .message.received {
+            background: #f1f1f1;
+            text-align: left;
+        }
+
         .chat-input {
             display: flex;
             margin-top: 10px;
         }
+
         .chat-input input {
             flex: 1;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+
         .chat-input button {
             margin-left: 5px;
             padding: 8px 12px;
@@ -71,15 +95,27 @@
             border-radius: 5px;
             cursor: pointer;
         }
+
+        .room-select {
+            width: 100%;
+            margin: 10px 0;
+            padding: 5px;
+        }
     </style>
 </head>
+
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            Chat App 
-            <span id="notificationBadge" class="badge">0</span> 
+            Chat App
+            <span id="notificationBadge" class="badge">0</span>
         </div>
         <div class="status" id="connectionStatus">🔄 Connecting...</div>
+
+        <select id="roomSelect" class="room-select">
+            <option value="">-- Chọn phòng --</option>
+        </select>
+
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">
             <input type="text" id="messageInput" placeholder="Nhập tin nhắn...">
@@ -87,8 +123,10 @@
         </div>
     </div>
 
+    <!-- ... phần <head> và style giữ nguyên ... -->
+
     <script>
-        const API_BASE = "http://localhost:3002/api/v1/chat";
+        const API_BASE = "http://localhost:3002";
         const token = localStorage.getItem("accessToken");
         if (!token) {
             alert("Bạn chưa đăng nhập!");
@@ -102,7 +140,21 @@
 
         const connectionStatus = document.getElementById("connectionStatus");
         const notificationBadge = document.getElementById("notificationBadge");
+        const roomSelect = document.getElementById("roomSelect");
+        const chatMessages = document.getElementById("chatMessages");
+        const messageInput = document.getElementById("messageInput");
+
+        let currentRoom = "";
         let notificationCount = 0;
+        let myUserId = "";
+
+        // Giải mã token để lấy userId của mình (nếu cần)
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            myUserId = payload.sub || payload._id || "";
+        } catch (err) {
+            console.warn("Không lấy được userId từ token:", err);
+        }
 
         socket.on("connect", () => {
             connectionStatus.textContent = "✅ Connected";
@@ -123,6 +175,14 @@
             updateNotificationCount();
         });
 
+        socket.on("newMessage", (msg) => {
+            if (msg.roomId === currentRoom) {
+                displayMessage(msg, msg.senderId === myUserId ? "sent" : "received");
+            } else {
+                updateNotificationCount();
+            }
+        });
+
         function updateNotificationCount() {
             notificationCount++;
             notificationBadge.textContent = notificationCount;
@@ -134,6 +194,98 @@
             notificationBadge.textContent = "0";
             notificationBadge.style.display = "none";
         });
+
+        // Gọi API để lấy danh sách phòng
+        async function fetchRooms() {
+            try {
+                const res = await fetch(`${API_BASE}/get-room`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data?.data) {
+                    data.data.forEach(roomId => {
+                        const option = document.createElement("option");
+                        option.value = roomId;
+                        option.textContent = roomId;
+                        roomSelect.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error("Lỗi khi lấy danh sách phòng:", err);
+            }
+        }
+
+        // Gọi API lấy lịch sử chat
+        async function fetchMessages(roomId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/chat/chat/messages?roomId=${roomId}&limit=15`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const result = await res.json();
+                if (Array.isArray(result?.data)) {
+                    chatMessages.innerHTML = ""; // clear cũ trước khi load
+                    result.data.reverse().forEach(msg => {
+                        const type = msg.senderId === myUserId ? "sent" : "received";
+                        displayMessage(msg, type);
+                    });
+                }
+            } catch (err) {
+                console.error("Lỗi khi lấy lịch sử chat:", err);
+            }
+        }
+
+        // Chọn phòng
+        roomSelect.addEventListener("change", () => {
+            const selectedRoom = roomSelect.value;
+            if (selectedRoom) {
+                currentRoom = selectedRoom;
+                socket.emit("joinRoom", currentRoom);
+                chatMessages.innerHTML = ""; // clear chat khi đổi phòng
+                fetchMessages(currentRoom);  // lấy lịch sử chat
+            }
+        });
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return alert("Vui lòng nhập tin nhắn!");
+            if (!currentRoom) return alert("Vui lòng chọn phòng!");
+
+            const payload = { roomId: currentRoom, message };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/chat/chat`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    displayMessage({ senderId: myUserId, message }, "sent");
+                    socket.emit("sendMessage", payload);
+                    messageInput.value = "";
+                } else {
+                    console.error("Lỗi gửi tin nhắn:", res.statusText);
+                }
+            } catch (err) {
+                console.error("Lỗi mạng:", err);
+            }
+        }
+
+        function displayMessage(msg, type) {
+            const div = document.createElement("div");
+            div.classList.add("message", type);
+            div.innerHTML = `<b>${msg.senderId}</b>: ${msg.message}`;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Gọi khi trang load
+        fetchRooms();
     </script>
+
 </body>
+
 </html>

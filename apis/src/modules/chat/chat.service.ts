@@ -1,7 +1,7 @@
 import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Message } from '@entities/message.entities';
+import { Message, MessageDocument } from '@entities/message.entities';
 import { CreateChatDto, InputMessageDto, VerifyChatDto } from './dto/create-message.dto';
 import { UserService } from '@modules/index-service';
 import { UUID } from 'crypto';
@@ -12,7 +12,7 @@ import { Cache } from 'cache-manager';
 @Injectable()
 export class ChatService {
   constructor(
-    @InjectModel(Message.name) private readonly chatModel: Model<Message>,
+    @InjectModel(Message.name) private readonly chatModel: Model<MessageDocument>,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
 
@@ -20,8 +20,11 @@ export class ChatService {
   ) { }
 
   async createMessage(data: CreateChatDto): Promise<CreateChatDto> {
-    const newMessage = new this.chatModel(data)
-    newMessage.save()
+    const newMessage = new this.chatModel({
+      ...data,
+      createdAt: new Date(),
+    })
+    await newMessage.save()
     return newMessage
   }
 

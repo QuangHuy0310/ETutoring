@@ -16,6 +16,16 @@ export class Message extends BaseEntity {
   @Prop ({type: String})
   path: string
 
+  @Prop({
+    type: Date,
+    default: () => Date.now(),
+  })
+  createdAt: Date;
+
+  @Prop({})
+  deletedAt: Date
+
 }
 
+export type MessageDocument = Message & Document;
 export const MessageSchema = SchemaFactory.createForClass(Message);
