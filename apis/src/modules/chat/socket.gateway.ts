@@ -81,8 +81,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return rooms
   }
   @SubscribeMessage('joinRoom')
-  async handleJoinRoom(@ConnectedSocket() client: Socket) {
-
+  handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() roomId: string) {
+    console.log(`📢 ${client.id} yêu cầu join room:`, roomId);
+    client.join(roomId);
+    console.log(`✅ Socket ${client.id} đã join room ${roomId}`);
   }
 
   @SubscribeMessage('sendMessage')
