@@ -20,13 +20,20 @@ export class ChatService {
   ) { }
 
   async createMessage(data: CreateChatDto): Promise<CreateChatDto> {
-    const newMessage = new this.chatModel({
+    const message = await this.chatModel.create({
       ...data,
       createdAt: new Date(),
-    })
-    await newMessage.save()
-    return newMessage
+    });
+  
+    const cacheKeyPrefix = `chat:${data.roomId}`;
+    const keys = [20, 50, 100].map(limit => `${cacheKeyPrefix}:${limit}`);
+    
+    // Xóa nhiều limit nếu cần - hỗ trợ soft invalidate
+    await Promise.all(keys.map(key => this.cacheManager.del(key)));
+  
+    return message;
   }
+  
 
 
   // Lấy tin nhắn theo roomId
