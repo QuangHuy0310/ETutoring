@@ -14,18 +14,22 @@ export default function ChatboxPage() {
   const [rooms, setRooms] = useState<string[]>([]);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const userIdRef = useRef<string | null>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 🧠 Load message API
+  const userIdRef = useRef<string | null>(null);
+  const currentRoomRef = useRef<string | null>(null); // 🔐 fix stale closure bug
+
+  // 📥 Load messages
   const fetchMessages = async (roomId: string) => {
     const token = localStorage.getItem("accessToken");
     if (!token) return;
 
     try {
-      const res = await fetch(`http://localhost:3002/api/v1/chat/chat/messages?roomId=${roomId}&limit=50`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://localhost:3002/api/v1/chat/chat/messages?roomId=${roomId}&limit=50`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       const response = await res.json();
       const data = response?.data;
@@ -46,7 +50,7 @@ export default function ChatboxPage() {
     }
   };
 
-  // ⚙️ Setup Socket + Room
+  // ⚙️ Setup socket + room list
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     const uid = localStorage.getItem("userId");
@@ -63,6 +67,17 @@ export default function ChatboxPage() {
 
     socket.on("connect", () => console.log("✅ Socket connected"));
     socket.on("disconnect", (reason) => console.warn("❌ Socket disconnected:", reason));
+
+    socket.on("newMessage", (msg: any) => {
+      if (msg.roomId === currentRoomRef.current) {
+        const senderType = msg.senderId === userIdRef.current ? "me" : "other";
+        console.log("📩 [Realtime] Message from", senderType, ":", msg.message);
+
+        setMessages((prev) => [...prev, { text: msg.message, sender: senderType }]);
+      } else {
+        console.warn("📥 Bỏ qua message từ room khác:", msg.roomId);
+      }
+    });
 
     fetch("http://localhost:3002/get-room", {
       headers: { Authorization: `Bearer ${token}` },
@@ -83,6 +98,7 @@ export default function ChatboxPage() {
           setCurrentRoom(firstRoom);
           roomList.forEach((roomId) => {
             socket.emit("joinRoom", roomId);
+            console.log(`📶 Join room: ${roomId}`);
           });
         }
       })
@@ -93,51 +109,47 @@ export default function ChatboxPage() {
     };
   }, []);
 
-  // 📡 Polling mỗi 3s nếu đã có room & user
+  // 🧲 Load lại khi đổi phòng
   useEffect(() => {
     if (!currentRoom || !userId) return;
-
-    fetchMessages(currentRoom); // load ngay lập tức
-
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    pollingRef.current = setInterval(() => {
-      fetchMessages(currentRoom);
-    }, 3000);
-
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
+    currentRoomRef.current = currentRoom;
+    fetchMessages(currentRoom);
   }, [currentRoom, userId]);
 
   // 📤 Gửi tin nhắn
-  const handleSend = async (message: string) => {
-    if (!currentRoom) return alert("Bạn chưa chọn phòng");
+  // 📤 Gửi tin nhắn
+const handleSend = async (message: string) => {
+  if (!currentRoom) return alert("Bạn chưa chọn phòng");
+  const token = localStorage.getItem("accessToken");
+  if (!token) return alert("Token không tồn tại");
 
-    const token = localStorage.getItem("accessToken");
-    if (!token) return alert("Token không tồn tại");
+  const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
+  url.searchParams.append("roomId", currentRoom);
+  url.searchParams.append("message", message);
 
-    const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
-    url.searchParams.append("roomId", currentRoom);
-    url.searchParams.append("message", message);
+  try {
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    try {
-      const res = await fetch(url.toString(), {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        console.error("❌ REST API lỗi:", res.status);
-        return;
-      }
-
-      setMessages((prev) => [...prev, { text: message, sender: "me" }]);
-    } catch (err) {
-      console.error("❌ Lỗi khi gửi tin nhắn:", err);
+    if (!res.ok) {
+      console.error("❌ REST API lỗi:", res.status);
+      return;
     }
-  };
+
+    // ❌ KHÔNG emit lại vì BE đã emit cho room (đã fix trước)
+    // ❌ KHÔNG setMessages thủ công — socket.on sẽ lo
+
+    console.log("✅ Tin nhắn đã gửi, chờ socket update UI...");
+
+  } catch (err) {
+    console.error("❌ Lỗi khi gửi tin nhắn:", err);
+  }
+};
+
 
   return (
     <Layout>
