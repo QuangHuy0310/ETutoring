@@ -6,6 +6,7 @@ import ChatboxForm from "@/app/chatbox/chatboxform";
 import { ChatMessage } from "@/app/chatbox/chatmessage";
 import { FaPhone, FaVideo, FaCog } from "react-icons/fa";
 import Layout from "@/app/componets/layout";
+import ChatSidebar from "@/app/chatbox/chatsidebar"; // ✅ Import mới
 
 let socket: Socket;
 
@@ -14,6 +15,7 @@ export default function ChatboxPage() {
   const [rooms, setRooms] = useState<string[]>([]);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false); // ✅ State mở sidebar
 
   const userIdRef = useRef<string | null>(null);
   const currentRoomRef = useRef<string | null>(null);
@@ -121,8 +123,7 @@ export default function ChatboxPage() {
       const res = await fetch(url.toString(), {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
-        },
+          Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
@@ -138,7 +139,10 @@ export default function ChatboxPage() {
 
   return (
     <Layout>
-      <div className="flex flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl">
+      <div className="flex flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl relative">
+        {/* Sidebar Toggle */}
+        {showSidebar && <ChatSidebar onClose={() => setShowSidebar(false)} />} {/* ✅ Thêm UI sidebar */}
+
         <div className="w-[300px] bg-black border-r border-gray-700 p-4">
           <h2 className="text-xl font-semibold text-white mb-4">Chat Rooms</h2>
           <ul>
@@ -157,6 +161,7 @@ export default function ChatboxPage() {
         </div>
 
         <div className="flex flex-col flex-1 h-full">
+          {/* Header */}
           <div className="flex items-center justify-between p-4 bg-black border-b border-gray-700">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gray-600 rounded-full" />
@@ -167,10 +172,13 @@ export default function ChatboxPage() {
             <div className="flex space-x-4">
               <button className="p-2 bg-gray-700 text-white rounded"><FaPhone /></button>
               <button className="p-2 bg-gray-700 text-white rounded"><FaVideo /></button>
-              <button className="p-2 bg-gray-700 text-white rounded"><FaCog /></button>
+              <button className="p-2 bg-gray-700 text-white rounded" onClick={() => setShowSidebar(true)}>
+                <FaCog />
+              </button>
             </div>
           </div>
 
+          {/* Chat Content */}
           <div className="flex-1 overflow-auto p-4 bg-black flex flex-col">
             <div className="flex flex-col flex-1 justify-end">
               {messages.map((msg, index) => {
@@ -230,6 +238,7 @@ export default function ChatboxPage() {
             </div>
           </div>
 
+          {/* Form Input */}
           <div className="p-4 bg-black border-t border-gray-700 relative">
             <ChatboxForm onSend={handleSend} />
           </div>
