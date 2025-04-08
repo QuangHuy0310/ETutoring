@@ -37,4 +37,7 @@ export const configs = {
   secret: process.env.SECRET_JWT,
   baseUrl: process.env.BASE_URL,
   instructorRoleId: process.env.INSTRUCTOR_ROLE_ID,
+
+  //redis
+  redisURL: process.env.REDIS_URL,
 };
