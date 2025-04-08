@@ -141,7 +141,13 @@ export default function ChatboxPage() {
     <Layout>
       <div className="flex flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl relative">
         {/* Sidebar Toggle */}
-        {showSidebar && <ChatSidebar onClose={() => setShowSidebar(false)} />} {/* ✅ Thêm UI sidebar */}
+        {showSidebar && (
+  <ChatSidebar
+    onClose={() => setShowSidebar(false)}
+    messages={messages} // ✅ truyền props
+  />
+)}
+
 
         <div className="w-[300px] bg-black border-r border-gray-700 p-4">
           <h2 className="text-xl font-semibold text-white mb-4">Chat Rooms</h2>
