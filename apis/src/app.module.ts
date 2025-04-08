@@ -1,3 +1,4 @@
+import { DocuModule } from './modules/docu/docu.module';
 import { MatchingModule } from './modules/matching/matching.module';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';

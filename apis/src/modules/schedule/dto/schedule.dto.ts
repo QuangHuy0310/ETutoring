@@ -20,9 +20,6 @@ export class InputScheduleDto {
     @IsString()
     partnerId: string;
 
-    @ApiProperty()
-    @IsString()
-    majorId: string;
 }
 
 export class CreateScheduleDto {
@@ -43,9 +40,6 @@ export class CreateScheduleDto {
     @IsString()
     partnerId: string;
 
-    @ApiProperty()
-    @IsString()
-    majorId: string;
 }
 
 export class QueryScheduleDto {

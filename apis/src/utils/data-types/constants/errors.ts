@@ -22,7 +22,8 @@ export const USER_ERRORS = {
   WRONG_CREATE: 'content is empty',
   WRONG_USER: 'User is invalid',
   SCHEDULE_EXISTED: 'Schedule already exists',
-  ROOM_EXISTED: 'Room is already exists'
+  ROOM_EXISTED: 'Room is already exists',
+  COMMENT_WRONG: 'You are owner of this document'
 };
 
 export const AUTH_ERRORS = {

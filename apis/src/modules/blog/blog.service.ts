@@ -41,7 +41,6 @@ export class BlogService {
         return await this.createBlog(payload)
     }
     async createBlog(payload: any): Promise<Blog> {
-       console.log(payload)
 
         const newBlog = await new this.blogModel(payload);
         return newBlog.save();
