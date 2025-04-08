@@ -10,6 +10,7 @@ export * from '@entities/slot.entities'
 export * from '@entities/schedule.entities';
 export * from '@entities/majoring.entities';
 export * from '@entities/matching.entities';
+export * from '@entities/document.entities';
 
 
 

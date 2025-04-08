@@ -2,10 +2,11 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Chat App</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
+        /* CSS giữ nguyên như bạn gửi */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -101,6 +102,16 @@
             margin: 10px 0;
             padding: 5px;
         }
+
+        .document-box {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
     </style>
 </head>
 
@@ -117,13 +128,22 @@
         </select>
 
         <div class="chat-messages" id="chatMessages"></div>
+
+        <!-- Tài liệu phòng -->
+        <div style="margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="margin: 0;">📄 Tài liệu</h4>
+                <button onclick="fetchDocument(currentRoom)" style="padding: 5px 10px; cursor: pointer;">Lấy tài
+                    liệu</button>
+            </div>
+            <div id="documentDisplay" class="document-box">Chưa có tài liệu</div>
+        </div>
+
         <div class="chat-input">
             <input type="text" id="messageInput" placeholder="Nhập tin nhắn...">
             <button onclick="sendMessage()">Gửi</button>
         </div>
     </div>
-
-    <!-- ... phần <head> và style giữ nguyên ... -->
 
     <script>
         const API_BASE = "http://localhost:3002";
@@ -143,12 +163,12 @@
         const roomSelect = document.getElementById("roomSelect");
         const chatMessages = document.getElementById("chatMessages");
         const messageInput = document.getElementById("messageInput");
+        const documentDisplay = document.getElementById("documentDisplay");
 
         let currentRoom = "";
         let notificationCount = 0;
         let myUserId = "";
 
-        // Giải mã token để lấy userId của mình (nếu cần)
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             myUserId = payload.sub || payload._id || "";
@@ -183,6 +203,20 @@
             }
         });
 
+        // 👉 BẮT SỰ KIỆN newComment từ socket
+        socket.on("newComment", (data) => {
+            console.log("📩 Nhận bình luận mới:", data);
+
+            if (data.roomId === currentRoom) {
+                // Đợi một chút rồi mới fetch để backend kịp lưu xong
+                setTimeout(() => {
+                    fetchDocument(currentRoom);
+                }, 300); // Delay khoảng 300ms
+            } else {
+                updateNotificationCount();
+            }
+        });
+
         function updateNotificationCount() {
             notificationCount++;
             notificationBadge.textContent = notificationCount;
@@ -195,7 +229,6 @@
             notificationBadge.style.display = "none";
         });
 
-        // Gọi API để lấy danh sách phòng
         async function fetchRooms() {
             try {
                 const res = await fetch(`${API_BASE}/get-room`, {
@@ -215,7 +248,6 @@
             }
         }
 
-        // Gọi API lấy lịch sử chat
         async function fetchMessages(roomId) {
             try {
                 const res = await fetch(`${API_BASE}/api/v1/chat/chat/messages?roomId=${roomId}&limit=15`, {
@@ -223,7 +255,7 @@
                 });
                 const result = await res.json();
                 if (Array.isArray(result?.data)) {
-                    chatMessages.innerHTML = ""; // clear cũ trước khi load
+                    chatMessages.innerHTML = "";
                     result.data.reverse().forEach(msg => {
                         const type = msg.senderId === myUserId ? "sent" : "received";
                         displayMessage(msg, type);
@@ -234,14 +266,38 @@
             }
         }
 
-        // Chọn phòng
+        async function fetchDocument(roomId) {
+            if (!roomId) return alert("Vui lòng chọn phòng trước!");
+            try {
+                const res = await fetch(`${API_BASE}/get-document?roomId=${roomId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const result = await res.json();
+
+                if (Array.isArray(result?.data) && result.data.length > 0) {
+                    const html = result.data.map(doc => `
+            <div>
+              <b>${doc.name}</b>: ${doc.comment || 'Không có bình luận'}
+            </div>
+          `).join('');
+                    documentDisplay.innerHTML = html;
+                } else {
+                    documentDisplay.innerHTML = "Không có tài liệu";
+                }
+            } catch (err) {
+                console.error("Lỗi khi lấy tài liệu:", err);
+                documentDisplay.innerHTML = "Không thể tải tài liệu";
+            }
+        }
+
         roomSelect.addEventListener("change", () => {
             const selectedRoom = roomSelect.value;
             if (selectedRoom) {
                 currentRoom = selectedRoom;
                 socket.emit("joinRoom", currentRoom);
-                chatMessages.innerHTML = ""; // clear chat khi đổi phòng
-                fetchMessages(currentRoom);  // lấy lịch sử chat
+                chatMessages.innerHTML = "";
+                fetchMessages(currentRoom);
+                fetchDocument(currentRoom); // tự động lấy tài liệu khi chọn phòng
             }
         });
 
@@ -282,10 +338,8 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Gọi khi trang load
         fetchRooms();
     </script>
-
 </body>
 
 </html>

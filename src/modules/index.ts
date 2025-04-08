@@ -14,3 +14,4 @@ export * from '@modules/majoring/majoring.module';
 export * from '@modules/mail/mail.module';
 export * from '@modules/room/room.module';
 export * from '@modules/matching/matching.module';
+export * from '@modules/docu/docu.module';
