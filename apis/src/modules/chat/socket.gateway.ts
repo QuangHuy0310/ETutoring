@@ -117,6 +117,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   matchingNotification(from: string, to: string, notification: string) {
     this.server.to(from).emit('newNotification', notification)
     this.server.to(to).emit('newNotification', notification)
+  }
 
+
+  @SubscribeMessage('newComment')
+  sendCommentForDocument(receiverId: any, payload: any) {
+    this.server.to(receiverId).emit('newComment', payload)
   }
 }

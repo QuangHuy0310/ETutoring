@@ -16,6 +16,9 @@ export class Message extends BaseEntity {
   @Prop ({type: String})
   path: string
 
+  @Prop({ type: String })
+  document: string; 
+
   @Prop({
     type: Date,
     default: () => Date.now(),

@@ -18,8 +18,6 @@ export class Schedule extends BaseEntity {
     @Prop({ required: true, type: String, ref: 'Slot' })
     slotId: string;
 
-    @Prop({ required: true, type: String })
-    majorId: string;
 
     @Prop({ required: true, type: String })
     partnerId: string;
