@@ -29,9 +29,13 @@ export class ChatController {
   // API lấy tất cả tin nhắn theo roomId
   @RequiredByUserRoles()
   @ApiQuery({ name: 'roomId', type: String, required: true })
+  @ApiQuery({ name: 'sender', type: String, required: false })
+  @ApiQuery({ name: 'path', type: String, required: false })
+  @ApiQuery({ name: 'document', type: String, required: false })
+  @ApiQuery({ name: 'createdAt', type: String, required: false })
   @ApiQuery({ name: 'limit', type: Number, required: false })
   @Get('messages')
   async getMessages(@Query() payload: GetMessageDto){
-    return await this.chatService.getMessagesByRoomId(payload.roomId, payload.limit)
+    return await this.chatService.getMessagesByRoomId(payload)
   }
 }
