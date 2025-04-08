@@ -11,6 +11,7 @@ import * as redisStore from 'cache-manager-redis-store';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MessageProcessor } from './chat.processor';
+import { redisOptions } from '@utils/configs/redis-config/redis.config';
 @Module({
   imports: [
     forwardRef(() => UserModule),
@@ -23,22 +24,18 @@ import { MessageProcessor } from './chat.processor';
     ]),
     CacheModule.register({
       store: redisStore,
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
+      ...redisOptions,
       ttl: 300000, // Cache 5 phút
     }),
     BullModule.registerQueue({
       name: 'messageQueue', // Tên queue
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: Number(process.env.REDIS_PORT) || 6379,
-      },
+      redis: redisOptions,
     }),
   ],
   controllers: [
     ChatController,],
   providers: [
-    ChatService, SocketGateway,MessageProcessor],
+    ChatService, SocketGateway, MessageProcessor],
   exports: [SocketGateway]
 
 })
