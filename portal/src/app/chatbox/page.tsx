@@ -16,9 +16,8 @@ export default function ChatboxPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const userIdRef = useRef<string | null>(null);
-  const currentRoomRef = useRef<string | null>(null); // 🔐 fix stale closure bug
+  const currentRoomRef = useRef<string | null>(null);
 
-  // 📥 Load messages
   const fetchMessages = async (roomId: string) => {
     const token = localStorage.getItem("accessToken");
     if (!token) return;
@@ -50,7 +49,6 @@ export default function ChatboxPage() {
     }
   };
 
-  // ⚙️ Setup socket + room list
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     const uid = localStorage.getItem("userId");
@@ -71,11 +69,7 @@ export default function ChatboxPage() {
     socket.on("newMessage", (msg: any) => {
       if (msg.roomId === currentRoomRef.current) {
         const senderType = msg.senderId === userIdRef.current ? "me" : "other";
-        console.log("📩 [Realtime] Message from", senderType, ":", msg.message);
-
         setMessages((prev) => [...prev, { text: msg.message, sender: senderType }]);
-      } else {
-        console.warn("📥 Bỏ qua message từ room khác:", msg.roomId);
       }
     });
 
@@ -98,7 +92,6 @@ export default function ChatboxPage() {
           setCurrentRoom(firstRoom);
           roomList.forEach((roomId) => {
             socket.emit("joinRoom", roomId);
-            console.log(`📶 Join room: ${roomId}`);
           });
         }
       })
@@ -109,47 +102,39 @@ export default function ChatboxPage() {
     };
   }, []);
 
-  // 🧲 Load lại khi đổi phòng
   useEffect(() => {
     if (!currentRoom || !userId) return;
     currentRoomRef.current = currentRoom;
     fetchMessages(currentRoom);
   }, [currentRoom, userId]);
 
-  // 📤 Gửi tin nhắn
-  // 📤 Gửi tin nhắn
-const handleSend = async (message: string) => {
-  if (!currentRoom) return alert("Bạn chưa chọn phòng");
-  const token = localStorage.getItem("accessToken");
-  if (!token) return alert("Token không tồn tại");
+  const handleSend = async (message: string) => {
+    if (!currentRoom) return alert("Bạn chưa chọn phòng");
+    const token = localStorage.getItem("accessToken");
+    if (!token) return alert("Token không tồn tại");
 
-  const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
-  url.searchParams.append("roomId", currentRoom);
-  url.searchParams.append("message", message);
+    const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
+    url.searchParams.append("roomId", currentRoom);
+    url.searchParams.append("message", message);
 
-  try {
-    const res = await fetch(url.toString(), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (!res.ok) {
-      console.error("❌ REST API lỗi:", res.status);
-      return;
+      if (!res.ok) {
+        console.error("❌ REST API lỗi:", res.status);
+        return;
+      }
+
+      console.log("✅ Tin nhắn đã gửi, chờ socket update UI...");
+    } catch (err) {
+      console.error("❌ Lỗi khi gửi tin nhắn:", err);
     }
-
-    // ❌ KHÔNG emit lại vì BE đã emit cho room (đã fix trước)
-    // ❌ KHÔNG setMessages thủ công — socket.on sẽ lo
-
-    console.log("✅ Tin nhắn đã gửi, chờ socket update UI...");
-
-  } catch (err) {
-    console.error("❌ Lỗi khi gửi tin nhắn:", err);
-  }
-};
-
+  };
 
   return (
     <Layout>
@@ -188,9 +173,60 @@ const handleSend = async (message: string) => {
 
           <div className="flex-1 overflow-auto p-4 bg-black flex flex-col">
             <div className="flex flex-col flex-1 justify-end">
-              {messages.map((msg, index) => (
-                <ChatMessage key={index} text={msg.text} sender={msg.sender} />
-              ))}
+              {messages.map((msg, index) => {
+                let parsed;
+                try {
+                  parsed = JSON.parse(msg.text);
+                } catch {
+                  parsed = null;
+                }
+
+                if (parsed?.type === "image-gallery" && Array.isArray(parsed.images)) {
+                  return (
+                    <div key={index} className={`mb-4 ${msg.sender === "me" ? "text-right" : "text-left"}`}>
+                      <div className="flex gap-2 overflow-x-auto max-w-full scrollbar-hide">
+                        {parsed.images.map((url: string, i: number) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt={`Gallery ${i}`}
+                            className="w-32 h-32 object-cover rounded shadow"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (parsed?.type === "doc-attachment" && parsed.fileUrl && parsed.filename) {
+                  return (
+                    <div key={index} className={`mb-3 ${msg.sender === "me" ? "text-right" : "text-left"}`}>
+                      <a
+                        href={parsed.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-blue-400 hover:text-blue-300 underline"
+                      >
+                        📎 {parsed.filename}
+                      </a>
+                    </div>
+                  );
+                }
+
+                if (msg.text.startsWith("http") && msg.text.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
+                  return (
+                    <div key={index} className={`mb-2 ${msg.sender === "me" ? "text-right" : "text-left"}`}>
+                      <img
+                        src={msg.text}
+                        alt="Image"
+                        className="inline-block max-w-[300px] rounded-lg shadow-lg"
+                      />
+                    </div>
+                  );
+                }
+
+                return <ChatMessage key={index} text={msg.text} sender={msg.sender} />;
+              })}
             </div>
           </div>
 
