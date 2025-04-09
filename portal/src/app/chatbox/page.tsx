@@ -26,6 +26,7 @@ export default function ChatboxPage() {
 
   const userIdRef = useRef<string | null>(null);
   const currentRoomRef = useRef<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null); // 👈 Scroll ref
 
   const fetchMessages = async (roomId: string) => {
     const token = localStorage.getItem("accessToken");
@@ -127,6 +128,13 @@ export default function ChatboxPage() {
     fetchMessages(currentRoom);
   }, [currentRoom, userId]);
 
+  // 👇 Scroll xuống cuối khi có tin nhắn mới
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
   const handleSend = async (message: string) => {
     if (!currentRoom) return alert("Bạn chưa chọn phòng");
     const token = localStorage.getItem("accessToken");
@@ -157,15 +165,8 @@ export default function ChatboxPage() {
 
   return (
     <Layout>
-      <div className="flex flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl relative">
-        {/* Sidebar Toggle */}
-        {showSidebar && (
-          <ChatSidebar
-            onClose={() => setShowSidebar(false)}
-            messages={messages}
-          />
-        )}
-
+      <div className="flex flex-row flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl">
+        {/* Sidebar trái: danh sách phòng */}
         <div className="w-[300px] bg-black border-r border-gray-700 p-4">
           <h2 className="text-xl font-semibold text-white mb-4">Chat Rooms</h2>
           <ul>
@@ -183,6 +184,7 @@ export default function ChatboxPage() {
           </ul>
         </div>
 
+        {/* Nội dung chat */}
         <div className="flex flex-col flex-1 h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 bg-black border-b border-gray-700">
@@ -201,28 +203,37 @@ export default function ChatboxPage() {
             </div>
           </div>
 
-          {/* Chat Content */}
+          {/* Danh sách tin nhắn */}
           <div className="flex-1 overflow-auto p-4 bg-black flex flex-col">
             <div className="flex flex-col flex-1 justify-end">
-              {messages.map((msg, index) => {
-                return (
-                  <ChatMessage
-                    key={index}
-                    text={msg.text}
-                    sender={msg.sender}
-                    senderId={msg.senderId}
-                    createdAt={msg.createdAt}
-                  />
-                );
-              })}
+              {messages.map((msg, index) => (
+                <ChatMessage
+                  key={index}
+                  text={msg.text}
+                  sender={msg.sender}
+                  senderId={msg.senderId}
+                  createdAt={msg.createdAt}
+                />
+              ))}
+              <div ref={bottomRef} /> {/* 👈 Element để cuộn tới */}
             </div>
           </div>
 
-          {/* Form Input */}
+          {/* Form nhập */}
           <div className="p-4 bg-black border-t border-gray-700 relative">
             <ChatboxForm onSend={handleSend} />
           </div>
         </div>
+
+        {/* Sidebar phải: ChatSidebar */}
+        {showSidebar && (
+          <div className="w-[350px] h-full max-h-full overflow-y-auto border-l border-gray-700">
+            <ChatSidebar
+              onClose={() => setShowSidebar(false)}
+              messages={messages}
+            />
+          </div>
+        )}
       </div>
     </Layout>
   );

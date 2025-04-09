@@ -140,12 +140,11 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
   ];
 
   return (
-    <div className="absolute top-0 bottom-0 right-0 w-[350px] h-full bg-[#1e1e1e] text-white shadow-lg z-50 border-l border-gray-700 flex flex-col">
+    <div className="w-[350px] h-full bg-[#1e1e1e] text-white shadow-lg z-50 border-l border-gray-700 flex flex-col overflow-y-auto overflow-x-hidden">
+      {/* Header */}
       <div className="p-4 border-b border-gray-700 font-semibold text-lg flex justify-between items-center">
         Thông tin hội thoại
-        <button onClick={onClose} className="text-gray-400 hover:text-white">
-          ✕
-        </button>
+        <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
       </div>
 
       <Tab.Group>
@@ -165,22 +164,22 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
           ))}
         </Tab.List>
 
-        <Tab.Panels className="flex-1 overflow-auto">
-          {/* Ảnh */}
-          <Tab.Panel>
-            <div className="p-4">
+        <Tab.Panels className="flex-1">
+          {/* === TAB ẢNH === */}
+          <Tab.Panel className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-700">
               {Object.entries(groupedImages).map(([date, urls]) => (
-                <div key={date} className="mb-6">
-                  <h3 className="text-white font-semibold mb-3">
-                    Ngày {date.replaceAll("/", " Tháng ")}
+                <div key={date}>
+                  <h3 className="text-white font-semibold mb-2">
+                    📅 Ngày {date.replaceAll("/", " Tháng ")}
                   </h3>
                   <div className="grid grid-cols-3 gap-2">
                     {urls.map((url, idx) => (
                       <img
-                        key={idx}
+                        key={`${date}-${idx}`}
                         src={url}
                         alt={`Ảnh ${idx}`}
-                        className="rounded object-cover w-full h-28 bg-gray-700"
+                        className="rounded object-cover w-full aspect-square bg-gray-700 max-w-full"
                       />
                     ))}
                   </div>
@@ -189,108 +188,101 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
             </div>
           </Tab.Panel>
 
-          {/* Files */}
-          <Tab.Panel>
-            <div className="p-4">
-              {/* Search */}
-              <div className="flex items-center mb-3 bg-gray-800 px-3 py-2 rounded">
-                <FaSearch className="mr-2 text-gray-400" />
-                <input
-                  placeholder="Tìm kiếm File"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-transparent outline-none text-white w-full"
-                />
-              </div>
+          {/* === TAB FILE === */}
+          <Tab.Panel className="h-full overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-600">
+            <div className="flex items-center mb-3 bg-gray-800 px-3 py-2 rounded">
+              <FaSearch className="mr-2 text-gray-400" />
+              <input
+                placeholder="Tìm kiếm File"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent outline-none text-white w-full"
+              />
+            </div>
 
-              {/* Filters */}
-              <div className="flex gap-2 mb-4">
-                <div className="relative">
-                  <button
-                    onClick={() => setTypeOpen(!typeOpen)}
-                    className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
-                  >
-                    Loại <FaChevronDown className="ml-1" />
-                  </button>
-                  {typeOpen && (
-                    <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg">
-                      {fileTypeOptions.map((type) => (
-                        <div
-                          key={type.value}
-                          className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-700"
-                          onClick={() => {
-                            setSelectedType(type.value);
-                            setTypeOpen(false);
-                          }}
-                        >
-                          {type.icon}
-                          <span className="ml-2">{type.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <button
-                    onClick={() => setDateOpen(!dateOpen)}
-                    className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
-                  >
-                    Ngày gửi <FaChevronDown className="ml-1" />
-                  </button>
-                  {dateOpen && (
-                    <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg p-3 w-56">
-                      <label className="text-xs text-gray-400 mb-1 block">Từ ngày</label>
-                      <input
-                        type="date"
-                        className="w-full mb-2 p-1 rounded bg-gray-800 text-white"
-                        value={fromDate}
-                        onChange={(e) => setFromDate(e.target.value)}
-                      />
-                      <label className="text-xs text-gray-400 mb-1 block">Đến ngày</label>
-                      <input
-                        type="date"
-                        className="w-full p-1 rounded bg-gray-800 text-white"
-                        value={toDate}
-                        onChange={(e) => setToDate(e.target.value)}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* File list */}
-              {Object.entries(groupedFiles).map(([date, files]) => (
-                <div key={date} className="mb-4">
-                  <div className="text-sm text-gray-400 mb-2">
-                    📅 Ngày {date}
-                  </div>
-                  <ul>
-                    {files.map((file, i) => (
-                      <li
-                        key={i}
-                        className="p-2 bg-gray-800 rounded mb-2 flex justify-between items-center"
+            <div className="flex gap-2 mb-4">
+              <div className="relative">
+                <button
+                  onClick={() => setTypeOpen(!typeOpen)}
+                  className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
+                >
+                  Loại <FaChevronDown className="ml-1" />
+                </button>
+                {typeOpen && (
+                  <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg">
+                    {fileTypeOptions.map((type) => (
+                      <div
+                        key={type.value}
+                        className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-700"
+                        onClick={() => {
+                          setSelectedType(type.value);
+                          setTypeOpen(false);
+                        }}
                       >
-                        <a
-                          href={file.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-white hover:underline max-w-[75%] truncate"
-                        >
-                          📎 {file.filename}
-                        </a>
-                        <span className="text-xs text-green-400">✓</span>
-                      </li>
+                        {type.icon}
+                        <span className="ml-2">{type.label}</span>
+                      </div>
                     ))}
-                  </ul>
-                </div>
-              ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <button
+                  onClick={() => setDateOpen(!dateOpen)}
+                  className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
+                >
+                  Ngày gửi <FaChevronDown className="ml-1" />
+                </button>
+                {dateOpen && (
+                  <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg p-3 w-56">
+                    <label className="text-xs text-gray-400 mb-1 block">Từ ngày</label>
+                    <input
+                      type="date"
+                      className="w-full mb-2 p-1 rounded bg-gray-800 text-white"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                    />
+                    <label className="text-xs text-gray-400 mb-1 block">Đến ngày</label>
+                    <input
+                      type="date"
+                      className="w-full p-1 rounded bg-gray-800 text-white"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+
+            {Object.entries(groupedFiles).map(([date, files]) => (
+              <div key={date} className="mb-4">
+                <div className="text-sm text-gray-400 mb-2">📅 Ngày {date}</div>
+                <ul>
+                  {files.map((file, i) => (
+                    <li
+                      key={i}
+                      className="p-2 bg-gray-800 rounded mb-2 flex justify-between items-center overflow-hidden"
+                    >
+                      <a
+                        href={file.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white hover:underline max-w-[75%] truncate"
+                      >
+                        📎 {file.filename}
+                      </a>
+                      <span className="text-xs text-green-400">✓</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </Tab.Panel>
 
-          {/* Links */}
-          <Tab.Panel>
-            <div className="p-4 text-center text-gray-400">Chức năng đang phát triển...</div>
+          {/* === TAB LINKS === */}
+          <Tab.Panel className="p-4 text-center text-gray-400">
+            Chức năng đang phát triển...
           </Tab.Panel>
         </Tab.Panels>
       </Tab.Group>
