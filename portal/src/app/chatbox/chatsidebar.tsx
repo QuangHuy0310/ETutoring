@@ -12,78 +12,34 @@ import {
 import { Tab } from "@headlessui/react";
 import clsx from "clsx";
 
-const dummyFiles = [
-  {
-    name: "Resume TANG MINH NHUT.pdf",
-    type: "pdf",
-    size: "1.41 MB",
-    sender: "Tăng Minh Nhựt",
-    date: "2025-02-27",
-  },
-  {
-    name: "APTIS SPEAKING - BC.pdf",
-    type: "pdf",
-    size: "1.28 MB",
-    sender: "Bum",
-    date: "2025-02-03",
-  },
-  {
-    name: "BÁO GIÁ KÊNH GT.docx",
-    type: "word",
-    size: "1.23 MB",
-    sender: "Bum",
-    date: "2025-01-18",
-  },
-];
+interface ChatMessageItem {
+  text: string;
+  sender: "me" | "other";
+  senderId: string;
+  createdAt?: string;
+}
 
-const fileTypeOptions = [
-  { label: "PDF", icon: <FaFilePdf className="text-red-500" />, value: "pdf" },
-  { label: "Word", icon: <FaFileWord className="text-blue-500" />, value: "word" },
-  { label: "PowerPoint", icon: <FaFilePowerpoint className="text-orange-500" />, value: "ppt" },
-  { label: "Excel", icon: <FaFileExcel className="text-green-500" />, value: "excel" },
-];
-
-const senderOptions = ["Tăng Minh Nhựt", "Bum"];
+interface FileItem {
+  filename: string;
+  fileUrl: string;
+  mime: string;
+  senderId: string;
+  createdAt?: string;
+  type: "pdf" | "word" | "excel" | "ppt" | "other";
+}
 
 interface ChatSidebarProps {
   onClose: () => void;
-  messages: { text: string; sender: "me" | "other" }[];
+  messages: ChatMessageItem[];
 }
 
 export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedSender, setSelectedSender] = useState<string | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [typeOpen, setTypeOpen] = useState(false);
-  const [senderOpen, setSenderOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
-
-  const groupByDate = (arr: { date: string }[]) => {
-    const grouped: Record<string, typeof arr> = {};
-    arr.forEach((item) => {
-      if (!grouped[item.date]) grouped[item.date] = [];
-      grouped[item.date].push(item);
-    });
-    return grouped;
-  };
-
-  const filteredFiles = useMemo(() => {
-    return dummyFiles
-      .filter((file) => !search || file.name.toLowerCase().includes(search.toLowerCase()))
-      .filter((file) => !selectedType || file.type === selectedType)
-      .filter((file) => !selectedSender || file.sender === selectedSender)
-      .filter((file) => {
-        const fileDate = new Date(file.date).getTime();
-        return (
-          (!fromDate || fileDate >= new Date(fromDate).getTime()) &&
-          (!toDate || fileDate <= new Date(toDate).getTime())
-        );
-      });
-  }, [search, selectedType, selectedSender, fromDate, toDate]);
-
-  const groupedFiles = useMemo(() => groupByDate(filteredFiles), [filteredFiles]);
 
   const extractImagesByDate = () => {
     const grouped: { [date: string]: string[] } = {};
@@ -103,7 +59,10 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
       }
 
       if (urls.length > 0) {
-        const date = new Date().toLocaleDateString("vi-VN"); // fallback nếu không có msg.sentAt
+        const date = msg.createdAt
+          ? new Date(msg.createdAt).toLocaleDateString("vi-VN")
+          : new Date().toLocaleDateString("vi-VN");
+
         if (!grouped[date]) grouped[date] = [];
         grouped[date].push(...urls);
       }
@@ -113,6 +72,72 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
   };
 
   const groupedImages = useMemo(() => extractImagesByDate(), [messages]);
+
+  const extractFiles = (): FileItem[] => {
+    const fileList: FileItem[] = [];
+
+    messages.forEach((msg) => {
+      try {
+        const parsed = JSON.parse(msg.text);
+        if (parsed?.type === "doc-attachment" && parsed.fileUrl && parsed.filename) {
+          const mime = parsed.mime || "application/octet-stream";
+          const lower = mime.toLowerCase();
+
+          let type: FileItem["type"] = "other";
+          if (lower.includes("pdf")) type = "pdf";
+          else if (lower.includes("word") || lower.includes("doc")) type = "word";
+          else if (lower.includes("excel") || lower.includes("sheet")) type = "excel";
+          else if (lower.includes("presentation") || lower.includes("powerpoint") || lower.includes("ppt")) type = "ppt";
+
+          fileList.push({
+            filename: parsed.filename,
+            fileUrl: parsed.fileUrl,
+            mime,
+            senderId: msg.senderId,
+            createdAt: msg.createdAt,
+            type,
+          });
+        }
+      } catch {}
+    });
+
+    return fileList;
+  };
+
+  const filteredFiles = useMemo(() => {
+    return extractFiles()
+      .filter((file) => !search || file.filename.toLowerCase().includes(search.toLowerCase()))
+      .filter((file) => !selectedType || file.type === selectedType)
+      .filter((file) => {
+        const fileDate = new Date(file.createdAt ?? "").getTime();
+        return (
+          (!fromDate || fileDate >= new Date(fromDate).getTime()) &&
+          (!toDate || fileDate <= new Date(toDate).getTime())
+        );
+      });
+  }, [messages, search, selectedType, fromDate, toDate]);
+
+  const groupFilesByDate = (files: FileItem[]) => {
+    const grouped: { [date: string]: FileItem[] } = {};
+    files.forEach((file) => {
+      const date = file.createdAt
+        ? new Date(file.createdAt).toLocaleDateString("vi-VN")
+        : "Không rõ ngày";
+
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push(file);
+    });
+    return grouped;
+  };
+
+  const groupedFiles = useMemo(() => groupFilesByDate(filteredFiles), [filteredFiles]);
+
+  const fileTypeOptions = [
+    { label: "PDF", icon: <FaFilePdf className="text-red-500" />, value: "pdf" },
+    { label: "Word", icon: <FaFileWord className="text-blue-500" />, value: "word" },
+    { label: "PowerPoint", icon: <FaFilePowerpoint className="text-orange-500" />, value: "ppt" },
+    { label: "Excel", icon: <FaFileExcel className="text-green-500" />, value: "excel" },
+  ];
 
   return (
     <div className="absolute top-0 bottom-0 right-0 w-[350px] h-full bg-[#1e1e1e] text-white shadow-lg z-50 border-l border-gray-700 flex flex-col">
@@ -141,7 +166,7 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
         </Tab.List>
 
         <Tab.Panels className="flex-1 overflow-auto">
-          {/* Tab Ảnh */}
+          {/* Ảnh */}
           <Tab.Panel>
             <div className="p-4">
               {Object.entries(groupedImages).map(([date, urls]) => (
@@ -164,7 +189,7 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
             </div>
           </Tab.Panel>
 
-          {/* Tab Files */}
+          {/* Files */}
           <Tab.Panel>
             <div className="p-4">
               {/* Search */}
@@ -208,31 +233,6 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
 
                 <div className="relative">
                   <button
-                    onClick={() => setSenderOpen(!senderOpen)}
-                    className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
-                  >
-                    Người gửi <FaChevronDown className="ml-1" />
-                  </button>
-                  {senderOpen && (
-                    <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg w-40 p-2">
-                      {senderOptions.map((s) => (
-                        <div
-                          key={s}
-                          className="px-3 py-1 text-sm hover:bg-gray-700 cursor-pointer"
-                          onClick={() => {
-                            setSelectedSender(s);
-                            setSenderOpen(false);
-                          }}
-                        >
-                          {s}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <button
                     onClick={() => setDateOpen(!dateOpen)}
                     className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
                   >
@@ -263,16 +263,23 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
               {Object.entries(groupedFiles).map(([date, files]) => (
                 <div key={date} className="mb-4">
                   <div className="text-sm text-gray-400 mb-2">
-                    📅 Ngày {new Date(date).toLocaleDateString("vi-VN")}
+                    📅 Ngày {date}
                   </div>
                   <ul>
                     {files.map((file, i) => (
-                      <li key={i} className="p-2 bg-gray-800 rounded mb-2 flex justify-between items-center">
-                        <div>
-                          <div className="font-semibold text-white">{file.name}</div>
-                          <div className="text-sm text-gray-400">{file.size}</div>
-                        </div>
-                        <div className="text-xs text-green-400">✓</div>
+                      <li
+                        key={i}
+                        className="p-2 bg-gray-800 rounded mb-2 flex justify-between items-center"
+                      >
+                        <a
+                          href={file.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-white hover:underline max-w-[75%] truncate"
+                        >
+                          📎 {file.filename}
+                        </a>
+                        <span className="text-xs text-green-400">✓</span>
                       </li>
                     ))}
                   </ul>
@@ -281,7 +288,7 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
             </div>
           </Tab.Panel>
 
-          {/* Tab Links */}
+          {/* Links */}
           <Tab.Panel>
             <div className="p-4 text-center text-gray-400">Chức năng đang phát triển...</div>
           </Tab.Panel>

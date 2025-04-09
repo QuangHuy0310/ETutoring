@@ -6,16 +6,23 @@ import ChatboxForm from "@/app/chatbox/chatboxform";
 import { ChatMessage } from "@/app/chatbox/chatmessage";
 import { FaPhone, FaVideo, FaCog } from "react-icons/fa";
 import Layout from "@/app/componets/layout";
-import ChatSidebar from "@/app/chatbox/chatsidebar"; // ✅ Import mới
+import ChatSidebar from "@/app/chatbox/chatsidebar";
 
 let socket: Socket;
 
+interface ChatMessageItem {
+  text: string;
+  sender: "me" | "other";
+  senderId: string;
+  createdAt?: string;
+}
+
 export default function ChatboxPage() {
-  const [messages, setMessages] = useState<{ text: string; sender: "me" | "other" }[]>([]);
+  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [rooms, setRooms] = useState<string[]>([]);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [showSidebar, setShowSidebar] = useState(false); // ✅ State mở sidebar
+  const [showSidebar, setShowSidebar] = useState(false);
 
   const userIdRef = useRef<string | null>(null);
   const currentRoomRef = useRef<string | null>(null);
@@ -40,9 +47,11 @@ export default function ChatboxPage() {
         return;
       }
 
-      const history = data.map((msg: any): { text: string; sender: "me" | "other" } => ({
+      const history: ChatMessageItem[] = data.map((msg: any) => ({
         text: String(msg.message),
         sender: msg.senderId === userIdRef.current ? "me" : "other",
+        senderId: msg.senderId,
+        createdAt: msg.createdAt,
       }));
 
       setMessages(history.reverse());
@@ -71,7 +80,15 @@ export default function ChatboxPage() {
     socket.on("newMessage", (msg: any) => {
       if (msg.roomId === currentRoomRef.current) {
         const senderType = msg.senderId === userIdRef.current ? "me" : "other";
-        setMessages((prev) => [...prev, { text: msg.message, sender: senderType }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: msg.message,
+            sender: senderType,
+            senderId: msg.senderId,
+            createdAt: msg.createdAt,
+          },
+        ]);
       }
     });
 
@@ -123,7 +140,8 @@ export default function ChatboxPage() {
       const res = await fetch(url.toString(), {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}` },
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {
@@ -142,12 +160,11 @@ export default function ChatboxPage() {
       <div className="flex flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl relative">
         {/* Sidebar Toggle */}
         {showSidebar && (
-  <ChatSidebar
-    onClose={() => setShowSidebar(false)}
-    messages={messages} // ✅ truyền props
-  />
-)}
-
+          <ChatSidebar
+            onClose={() => setShowSidebar(false)}
+            messages={messages}
+          />
+        )}
 
         <div className="w-[300px] bg-black border-r border-gray-700 p-4">
           <h2 className="text-xl font-semibold text-white mb-4">Chat Rooms</h2>
@@ -188,58 +205,15 @@ export default function ChatboxPage() {
           <div className="flex-1 overflow-auto p-4 bg-black flex flex-col">
             <div className="flex flex-col flex-1 justify-end">
               {messages.map((msg, index) => {
-                let parsed;
-                try {
-                  parsed = JSON.parse(msg.text);
-                } catch {
-                  parsed = null;
-                }
-
-                if (parsed?.type === "image-gallery" && Array.isArray(parsed.images)) {
-                  return (
-                    <div key={index} className={`mb-4 ${msg.sender === "me" ? "text-right" : "text-left"}`}>
-                      <div className="flex gap-2 overflow-x-auto max-w-full scrollbar-hide">
-                        {parsed.images.map((url: string, i: number) => (
-                          <img
-                            key={i}
-                            src={url}
-                            alt={`Gallery ${i}`}
-                            className="w-32 h-32 object-cover rounded shadow"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (parsed?.type === "doc-attachment" && parsed.fileUrl && parsed.filename) {
-                  return (
-                    <div key={index} className={`mb-3 ${msg.sender === "me" ? "text-right" : "text-left"}`}>
-                      <a
-                        href={parsed.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block text-blue-400 hover:text-blue-300 underline"
-                      >
-                        📎 {parsed.filename}
-                      </a>
-                    </div>
-                  );
-                }
-
-                if (msg.text.startsWith("http") && msg.text.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
-                  return (
-                    <div key={index} className={`mb-2 ${msg.sender === "me" ? "text-right" : "text-left"}`}>
-                      <img
-                        src={msg.text}
-                        alt="Image"
-                        className="inline-block max-w-[300px] rounded-lg shadow-lg"
-                      />
-                    </div>
-                  );
-                }
-
-                return <ChatMessage key={index} text={msg.text} sender={msg.sender} />;
+                return (
+                  <ChatMessage
+                    key={index}
+                    text={msg.text}
+                    sender={msg.sender}
+                    senderId={msg.senderId}
+                    createdAt={msg.createdAt}
+                  />
+                );
               })}
             </div>
           </div>
