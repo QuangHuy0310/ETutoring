@@ -40,8 +40,9 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
   const [toDate, setToDate] = useState("");
   const [typeOpen, setTypeOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const extractImagesByDate = () => {
+  const groupedImages = useMemo(() => {
     const grouped: { [date: string]: string[] } = {};
 
     messages.forEach((msg) => {
@@ -69,11 +70,9 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
     });
 
     return grouped;
-  };
+  }, [messages]);
 
-  const groupedImages = useMemo(() => extractImagesByDate(), [messages]);
-
-  const extractFiles = (): FileItem[] => {
+  const filteredFiles = useMemo(() => {
     const fileList: FileItem[] = [];
 
     messages.forEach((msg) => {
@@ -82,7 +81,6 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
         if (parsed?.type === "doc-attachment" && parsed.fileUrl && parsed.filename) {
           const mime = parsed.mime || "application/octet-stream";
           const lower = mime.toLowerCase();
-
           let type: FileItem["type"] = "other";
           if (lower.includes("pdf")) type = "pdf";
           else if (lower.includes("word") || lower.includes("doc")) type = "word";
@@ -101,11 +99,7 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
       } catch {}
     });
 
-    return fileList;
-  };
-
-  const filteredFiles = useMemo(() => {
-    return extractFiles()
+    return fileList
       .filter((file) => !search || file.filename.toLowerCase().includes(search.toLowerCase()))
       .filter((file) => !selectedType || file.type === selectedType)
       .filter((file) => {
@@ -123,7 +117,6 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
       const date = file.createdAt
         ? new Date(file.createdAt).toLocaleDateString("vi-VN")
         : "Không rõ ngày";
-
       if (!grouped[date]) grouped[date] = [];
       grouped[date].push(file);
     });
@@ -141,15 +134,14 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
 
   return (
     <div className="w-[350px] h-full bg-[#1e1e1e] text-white shadow-lg z-50 border-l border-gray-700 flex flex-col overflow-y-auto overflow-x-hidden">
-      {/* Header */}
       <div className="p-4 border-b border-gray-700 font-semibold text-lg flex justify-between items-center">
-        Thông tin hội thoại
+        Information Chatbox
         <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
       </div>
 
       <Tab.Group>
         <Tab.List className="flex border-b border-gray-700">
-          {["Ảnh", "Files", "Links"].map((tab, idx) => (
+          {["Photos", "Files", "Links"].map((tab, idx) => (
             <Tab
               key={idx}
               className={({ selected }) =>
@@ -165,13 +157,12 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
         </Tab.List>
 
         <Tab.Panels className="flex-1">
-          {/* === TAB ẢNH === */}
           <Tab.Panel className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-700">
               {Object.entries(groupedImages).map(([date, urls]) => (
                 <div key={date}>
                   <h3 className="text-white font-semibold mb-2">
-                    📅 Ngày {date.replaceAll("/", " Tháng ")}
+                    📅 Day {date.replaceAll("/", " Tháng ")}
                   </h3>
                   <div className="grid grid-cols-3 gap-2">
                     {urls.map((url, idx) => (
@@ -179,7 +170,8 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
                         key={`${date}-${idx}`}
                         src={url}
                         alt={`Ảnh ${idx}`}
-                        className="rounded object-cover w-full aspect-square bg-gray-700 max-w-full"
+                        className="rounded object-cover w-full aspect-square bg-gray-700 max-w-full cursor-pointer"
+                        onClick={() => setSelectedImage(url)}
                       />
                     ))}
                   </div>
@@ -188,7 +180,6 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
             </div>
           </Tab.Panel>
 
-          {/* === TAB FILE === */}
           <Tab.Panel className="h-full overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-600">
             <div className="flex items-center mb-3 bg-gray-800 px-3 py-2 rounded">
               <FaSearch className="mr-2 text-gray-400" />
@@ -206,7 +197,7 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
                   onClick={() => setTypeOpen(!typeOpen)}
                   className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
                 >
-                  Loại <FaChevronDown className="ml-1" />
+                  Type <FaChevronDown className="ml-1" />
                 </button>
                 {typeOpen && (
                   <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg">
@@ -232,18 +223,18 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
                   onClick={() => setDateOpen(!dateOpen)}
                   className="flex items-center px-2 py-1 bg-gray-800 rounded text-sm"
                 >
-                  Ngày gửi <FaChevronDown className="ml-1" />
+                  Day Received <FaChevronDown className="ml-1" />
                 </button>
                 {dateOpen && (
                   <div className="absolute z-10 mt-2 bg-gray-900 border border-gray-700 rounded shadow-lg p-3 w-56">
-                    <label className="text-xs text-gray-400 mb-1 block">Từ ngày</label>
+                    <label className="text-xs text-gray-400 mb-1 block">From Day</label>
                     <input
                       type="date"
                       className="w-full mb-2 p-1 rounded bg-gray-800 text-white"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
                     />
-                    <label className="text-xs text-gray-400 mb-1 block">Đến ngày</label>
+                    <label className="text-xs text-gray-400 mb-1 block">To Day</label>
                     <input
                       type="date"
                       className="w-full p-1 rounded bg-gray-800 text-white"
@@ -257,7 +248,7 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
 
             {Object.entries(groupedFiles).map(([date, files]) => (
               <div key={date} className="mb-4">
-                <div className="text-sm text-gray-400 mb-2">📅 Ngày {date}</div>
+                <div className="text-sm text-gray-400 mb-2">📅 Day {date}</div>
                 <ul>
                   {files.map((file, i) => (
                     <li
@@ -280,12 +271,24 @@ export default function ChatSidebar({ onClose, messages }: ChatSidebarProps) {
             ))}
           </Tab.Panel>
 
-          {/* === TAB LINKS === */}
           <Tab.Panel className="p-4 text-center text-gray-400">
             Chức năng đang phát triển...
           </Tab.Panel>
         </Tab.Panels>
       </Tab.Group>
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999]"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Preview"
+            className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-lg object-contain"
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -12,9 +12,9 @@ interface ChatMessageProps {
 
 export function ChatMessage({ text, sender, senderId, createdAt }: ChatMessageProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const isImage = text.startsWith("blob:") || text.match(/\.(jpeg|jpg|gif|png|webp)$/i);
 
-  // Optional parse for JSON type messages (gallery, doc, etc.)
   let parsed: any = null;
   try {
     parsed = JSON.parse(text);
@@ -39,12 +39,14 @@ export function ChatMessage({ text, sender, senderId, createdAt }: ChatMessagePr
                   src={url}
                   alt={`Image ${i}`}
                   className="w-32 h-32 object-cover rounded cursor-pointer shadow"
-                  onClick={() => setIsOpen(true)}
+                  onClick={() => {
+                    setSelectedImage(url);
+                    setIsOpen(true);
+                  }}
                 />
               ))}
             </div>
           ) : parsed?.type === "doc-attachment" && parsed.fileUrl ? (
-            // 📎 Doc Attachment Message
             <a
               href={parsed.fileUrl}
               target="_blank"
@@ -54,15 +56,16 @@ export function ChatMessage({ text, sender, senderId, createdAt }: ChatMessagePr
               📎 {parsed.filename}
             </a>
           ) : isImage ? (
-            // 🖼️ Raw image
             <img
               src={text}
               alt="Sent image"
               className="max-w-[300px] rounded-lg cursor-pointer hover:opacity-75 transition"
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                setSelectedImage(text);
+                setIsOpen(true);
+              }}
             />
           ) : (
-            // 💬 Plain Text
             <span>{text}</span>
           )}
 
@@ -78,14 +81,28 @@ export function ChatMessage({ text, sender, senderId, createdAt }: ChatMessagePr
         </div>
       </div>
 
-      {/* 🖼️ Fullscreen image preview (modal) */}
-      {isImage && isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+      {/* === Fullscreen Modal === */}
+      {selectedImage && isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={() => {
+            setIsOpen(false);
+            setSelectedImage(null);
+          }}
+        >
           <div className="relative">
-            <img src={text} alt="Fullsize Image" className="max-w-[90vw] max-h-[90vh] rounded-lg" />
+            <img
+              src={selectedImage}
+              alt="Fullsize Image"
+              className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-lg object-contain"
+            />
             <button
               className="absolute top-3 right-3 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+                setSelectedImage(null);
+              }}
             >
               <FaTimes size={20} />
             </button>
