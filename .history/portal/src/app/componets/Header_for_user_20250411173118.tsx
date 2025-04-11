@@ -13,6 +13,7 @@ interface SearchResult {
   name?: string;
   email?: string;
   role?: string;
+  userId?: string;
 }
 
 const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
@@ -71,6 +72,21 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     setSearchTerm("");
   };
   
+  // Hàm giải mã token
+  const decodeToken = () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) return null;
+    try {
+      const tokenParts = accessToken.split('.');
+      if (tokenParts.length === 3) {
+        return JSON.parse(atob(tokenParts[1]));
+      }
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+    return null;
+  };
+
   // Hàm tìm kiếm
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
@@ -78,41 +94,69 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     setIsSearching(true);
     try {
       const accessToken = localStorage.getItem('accessToken');
-      let url;
-      
-      // Xác định URL dựa vào option tìm kiếm
-      if (searchBy === 'email') {
-        url = `http://localhost:3002/get-infors?email=${encodeURIComponent(searchTerm)}`;
-      } else {
-        url = `http://localhost:3002/get-infors?name=${encodeURIComponent(searchTerm)}`;
+      if (!accessToken) {
+        console.error("Authentication required");
+        setIsSearching(false);
+        return;
+      }
+
+      // Giải mã token để lấy thông tin userId hiện tại
+      const tokenInfo = decodeToken();
+      if (!tokenInfo || !tokenInfo.userId) {
+        console.error("Unable to get userId from token");
+        setIsSearching(false);
+        return;
       }
       
-      const response = await fetch(url, {
+      // Fetch tất cả users từ API get-infors
+      const response = await fetch(`http://localhost:3002/get-infors`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': accessToken ? `Bearer ${accessToken}` : '',
+          'Authorization': `Bearer ${accessToken}`
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Xử lý dữ liệu trả về
-        let results: SearchResult[] = [];
-        if (data && data.data && Array.isArray(data.data)) {
-          results = data.data;
-        } else if (Array.isArray(data)) {
-          results = data;
-        } else if (data && typeof data === 'object') {
-          results = [data];
-        }
-        
-        setSearchResults(results);
-      } else {
+      if (!response.ok) {
         console.error('Search error:', response.status);
         setSearchResults([]);
+        setIsSearching(false);
+        return;
       }
+      
+      const data = await response.json();
+      
+      // Xử lý dữ liệu trả về
+      let allUsers: SearchResult[] = [];
+      if (data && data.data && Array.isArray(data.data)) {
+        allUsers = data.data;
+      } else if (Array.isArray(data)) {
+        allUsers = data;
+      }
+      
+      // Lọc kết quả dựa trên điều kiện tìm kiếm
+      let filteredResults: SearchResult[] = [];
+      
+      if (searchBy === 'email') {
+        // Tìm kiếm người dùng có email chứa searchTerm (không phân biệt hoa thường)
+        const lcSearchTerm = searchTerm.toLowerCase();
+        filteredResults = allUsers.filter(user => {
+          // Ưu tiên kiểm tra email gốc từ userId
+          if (user.userId && user.userId.toLowerCase().includes(lcSearchTerm)) {
+            return true;
+          }
+          // Kiểm tra email trong thông tin người dùng
+          return user.email && user.email.toLowerCase().includes(lcSearchTerm);
+        });
+      } else {
+        // Tìm kiếm người dùng có tên chứa searchTerm
+        const lcSearchTerm = searchTerm.toLowerCase();
+        filteredResults = allUsers.filter(user => 
+          user.name && user.name.toLowerCase().includes(lcSearchTerm)
+        );
+      }
+      
+      setSearchResults(filteredResults);
     } catch (error) {
       console.error('Error searching:', error);
       setSearchResults([]);

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Layout from "@/app/componets/layout";
 import { FaEdit, FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag } from "react-icons/fa";
 import InformationForm from "@/app/information/information-form";
-import Timetable from "@/app/information/timetable";
 
 // Định nghĩa interface cho dữ liệu người dùng
 interface UserInfo {
@@ -19,6 +18,31 @@ interface UserInfo {
   country?: string;
 }
 
+// Định nghĩa component Timetable
+function Timetable() {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const slots = ["8:00-10:00", "10:00-12:00", "13:00-15:00", "15:00-17:00", "17:00-19:00"];
+
+  return (
+    <table className="w-full border border-gray-600 text-center">
+      <thead>
+        <tr className="bg-gray-800 text-white">
+          <th className="border border-gray-600 p-2">Slot / Day</th>
+          {days.map(day => <th key={day} className="border border-gray-600 p-2">{day}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {slots.map((slot, i) => (
+          <tr key={i} className="border border-gray-600">
+            <td className="border border-gray-600 p-2 bg-gray-800 text-white">{slot}</td>
+            {days.map((_, j) => <td key={j} className="border border-gray-600 p-2 bg-gray-700 text-gray-400">-</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export default function InformationPage() {
   // State cho thông tin người dùng
   const [userData, setUserData] = useState<UserInfo>({
@@ -30,9 +54,6 @@ export default function InformationPage() {
     major: "",
     avatar: ""
   });
-  
-  // State để lưu email từ token
-  const [tokenEmail, setTokenEmail] = useState<string>("");
   
   // State cho UI
   const [loading, setLoading] = useState(true);
@@ -76,11 +97,6 @@ export default function InformationPage() {
           setError("Authentication required. Please log in.");
           setLoading(false);
           return;
-        }
-
-        // Lưu email từ token vào state
-        if (tokenInfo.email) {
-          setTokenEmail(tokenInfo.email);
         }
 
         // Fetch detailed user information from API
@@ -327,16 +343,10 @@ export default function InformationPage() {
                   <h2 className="text-2xl font-semibold text-white bg-black bg-opacity-50 px-2 py-1 rounded-md">
                     {userData.name}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {tokenEmail && (
-                      <span className="text-gray-400 text-sm py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
-                        <FaEnvelope className="inline mr-1 text-xs" /> {tokenEmail}
-                      </span>
-                    )}
-                    <span className="bg-gray-800 text-xs px-2 py-1 rounded text-gray-300">
-                      {userData.role}
-                    </span>
-                  </div>
+                  <p className="text-gray-400 text-sm">
+                    <span className="mr-2">{userData.email}</span>
+                    <span className="bg-gray-800 text-xs px-2 py-1 rounded">{userData.role}</span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -391,11 +401,6 @@ export default function InformationPage() {
                           <div>
                             <p className="text-gray-400 text-xs">Email Address</p>
                             <p className="text-white">{userData.email}</p>
-                            {tokenEmail && userData.email !== tokenEmail && (
-                              <p className="text-gray-400 text-xs mt-1">
-                                Token Email: {tokenEmail}
-                              </p>
-                            )}
                           </div>
                         </div>
                         
@@ -437,7 +442,9 @@ export default function InformationPage() {
               {/* Timetable Section */}
               <div className="md:col-span-2 bg-black border border-gray-700 p-8 rounded-lg shadow-md text-white">
                 <h3 className="text-lg font-semibold mb-4">Timetable</h3>
-                <Timetable />
+                <div className="overflow-x-auto">
+                  <Timetable />
+                </div>
               </div>
             </div>
           </>

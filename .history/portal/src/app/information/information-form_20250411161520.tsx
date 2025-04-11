@@ -12,7 +12,6 @@ interface InformationFormProps {
   onUpdate: (updatedData: { 
     name: string; 
     phoneNumber: string;
-    email: string;
     major?: string;
     address?: string;
     country?: string;
@@ -44,7 +43,6 @@ const InformationForm: React.FC<InformationFormProps> = ({
     const updatedData = {
       name: formData.get('name') as string,
       phoneNumber: formData.get('phoneNumber') as string,
-      email: formData.get('email') as string,
       major: formData.get('major') as string,
       address: formData.get('address') as string,
       country: formData.get('country') as string,
@@ -93,11 +91,11 @@ const InformationForm: React.FC<InformationFormProps> = ({
           <input 
             type="email"
             name="email"
-            defaultValue={userEmail}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={formLoading}
-            required
+            value={userEmail}
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-700 rounded-md cursor-not-allowed text-gray-400"
+            disabled
           />
+          <p className="mt-1 text-xs text-gray-400">Email cannot be changed</p>
         </div>
         
         <div className="mb-4">

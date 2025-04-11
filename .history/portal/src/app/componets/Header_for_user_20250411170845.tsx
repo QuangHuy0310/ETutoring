@@ -248,7 +248,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
                   onClick={() => viewUserProfile(result._id || result.id || "")}
                 >
                   <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-black !text-black mr-3">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3">
                       {result.name ? result.name.charAt(0).toUpperCase() : 'U'}
                     </div>
                     <div>
@@ -280,7 +280,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
             className="px-4 py-2 hover:bg-gray-50 text-gray-700 font-medium flex items-center gap-2"
             onClick={toggleUserDropdown}
           >
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-black">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white">
               {userName.charAt(0).toUpperCase()}
             </div>
             <span>{userName}</span>

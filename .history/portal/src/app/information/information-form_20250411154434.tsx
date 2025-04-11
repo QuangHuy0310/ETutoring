@@ -6,27 +6,14 @@ interface InformationFormProps {
   userName: string;
   userEmail: string;
   userPhone: string;
-  userMajor?: string;
-  userAddress?: string;
-  userCountry?: string;
-  onUpdate: (updatedData: { 
-    name: string; 
-    phoneNumber: string;
-    email: string;
-    major?: string;
-    address?: string;
-    country?: string;
-  }) => Promise<void>;
+  onUpdate: (updatedData: { name: string; phoneNumber: string }) => Promise<void>;
   onCancel: () => void;
 }
 
 const InformationForm: React.FC<InformationFormProps> = ({ 
   userName, 
   userEmail, 
-  userPhone,
-  userMajor = "",
-  userAddress = "",
-  userCountry = "",
+  userPhone, 
   onUpdate, 
   onCancel 
 }) => {
@@ -44,10 +31,6 @@ const InformationForm: React.FC<InformationFormProps> = ({
     const updatedData = {
       name: formData.get('name') as string,
       phoneNumber: formData.get('phoneNumber') as string,
-      email: formData.get('email') as string,
-      major: formData.get('major') as string,
-      address: formData.get('address') as string,
-      country: formData.get('country') as string,
     };
     
     try {
@@ -93,11 +76,11 @@ const InformationForm: React.FC<InformationFormProps> = ({
           <input 
             type="email"
             name="email"
-            defaultValue={userEmail}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={formLoading}
-            required
+            value={userEmail}
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-700 rounded-md cursor-not-allowed text-gray-400"
+            disabled
           />
+          <p className="mt-1 text-xs text-gray-400">Email cannot be changed</p>
         </div>
         
         <div className="mb-4">
@@ -109,42 +92,6 @@ const InformationForm: React.FC<InformationFormProps> = ({
             className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
             disabled={formLoading}
             placeholder="Enter your phone number"
-          />
-        </div>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Major</label>
-          <input 
-            type="text"
-            name="major"
-            defaultValue={userMajor}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={formLoading}
-            placeholder="Enter your major"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Address</label>
-          <input 
-            type="text"
-            name="address"
-            defaultValue={userAddress}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={formLoading}
-            placeholder="Enter your address"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Country</label>
-          <input 
-            type="text"
-            name="country"
-            defaultValue={userCountry}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={formLoading}
-            placeholder="Enter your country"
           />
         </div>
         

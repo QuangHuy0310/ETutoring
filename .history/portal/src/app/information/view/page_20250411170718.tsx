@@ -8,7 +8,6 @@ import { FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag, FaMapMarkerAlt
 // Định nghĩa interface cho dữ liệu người dùng
 interface UserInfo {
   id?: string;
-  userId?: string;
   name?: string;
   email: string;
   phoneNumber?: string;
@@ -21,18 +20,9 @@ interface UserInfo {
   description?: string;
 }
 
-// Interface để lưu trữ thông tin từ JWT token
-interface TokenInfo {
-  userId: string;
-  email: string;
-  role?: string;
-  name?: string;
-}
-
 export default function InformationViewPage() {
   // State cho thông tin người dùng
   const [userData, setUserData] = useState<UserInfo | null>(null);
-  const [tokenData, setTokenData] = useState<TokenInfo | null>(null);
   
   // State cho UI
   const [loading, setLoading] = useState(true);
@@ -42,28 +32,9 @@ export default function InformationViewPage() {
   const searchParams = useSearchParams();
   const idUser = searchParams.get('idUser');
 
-  // Hàm decode JWT token
-  const decodeToken = (token: string): TokenInfo | null => {
-    try {
-      const tokenParts = token.split('.');
-      if (tokenParts.length !== 3) return null;
-
-      const payload = JSON.parse(atob(tokenParts[1]));
-      return {
-        userId: payload.userId || payload.id || payload.sub,
-        email: payload.email || "",
-        role: payload.role || "",
-        name: payload.name || ""
-      };
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return null;
-    }
-  };
-
-  // Fetch token info của người dùng đang tìm kiếm
+  // Fetch user information
   useEffect(() => {
-    const fetchTargetUserToken = async () => {
+    const fetchUserInfo = async () => {
       try {
         if (!idUser) {
           setError("User ID not provided");
@@ -71,7 +42,7 @@ export default function InformationViewPage() {
           return;
         }
 
-        // Lấy token của người dùng hiện tại để xác thực API
+        // Get token for authentication
         const accessToken = localStorage.getItem('accessToken');
         if (!accessToken) {
           setError("Authentication required. Please log in.");
@@ -79,117 +50,68 @@ export default function InformationViewPage() {
           return;
         }
 
-        // API có thể là một API riêng để lấy JWT token của người dùng dựa vào userId
-        // Đây là một ví dụ, nếu không có API như vậy, bạn cần điều chỉnh theo API thực tế
-        const response = await fetch(`http://localhost:3002/api/v1/auth/get-user-token?userId=${idUser}`, {
+        // Fetch user information using the API with idUser parameter
+        const response = await fetch(`http://localhost:3002/Push-Id?idUser=${idUser}`, {
           headers: {
             "Authorization": `Bearer ${accessToken}`
           }
-        }).catch(() => null);
+        });
 
-        if (response && response.ok) {
-          const data = await response.json();
-          if (data && data.token) {
-            const tokenInfo = decodeToken(data.token);
-            if (tokenInfo) {
-              setTokenData(tokenInfo);
-            }
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Process the API response
+        let userInfo;
+
+        // Kiểm tra nếu response có cấu trúc { data: [...] }
+        if (data && data.data) {
+          if (Array.isArray(data.data)) {
+            // Nếu data.data là một mảng, lấy phần tử đầu tiên
+            userInfo = data.data[0];
+          } else if (typeof data.data === 'object') {
+            // Nếu data.data là một object đơn
+            userInfo = data.data;
+          }
+        } else {
+          // Xử lý theo cách cũ nếu không có cấu trúc { data: [...] }
+          if (Array.isArray(data)) {
+            // Nếu API trả về một mảng, lấy phần tử đầu tiên
+            userInfo = data[0];
+          } else if (typeof data === 'object') {
+            // Nếu API trả về một object đơn
+            userInfo = data;
           }
         }
-        
-        // Tiếp tục fetch thông tin người dùng từ API get-infors
-        fetchUserInfo();
+
+        if (userInfo) {
+          setUserData({
+            id: userInfo.id || userInfo._id || "",
+            name: userInfo.name || "User",
+            email: userInfo.email || "",
+            phoneNumber: userInfo.phone || userInfo.phoneNumber || "",
+            major: userInfo.major || "",
+            avatar: userInfo.avatar || "",
+            role: userInfo.role || "User",
+            address: userInfo.address || "",
+            country: userInfo.country || "",
+            description: userInfo.description || ""
+          });
+        } else {
+          throw new Error("User information not found in API response");
+        }
       } catch (error) {
-        console.error("Error fetching user token:", error);
-        // Tiếp tục fetch thông tin người dùng từ API get-infors dù có lỗi
-        fetchUserInfo();
+        console.error("Error fetching user info:", error);
+        setError("Failed to fetch user information. Please try again later.");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchTargetUserToken();
+    fetchUserInfo();
   }, [idUser]);
-
-  // Fetch user information
-  const fetchUserInfo = async () => {
-    try {
-      if (!idUser) {
-        setError("User ID not provided");
-        setLoading(false);
-        return;
-      }
-
-      // Get token for authentication
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        setError("Authentication required. Please log in.");
-        setLoading(false);
-        return;
-      }
-
-      // Fetch user information using the API with idUser parameter
-      const response = await fetch(`http://localhost:3002/get-infors`, {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Process the API response
-      let userInfo;
-
-      // Kiểm tra nếu response có cấu trúc { data: [...] }
-      if (data && data.data && Array.isArray(data.data)) {
-        // Tìm user theo userId
-        userInfo = data.data.find((user: any) => 
-          user.userId === idUser || 
-          user._id === idUser || 
-          user.id === idUser
-        );
-      } else if (Array.isArray(data)) {
-        // Nếu API trả về một mảng, tìm user theo userId
-        userInfo = data.find(user => 
-          user.userId === idUser || 
-          user._id === idUser || 
-          user.id === idUser
-        );
-      } else if (typeof data === 'object') {
-        // Nếu API trả về một object đơn, kiểm tra xem có phải là user cần tìm không
-        if (data.userId === idUser || data._id === idUser || data.id === idUser) {
-          userInfo = data;
-        } else if (data.data && (data.data.userId === idUser || data.data._id === idUser || data.data.id === idUser)) {
-          userInfo = data.data;
-        }
-      }
-
-      if (userInfo) {
-        setUserData({
-          id: userInfo.id || userInfo._id || "",
-          userId: userInfo.userId || "",
-          name: userInfo.name || "User",
-          email: userInfo.email || "",
-          phoneNumber: userInfo.phone || userInfo.phoneNumber || "",
-          major: userInfo.major || "",
-          avatar: userInfo.avatar || "",
-          role: userInfo.role || "User",
-          address: userInfo.address || "",
-          country: userInfo.country || "",
-          description: userInfo.description || ""
-        });
-      } else {
-        throw new Error("User information not found in API response");
-      }
-    } catch (error) {
-      console.error("Error fetching user info:", error);
-      setError("Failed to fetch user information. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Helper function for avatar
   const getInitialAvatar = () => {
@@ -246,18 +168,12 @@ export default function InformationViewPage() {
                     {userData.name}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {/* Hiển thị email từ token nếu có, ngược lại hiển thị email từ thông tin người dùng */}
                     <span className="text-gray-400 text-sm py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
-                      <FaEnvelope className="inline mr-1 text-xs" /> {tokenData?.email || userData.email}
+                      <FaEnvelope className="inline mr-1 text-xs" /> {userData.email}
                     </span>
                     <span className="bg-gray-800 text-xs px-2 py-1 rounded text-gray-300">
                       {userData.role}
                     </span>
-                    {userData.userId && (
-                      <span className="text-gray-400 text-xs py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
-                        ID: {userData.userId.substring(0, 8)}...
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -292,11 +208,6 @@ export default function InformationViewPage() {
                       <div>
                         <p className="text-gray-400 text-xs">Email Address</p>
                         <p className="text-white">{userData.email}</p>
-                        {tokenData && tokenData.email !== userData.email && (
-                          <p className="text-gray-400 text-xs mt-1">
-                            Token Email: {tokenData.email}
-                          </p>
-                        )}
                       </div>
                     </div>
                     
