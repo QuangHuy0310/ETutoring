@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Layout from "@/app/componets/layout";
 import { FaEdit, FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag } from "react-icons/fa";
 import InformationForm from "@/app/information/information-form";
-import Timetable from "@/app/information/timetable";
 
 // Định nghĩa interface cho dữ liệu người dùng
 interface UserInfo {
@@ -15,8 +14,31 @@ interface UserInfo {
   major?: string;
   avatar?: string;
   role?: string;
-  address?: string;
-  country?: string;
+}
+
+// Định nghĩa component Timetable
+function Timetable() {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const slots = ["8:00-10:00", "10:00-12:00", "13:00-15:00", "15:00-17:00", "17:00-19:00"];
+
+  return (
+    <table className="w-full border border-gray-600 text-center">
+      <thead>
+        <tr className="bg-gray-800 text-white">
+          <th className="border border-gray-600 p-2">Slot / Day</th>
+          {days.map(day => <th key={day} className="border border-gray-600 p-2">{day}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {slots.map((slot, i) => (
+          <tr key={i} className="border border-gray-600">
+            <td className="border border-gray-600 p-2 bg-gray-800 text-white">{slot}</td>
+            {days.map((_, j) => <td key={j} className="border border-gray-600 p-2 bg-gray-700 text-gray-400">-</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export default function InformationPage() {
@@ -30,9 +52,6 @@ export default function InformationPage() {
     major: "",
     avatar: ""
   });
-  
-  // State để lưu email từ token
-  const [tokenEmail, setTokenEmail] = useState<string>("");
   
   // State cho UI
   const [loading, setLoading] = useState(true);
@@ -78,11 +97,6 @@ export default function InformationPage() {
           return;
         }
 
-        // Lưu email từ token vào state
-        if (tokenInfo.email) {
-          setTokenEmail(tokenInfo.email);
-        }
-
         // Fetch detailed user information from API
         const response = await fetch("http://localhost:3002/get-infors", {
           headers: {
@@ -98,41 +112,20 @@ export default function InformationPage() {
         
         // Process the API response
         let userInfo;
-
-        // Kiểm tra nếu response có cấu trúc { data: [...] }
-        if (data && data.data) {
-          if (Array.isArray(data.data)) {
-            // Nếu data.data là một mảng, tìm user phù hợp
-            userInfo = data.data.find((user: { email: string }) => user.email === tokenInfo.email);
-            
-            if (!userInfo) {
-              // Thử tìm theo userId nếu không tìm thấy theo email
-                userInfo = data.data.find((user: { userId?: string; _id?: string; email: string }) => 
-                user.userId === tokenInfo.userId || 
-                user._id === tokenInfo.userId
-                );
-            }
-          } else if (typeof data.data === 'object') {
-            // Nếu data.data là một object đơn
-            userInfo = data.data;
+        if (Array.isArray(data)) {
+          // If API returns an array of users, find the matching one by email from token
+          userInfo = data.find(user => user.email === tokenInfo.email);
+          
+          if (!userInfo) {
+            // Try finding by user ID if email match fails
+            userInfo = data.find(user => 
+              user.id === tokenInfo.userId || 
+              user._id === tokenInfo.userId
+            );
           }
-        } else {
-          // Xử lý theo cách cũ nếu không có cấu trúc { data: [...] }
-          if (Array.isArray(data)) {
-            // If API returns an array of users, find the matching one by email from token
-            userInfo = data.find(user => user.email === tokenInfo.email);
-            
-            if (!userInfo) {
-              // Try finding by user ID if email match fails
-              userInfo = data.find(user => 
-                user.id === tokenInfo.userId || 
-                user._id === tokenInfo.userId
-              );
-            }
-          } else if (typeof data === 'object') {
-            // If API returns a single user object
-            userInfo = data;
-          }
+        } else if (typeof data === 'object') {
+          // If API returns a single user object
+          userInfo = data;
         }
 
         if (userInfo) {
@@ -161,14 +154,7 @@ export default function InformationPage() {
   }, []);
 
   // Update user information
-  const handleUpdateInfo = async (updatedData: { 
-    name: string; 
-    phoneNumber: string; 
-    email: string;
-    major?: string;
-    address?: string;
-    country?: string;
-  }) => {
+  const handleUpdateInfo = async (updatedData: { name: string; phoneNumber: string }) => {
     try {
       if (typeof window === 'undefined') return;
       
@@ -179,27 +165,24 @@ export default function InformationPage() {
         throw new Error("Authentication required. Please log in.");
       }
       
-      // Sử dụng userId từ JWT token thay vì từ userData
-      const userId = tokenInfo.userId;
+      // Use the user ID from API data
+      const userId = userData.id;
       
       if (!userId) {
-        throw new Error("User ID not found in token");
+        throw new Error("User ID not found in profile data");
       }
       
       // Call API to update user information
-      const response = await fetch(`http://localhost:3002/edit-infor?userId=${userId}`, {
-        method: "PUT",
+      const response = await fetch(`http://localhost:3002/edit-infors?id=${userId}`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           name: updatedData.name,
-          email: updatedData.email,
-          phone: updatedData.phoneNumber,
-          address: updatedData.address || "",
-          major: updatedData.major || "",
-          country: updatedData.country || ""
+          email: userData.email,
+          phoneNumber: updatedData.phoneNumber,
         })
       });
       
@@ -209,6 +192,7 @@ export default function InformationPage() {
       }
       
       // After successful update, fetch the updated info from API again
+      // to ensure we display the latest data
       const updatedResponse = await fetch("http://localhost:3002/get-infors", {
         headers: {
           "Authorization": `Bearer ${accessToken}`
@@ -219,37 +203,17 @@ export default function InformationPage() {
         const updatedData = await updatedResponse.json();
         let updatedUserInfo;
         
-        // Kiểm tra cấu trúc response { data: [...] }
-        if (updatedData && updatedData.data) {
-          if (Array.isArray(updatedData.data)) {
-            // Tìm user theo userId từ token thay vì id từ userData
-            updatedUserInfo = updatedData.data.find((user: { userId?: string; _id?: string; id?: string }) => 
-              user.userId === userId || user._id === userId || user.id === userId
-            );
-          } else if (typeof updatedData.data === 'object') {
-            updatedUserInfo = updatedData.data;
-          }
-        } else {
-          // Xử lý theo cách cũ
-          if (Array.isArray(updatedData)) {
-            // Tìm user theo userId từ token thay vì id từ userData
-            updatedUserInfo = updatedData.find(user => 
-              user.userId === userId || user._id === userId || user.id === userId
-            );
-          } else if (typeof updatedData === 'object') {
-            updatedUserInfo = updatedData;
-          }
+        if (Array.isArray(updatedData)) {
+          updatedUserInfo = updatedData.find(user => user.id === userId || user._id === userId);
+        } else if (typeof updatedData === 'object') {
+          updatedUserInfo = updatedData;
         }
         
         if (updatedUserInfo) {
           setUserData(prev => ({
             ...prev,
             name: updatedUserInfo.name || prev.name,
-            email: updatedUserInfo.email || prev.email,
-            phoneNumber: updatedUserInfo.phone || prev.phoneNumber,
-            major: updatedUserInfo.major || prev.major,
-            address: updatedUserInfo.address || prev.address,
-            country: updatedUserInfo.country || prev.country
+            phoneNumber: updatedUserInfo.phoneNumber || prev.phoneNumber
           }));
         }
       } else {
@@ -257,11 +221,7 @@ export default function InformationPage() {
         setUserData(prev => ({
           ...prev,
           name: updatedData.name,
-          email: updatedData.email,
-          phoneNumber: updatedData.phoneNumber,
-          major: updatedData.major || prev.major,
-          address: updatedData.address || prev.address,
-          country: updatedData.country || prev.country
+          phoneNumber: updatedData.phoneNumber
         }));
       }
       
@@ -327,16 +287,10 @@ export default function InformationPage() {
                   <h2 className="text-2xl font-semibold text-white bg-black bg-opacity-50 px-2 py-1 rounded-md">
                     {userData.name}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {tokenEmail && (
-                      <span className="text-gray-400 text-sm py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
-                        <FaEnvelope className="inline mr-1 text-xs" /> {tokenEmail}
-                      </span>
-                    )}
-                    <span className="bg-gray-800 text-xs px-2 py-1 rounded text-gray-300">
-                      {userData.role}
-                    </span>
-                  </div>
+                  <p className="text-gray-400 text-sm">
+                    <span className="mr-2">{userData.email}</span>
+                    <span className="bg-gray-800 text-xs px-2 py-1 rounded">{userData.role}</span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -367,9 +321,6 @@ export default function InformationPage() {
                         userName={userData.name || ""}
                         userEmail={userData.email}
                         userPhone={userData.phoneNumber || ""}
-                        userMajor={userData.major || ""}
-                        userAddress={userData.address || ""}
-                        userCountry={userData.country || ""}
                         onUpdate={handleUpdateInfo}
                         onCancel={() => setShowEditForm(false)}
                       />
@@ -391,11 +342,6 @@ export default function InformationPage() {
                           <div>
                             <p className="text-gray-400 text-xs">Email Address</p>
                             <p className="text-white">{userData.email}</p>
-                            {tokenEmail && userData.email !== tokenEmail && (
-                              <p className="text-gray-400 text-xs mt-1">
-                                Token Email: {tokenEmail}
-                              </p>
-                            )}
                           </div>
                         </div>
                         
@@ -437,7 +383,9 @@ export default function InformationPage() {
               {/* Timetable Section */}
               <div className="md:col-span-2 bg-black border border-gray-700 p-8 rounded-lg shadow-md text-white">
                 <h3 className="text-lg font-semibold mb-4">Timetable</h3>
-                <Timetable />
+                <div className="overflow-x-auto">
+                  <Timetable />
+                </div>
               </div>
             </div>
           </>

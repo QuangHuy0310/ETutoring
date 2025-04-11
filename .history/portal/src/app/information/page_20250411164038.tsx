@@ -31,9 +31,6 @@ export default function InformationPage() {
     avatar: ""
   });
   
-  // State để lưu email từ token
-  const [tokenEmail, setTokenEmail] = useState<string>("");
-  
   // State cho UI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,11 +73,6 @@ export default function InformationPage() {
           setError("Authentication required. Please log in.");
           setLoading(false);
           return;
-        }
-
-        // Lưu email từ token vào state
-        if (tokenInfo.email) {
-          setTokenEmail(tokenInfo.email);
         }
 
         // Fetch detailed user information from API
@@ -327,16 +319,10 @@ export default function InformationPage() {
                   <h2 className="text-2xl font-semibold text-white bg-black bg-opacity-50 px-2 py-1 rounded-md">
                     {userData.name}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {tokenEmail && (
-                      <span className="text-gray-400 text-sm py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
-                        <FaEnvelope className="inline mr-1 text-xs" /> {tokenEmail}
-                      </span>
-                    )}
-                    <span className="bg-gray-800 text-xs px-2 py-1 rounded text-gray-300">
-                      {userData.role}
-                    </span>
-                  </div>
+                  <p className="text-gray-400 text-sm">
+                    <span className="mr-2">{userData.email}</span>
+                    <span className="bg-gray-800 text-xs px-2 py-1 rounded">{userData.role}</span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -391,11 +377,6 @@ export default function InformationPage() {
                           <div>
                             <p className="text-gray-400 text-xs">Email Address</p>
                             <p className="text-white">{userData.email}</p>
-                            {tokenEmail && userData.email !== tokenEmail && (
-                              <p className="text-gray-400 text-xs mt-1">
-                                Token Email: {tokenEmail}
-                              </p>
-                            )}
                           </div>
                         </div>
                         
