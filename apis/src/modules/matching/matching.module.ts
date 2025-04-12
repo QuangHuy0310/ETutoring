@@ -1,26 +1,25 @@
+import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MatchingController } from './matching.controller';
+import { Matching, MatchingSchema } from '@entities/matching.entities';
 import { MatchingService } from './matching.service';
-/*
-https://docs.nestjs.com/modules
-*/
-
-import { forwardRef, Module } from '@nestjs/common';
-import { MatchingSchema } from '@entities/matching.entities';
-import { NotificationModule } from '@modules/notification/notification.module';
+import { MatchingController } from './matching.controller';
+import { UserModule } from '@modules/user/user.module';
+import { MailModule } from '@modules/mail/mail.module';
 import { RoomModule } from '@modules/room/room.module';
+import { NotificationModule } from '@modules/notification/notification.module'; // Add this import
 
 @Module({
     imports: [
-        forwardRef(() => NotificationModule),
-        forwardRef(() => RoomModule),
         MongooseModule.forFeature([
-            { name: 'Matching', schema: MatchingSchema },
+            { name: Matching.name, schema: MatchingSchema },
         ]),
+        UserModule,
+        MailModule,
+        RoomModule,
+        NotificationModule, 
     ],
-    controllers: [
-        MatchingController,],
-    providers: [
-        MatchingService,],
+    controllers: [MatchingController],
+    providers: [MatchingService],
+    exports: [MatchingService],
 })
-export class MatchingModule { }
+export class MatchingModule {}

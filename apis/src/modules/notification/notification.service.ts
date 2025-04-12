@@ -21,7 +21,7 @@ export class NotificationService {
         return notification.save();
     }
 
-    async createMatchingNotification(from: string, to: string): Promise<NotificationDto> {
+    async createMatchingNotification(from: string, to: string, p0: string): Promise<NotificationDto> {
         const payload = {
             notificationFrom: from,
             notificationTo: to,
@@ -32,6 +32,20 @@ export class NotificationService {
         const notification = new this.notificationModel(payload);
 
         await this.socketGate.matchingNotification(from, to, payload.title)
+        return notification.save();
+    }
+
+    async createMatchingRequestNotification(from: string, to: string, tutorId: string): Promise<NotificationDto> {
+        const title = `New matching request from student ${from} to tutor ${tutorId}`;
+        const payload = {
+            notificationFrom: from,
+            notificationTo: to,
+            title,
+            status: 'unread',
+        };
+
+        const notification = new this.notificationModel(payload);
+        await this.socketGate.sendMatchingRequestNotification(to, payload.title); // Send to staff only
         return notification.save();
     }
 }
