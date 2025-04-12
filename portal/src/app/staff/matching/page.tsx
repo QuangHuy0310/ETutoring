@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import StaffLayout from "@/app/staff/StaffLayout";
 import MatchingForm from "@/app/staff/matching/MatchingForm";
+import { getCookie } from "cookies-next";
 
 interface User {
   id: string;
@@ -35,7 +36,7 @@ const MatchingPage = () => {
     setError(null);
 
     try {
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getCookie('accessToken');
       if (!accessToken) {
         throw new Error("Authentication token not found. Please login again.");
       }

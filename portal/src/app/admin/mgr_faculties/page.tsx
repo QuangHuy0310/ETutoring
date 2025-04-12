@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/app/admin/AdminLayout";
 import AddFacultyModal from "@/app/admin/mgr_faculties/add_faculty_form";
+import { getCookie } from "cookies-next";
 
 interface Faculty {
   id?: number;
@@ -18,10 +19,10 @@ const FacultyManagerPage: React.FC = () => {
   
   // Lấy dữ liệu faculty từ API khi component được tải
   useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = getCookie('accessToken');
 
     if (!accessToken) {
-      console.error("Access token not found in localStorage");
+      console.error("Access token not found in cookies");
       setError("Access token is required.");
       setLoading(false);
       return;
@@ -53,14 +54,8 @@ const FacultyManagerPage: React.FC = () => {
       .catch((err) => {
         console.error("Error fetching faculties:", err);
         
-        // Nếu là lỗi Unauthorized, hướng dẫn người dùng đăng nhập lại
-        if (err.message.includes("Unauthorized")) {
-          localStorage.removeItem("accessToken"); // Xóa token không hợp lệ
-          setError("Your session has expired. Please refresh and login again.");
-        } else {
-          setError("Failed to connect to the server. Please try again later.");
-        }
-        
+        // Không cần xóa cookie ở đây vì middleware sẽ xử lý việc chuyển hướng
+        setError("Failed to connect to the server. Please try again later.");
         setLoading(false);
       });
   }, []);
@@ -76,7 +71,7 @@ const FacultyManagerPage: React.FC = () => {
     }
     
     if (window.confirm("Are you sure you want to delete this faculty?")) {
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getCookie('accessToken');
       
       if (!accessToken) {
         setError("Access token is required for this operation.");
@@ -124,7 +119,7 @@ const FacultyManagerPage: React.FC = () => {
 
   // Cập nhật hàm handleSaveFaculty
   const handleSaveFaculty = (newFaculty: Faculty) => {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = getCookie('accessToken');
     
     if (!accessToken) {
       setError("Access token is required for this operation.");
@@ -169,15 +164,7 @@ const FacultyManagerPage: React.FC = () => {
       })
       .catch((err) => {
         console.error("Error creating faculty:", err);
-        
-        // Nếu là lỗi Unauthorized, hướng dẫn người dùng đăng nhập lại
-        if (err.message.includes("Unauthorized")) {
-          localStorage.removeItem("accessToken"); // Xóa token không hợp lệ
-          setError("Your session has expired. Please refresh and login again.");
-        } else {
-          setError(`Failed to connect to the server: ${err.message}`);
-        }
-        
+        setError(`Failed to connect to the server: ${err.message}`);
         setLoading(false);
       });
   };

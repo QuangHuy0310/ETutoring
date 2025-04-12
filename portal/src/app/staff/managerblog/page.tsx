@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import StaffLayout from "@/app/staff/StaffLayout";
+import { getCookie } from "cookies-next";
 
 interface Blog {
   id: string;
@@ -21,8 +22,12 @@ const ManagerBlogPage: React.FC = () => {
   // ✅ Hàm gọi API cập nhật status blog
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) return;
+      const accessToken = getCookie('accessToken');
+      if (!accessToken) {
+        console.error("Access token not found");
+        router.push('/login');
+        return;
+      }
 
       const res = await fetch(
         `http://localhost:3002/api/v1/blog/update-status?id=${id}&status=${status}`,
@@ -49,8 +54,12 @@ const ManagerBlogPage: React.FC = () => {
   // ✅ Hàm fetch blogs
   const fetchBlogs = async () => {
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) return;
+      const accessToken = getCookie('accessToken');
+      if (!accessToken) {
+        console.error("Access token not found");
+        router.push('/login');
+        return;
+      }
 
       const response = await fetch(
         `http://localhost:3002/api/v1/blog/blogs?status=${filterStatus}`,

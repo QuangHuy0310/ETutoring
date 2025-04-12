@@ -4,14 +4,15 @@ import React, { useState, useEffect } from "react";
 import AdminLayout from "@/app/admin/AdminLayout";
 import AddAccountForm from "@/app/admin/mgr_account/add_acc_form";
 import EditAccount from "@/app/admin/mgr_account/edit_acc";
+import { getCookie } from "cookies-next";
 
 interface User {
   id: number;
-  name?: string; // Thêm ? để biến thành optional
+  name?: string;
   email: string;
-  faculties?: string; // Thêm ? để biến thành optional
+  faculties?: string;
   role: string;
-  password?: string; // Thêm nếu cần
+  password?: string;
 }
 
 const AccountManagerPage: React.FC = () => {
@@ -42,6 +43,13 @@ const AccountManagerPage: React.FC = () => {
   // Add search state
   const [searchTerm, setSearchTerm] = useState("");
   
+  // State for selected role filter
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  
   // State for managing the account creation modal
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   
@@ -49,12 +57,38 @@ const AccountManagerPage: React.FC = () => {
   const [isEditAccountOpen, setIsEditAccountOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
-  // Filter users based on search term - FIX HERE
-  const filteredUsers = users.filter(user => 
-    user && 
-    (user.name ? user.name.toLowerCase().includes(searchTerm.toLowerCase()) : false) || 
-    (user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false)
-  );
+  // Filter users based on search term and role
+  const filteredUsers = users.filter(user => {
+    // Filter by search term
+    const matchesSearch = 
+      (user.name ? user.name.toLowerCase().includes(searchTerm.toLowerCase()) : false) || 
+      (user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false);
+    
+    // Filter by role
+    let matchesRole = true;
+    if (selectedRole === "staff") {
+      matchesRole = user.role === "staff";
+    } else if (selectedRole === "user_tutor") {
+      matchesRole = user.role === "student" || user.role === "tutor";
+    }
+    
+    return matchesSearch && matchesRole;
+  });
+
+  // Paginate the filtered users
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  
+  // Calculate page numbers to display
+  const getPageNumbers = () => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   // Function to handle user deletion
   const deleteUser = (id: number) => {
@@ -73,14 +107,15 @@ const AccountManagerPage: React.FC = () => {
   };
 
   // Function to save edited user
-  const handleSaveEditedUser = (userId: number, updatedData: { name?: string }) => {
+  const handleSaveEditedUser = async (userId: number, updatedData: { email?: string; role?: string }) => {
+    // Cập nhật trong state UI
     setUsers(users.map(user => 
       user.id === userId ? { ...user, ...updatedData } : user
     ));
   };
 
   // Function to handle creating a new account
-  const createAccount = () => {
+  const createAccount = () => { 
     setIsAddAccountOpen(true);
   };
 
@@ -117,35 +152,75 @@ const AccountManagerPage: React.FC = () => {
     setUsers([...users, newUser]);
   };
 
-  // Thay thế đoạn code gọi API hiện tại
-
+  // Cập nhật hàm fetchUsers để xử lý dữ liệu API đúng cách
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // API endpoint có thể cần điều chỉnh dựa trên cấu trúc backend của bạn
-        // Thay thế URL API đúng ở đây
-        const response = await fetch("http://localhost:3002/api/v1/auth/all-users", {
+        const token = getCookie('accessToken');
+        
+        if (!token) {
+          console.error("Access token not found in cookies");
+          return;
+        }
+        
+        const response = await fetch("http://localhost:3002/api/v1/users/get-all-users", {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+            "Authorization": `Bearer ${token}`,
           }
         });
         
-        // Thêm log để debug
         console.log("API response status:", response.status);
         
         if (!response.ok) {
-          // Log chi tiết lỗi để debug
           const errorText = await response.text();
           console.error(`API error (${response.status}):`, errorText);
           throw new Error(`API error: ${response.status}`);
         }
         
-        const data = await response.json();
-        console.log("API data received:", data);
+        const responseData = await response.json();
+        console.log("API raw data received:", responseData);
         
-        // Đảm bảo mỗi item trong mảng có thuộc tính email
-        const validUsers = data.filter((user: any) => user && user.email);
-        setUsers(validUsers);
+        // Kiểm tra cấu trúc dữ liệu trả về
+        let userData = responseData;
+        
+        // Kiểm tra xem dữ liệu có nằm trong thuộc tính data hoặc users không
+        if (responseData.data) {
+          userData = responseData.data;
+          console.log("Data found in responseData.data:", userData);
+        } else if (responseData.users) {
+          userData = responseData.users;
+          console.log("Data found in responseData.users:", userData);
+        } else if (responseData.result) {
+          userData = responseData.result;
+          console.log("Data found in responseData.result:", userData);
+        }
+        
+        // Kiểm tra xem userData có phải là mảng không
+        if (!Array.isArray(userData)) {
+          console.error("User data is not an array:", userData);
+          return;
+        }
+        
+        console.log("Processing user data:", userData);
+        
+        // Ánh xạ dữ liệu API vào cấu trúc User
+        const validUsers = userData
+          .filter((user: any) => user && user.email)
+          .map((user: any) => ({
+            id: user.id || user._id,
+            name: user.name || user.username || user.fullName || "N/A",
+            email: user.email,
+            faculties: user.faculties || user.faculty || "N/A",
+            role: user.role || "student",
+          }));
+        
+        console.log("Processed user data:", validUsers);
+        
+        if (validUsers.length > 0) {
+          setUsers(validUsers);
+        } else {
+          console.warn("No valid users found in API response");
+        }
       } catch (error) {
         console.error("Error fetching users:", error);
         // Giữ nguyên dữ liệu mẫu nếu API không hoạt động
@@ -160,20 +235,40 @@ const AccountManagerPage: React.FC = () => {
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Account Manager</h1>
 
-        {/* Search box and Create Account button */}
-        <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-2">
-          <div className="relative w-full md:w-64">
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              🔍
-            </span>
+        {/* Search and filter section */}
+        <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col md:flex-row gap-2 w-full">
+            {/* Search box */}
+            <div className="relative w-full md:w-64">
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                🔍
+              </span>
+            </div>
+            
+            {/* Role filter */}
+            <div className="w-full md:w-auto">
+              <select
+                value={selectedRole}
+                onChange={(e) => {
+                  setSelectedRole(e.target.value);
+                  setCurrentPage(1); // Reset to first page on filter change
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Roles</option>
+                <option value="user_tutor">Users & Tutors</option>
+                <option value="staff">Staff</option>
+              </select>
+            </div>
           </div>
+          
           <button
             onClick={createAccount}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition w-full md:w-auto"
@@ -202,6 +297,8 @@ const AccountManagerPage: React.FC = () => {
             onSave={handleSaveEditedUser}
             userId={editingUser.id}
             currentName={editingUser.name || ""}
+            currentEmail={editingUser.email || ""}
+            currentRole={editingUser.role || "student"}
           />
         )}
 
@@ -218,8 +315,8 @@ const AccountManagerPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
+              {currentUsers.length > 0 ? (
+                currentUsers.map((user) => (
                   <tr key={user.id} className="text-center">
                     <td className="border p-2">{user.name || "N/A"}</td>
                     <td className="border p-2">{user.email}</td>
@@ -254,6 +351,21 @@ const AccountManagerPage: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex justify-center mt-4">
+          {getPageNumbers().map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 mx-1 rounded ${
+                currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
         </div>
       </div>
     </AdminLayout>
