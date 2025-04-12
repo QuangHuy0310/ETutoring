@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { getCookie } from "cookies-next";
 
 interface Faculty {
   id: string;
@@ -98,12 +99,19 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
     setApiError(null);
     
     try {
-      // 1. Tạo tài khoản mới
+      // 1. Lấy token từ cookie
+      const accessToken = getCookie('accessToken');
+      
+      if (!accessToken) {
+        throw new Error("Access token not found. Please log in again.");
+      }
+      
+      // 2. Tạo tài khoản mới
       const registerResponse = await fetch("http://localhost:3002/api/v1/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+          "Authorization": `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           email: formData.email,
@@ -120,13 +128,13 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
       const userData = await registerResponse.json();
       console.log("Registration successful:", userData);
       
-      // 2. Gửi email thông báo sau khi tạo tài khoản thành công
+      // 3. Gửi email thông báo sau khi tạo tài khoản thành công
       try {
         const emailResponse = await fetch("http://localhost:3002/mail/send", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+            "Authorization": `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             to: formData.email,
@@ -176,15 +184,22 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
     }
   };
 
-  // Thêm hàm này vào component của bạn để kiểm tra API email
+  // Cập nhật hàm testEmailApi
   const testEmailApi = async () => {
     try {
       console.log("Testing email API...");
+      const accessToken = getCookie('accessToken');
+      
+      if (!accessToken) {
+        console.error("Access token not found in cookie");
+        return false;
+      }
+      
       const response = await fetch("http://localhost:3002/mail/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+          "Authorization": `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           to: "test@example.com",

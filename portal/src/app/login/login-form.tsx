@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/app/lib/utils";
 import { Button } from "../componets/ui/button";
 import { Input } from "../componets/ui/input";
+import { setCookie } from "cookies-next";
 
 interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {}
 
 const ROLE_REDIRECTS = {
   admin: "/admin",
   user: "/",
-  staff: "/staff",
-  tutor: "/",
-  default: "/"
+  tutor: "/tutor",
+  default: "/login"
 };
 
 export default function LoginForm({ className, ...props }: LoginFormProps) {
@@ -52,9 +52,16 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       }
 
       const { accessToken } = result.data;
-      localStorage.setItem("accessToken", accessToken);
 
-      // ✅ FIXED: decode sub = userId
+      // Lưu token vào cookie thay vì localStorage
+      setCookie('accessToken', accessToken, {
+        maxAge: 30 * 24 * 60 * 60, // 30 ngày (tính bằng giây)
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+
+      // Chuyển hướng người dùng dựa trên role
       redirectUserBasedOnRole(accessToken);
     } catch (err) {
       handleLoginError(err);
@@ -68,13 +75,19 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userRole = payload.role;
 
-      // ✅ FIX HERE: use sub for userId
+      // Lưu user ID và email vào cookie
       if (payload.sub) {
-        localStorage.setItem("userId", payload.sub);
+        setCookie('userId', payload.sub, { 
+          maxAge: 30 * 24 * 60 * 60,
+          path: '/' 
+        });
       }
 
       if (payload.email) {
-        localStorage.setItem("userEmail", payload.email);
+        setCookie('userEmail', payload.email, { 
+          maxAge: 30 * 24 * 60 * 60,
+          path: '/' 
+        });
       }
 
       const redirectPath =
@@ -83,7 +96,6 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     } catch (decodeError) {
       console.error("Lỗi khi giải mã token:", decodeError);
       setError("Không thể xác thực thông tin đăng nhập. Vui lòng thử lại.");
-      localStorage.removeItem("accessToken");
     }
   };
 

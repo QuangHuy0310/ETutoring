@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import StaffLayout from "@/app/staff/StaffLayout";
+import { getCookie } from "cookies-next";
+import { useRouter } from "next/navigation";
 
 // User data interface
 interface User {
@@ -20,6 +22,7 @@ interface ApiResponse {
 }
 
 const ListOfUserPage = () => {
+  const router = useRouter();
   const [userType, setUserType] = useState<"tutor" | "user">("tutor");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,9 +36,10 @@ const ListOfUserPage = () => {
       setError(null);
 
       try {
-        const accessToken = localStorage.getItem("accessToken");
+        const accessToken = getCookie('accessToken');
 
         if (!accessToken) {
+          setIsAuthenticated(false);
           throw new Error("Authentication token not found. Please login again.");
         }
 
@@ -76,14 +80,12 @@ const ListOfUserPage = () => {
   }, [userType]);
 
   const redirectToLogin = () => {
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    router.push('/login');
   };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4 text-black">User List</h1>
+      <h1 className="text-2xl font-bold mb-4 text-white">User List</h1>
 
       {!isAuthenticated ? (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-4">
