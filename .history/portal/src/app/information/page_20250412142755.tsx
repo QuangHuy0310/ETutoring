@@ -6,7 +6,7 @@ import { FaEdit, FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag } from 
 import InformationForm from "@/app/information/information-form";
 import Timetable from "@/app/information/timetable";
 import { getCookie } from "cookies-next";
-import { jwtDecode } from "jwt-decode";
+import jwtDecode from "jwt-decode";
 
 // Định nghĩa interface cho dữ liệu người dùng
 interface UserInfo {
@@ -154,7 +154,7 @@ export default function InformationPage() {
             phoneNumber: userInfo.phone || "", // Change from phoneNumber to phone
             major: userInfo.major || "",
             avatar: userInfo.avatar || "",
-            role: userInfo.role || (tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User")
+            role: userInfo.role || tokenInfo.role?.charAt(0).toUpperCase() + tokenInfo.role?.slice(1) || "User"
           });
         } else {
           throw new Error("User information not found in API response");

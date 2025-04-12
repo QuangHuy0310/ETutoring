@@ -269,7 +269,7 @@ export default function Timetable() {
         if (typeof window === 'undefined') return;
         
         // Get token and decode it
-        const accessToken = getCookie('accessToken');
+        const accessToken = localStorage.getItem('accessToken');
         const tokenInfo = decodeToken();
         
         if (!accessToken || !tokenInfo) {
@@ -278,17 +278,8 @@ export default function Timetable() {
           return;
         }
 
-        let userId = tokenInfo.userId;
-        const urlParams = new URLSearchParams(window.location.search);
-        const queryUserId = urlParams.get('userId');
-        
-        // Kiểm tra quyền admin hoặc staff để xem lịch của người khác
-        if (queryUserId && (tokenInfo.role === 'admin' || tokenInfo.role === 'staff')) {
-          userId = queryUserId; // Admin và staff có thể xem lịch của bất kỳ người dùng nào
-        }
-
         // Fetch schedule from API
-        const response = await fetch(`http://localhost:3002/get-schedule?userId=${userId}`, {
+        const response = await fetch(`http://localhost:3002/get-schedule?userId=${tokenInfo.userId}`, {
           headers: {
             "Authorization": `Bearer ${accessToken}`
           }

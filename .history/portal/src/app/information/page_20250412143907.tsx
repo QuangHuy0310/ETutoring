@@ -154,7 +154,7 @@ export default function InformationPage() {
             phoneNumber: userInfo.phone || "", // Change from phoneNumber to phone
             major: userInfo.major || "",
             avatar: userInfo.avatar || "",
-            role: userInfo.role || (tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User")
+            role: userInfo.role || tokenInfo.role?.charAt(0).toUpperCase() + tokenInfo.role?.slice(1) || "User"
           });
         } else {
           throw new Error("User information not found in API response");
