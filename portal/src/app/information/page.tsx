@@ -5,6 +5,8 @@ import Layout from "@/app/componets/layout";
 import { FaEdit, FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag } from "react-icons/fa";
 import InformationForm from "@/app/information/information-form";
 import Timetable from "@/app/information/timetable";
+import { getCookie } from "cookies-next";
+import { jwtDecode } from "jwt-decode";
 
 // Định nghĩa interface cho dữ liệu người dùng
 interface UserInfo {
@@ -17,6 +19,17 @@ interface UserInfo {
   role?: string;
   address?: string;
   country?: string;
+}
+
+// Định nghĩa interface cho thông tin từ token
+interface DecodedToken {
+  email: string;
+  role?: string;
+  userId?: string;
+  sub?: string;
+  id?: string;
+  iat: number;
+  exp: number;
 }
 
 export default function InformationPage() {
@@ -44,17 +57,14 @@ export default function InformationPage() {
     try {
       if (typeof window === 'undefined') return null; // Check for server-side rendering
       
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken');
       if (!accessToken) return null;
 
-      const tokenParts = accessToken.split('.');
-      if (tokenParts.length !== 3) return null;
-
-      const payload = JSON.parse(atob(tokenParts[1]));
+      const decodedToken = jwtDecode<DecodedToken>(accessToken.toString());
       return {
-        email: payload.email,
-        role: payload.role,
-        userId: payload.userId || payload.id || payload.sub // Extract userId from different possible token formats
+        email: decodedToken.email,
+        role: decodedToken.role,
+        userId: decodedToken.userId || decodedToken.id || decodedToken.sub // Extract userId from different possible token formats
       };
     } catch (error) {
       console.error('Error decoding token:', error);
@@ -69,7 +79,7 @@ export default function InformationPage() {
         if (typeof window === 'undefined') return;
         
         // Get token and decode it (for authentication only)
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = getCookie('accessToken');
         const tokenInfo = decodeToken();
         
         if (!accessToken || !tokenInfo) {
@@ -144,7 +154,7 @@ export default function InformationPage() {
             phoneNumber: userInfo.phone || "", // Change from phoneNumber to phone
             major: userInfo.major || "",
             avatar: userInfo.avatar || "",
-            role: userInfo.role || tokenInfo.role?.charAt(0).toUpperCase() + tokenInfo.role?.slice(1) || "User"
+            role: userInfo.role || (tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User")
           });
         } else {
           throw new Error("User information not found in API response");
@@ -172,7 +182,7 @@ export default function InformationPage() {
     try {
       if (typeof window === 'undefined') return;
       
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken');
       const tokenInfo = decodeToken();
       
       if (!accessToken || !tokenInfo) {

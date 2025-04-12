@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FaCalendarAlt, FaExclamationTriangle, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { getCookie } from "cookies-next"; // Import getCookie
 
 // Định nghĩa interface cho dữ liệu lịch học từ API
 interface APIScheduleItem {
@@ -129,15 +130,16 @@ export default function Timetable() {
     try {
       if (typeof window === 'undefined') return null; // Check for server-side rendering
       
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken');
       if (!accessToken) return null;
 
-      const tokenParts = accessToken.split('.');
+      const tokenParts = accessToken.toString().split('.');
       if (tokenParts.length !== 3) return null;
 
       const payload = JSON.parse(atob(tokenParts[1]));
       return {
-        userId: payload.userId || payload.id || payload.sub // Extract userId from different possible token formats
+        userId: payload.userId || payload.id || payload.sub, // Extract userId from different possible token formats
+        role: payload.role || null // Thêm trích xuất role để kiểm tra quyền admin hoặc staff
       };
     } catch (error) {
       console.error('Error decoding token:', error);
@@ -165,7 +167,7 @@ export default function Timetable() {
   useEffect(() => {
     const fetchSlots = async () => {
       try {
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = getCookie('accessToken');
         if (!accessToken) return;
 
         const response = await fetch("http://localhost:3002/api/v1/slots/get-slot", {
@@ -267,7 +269,7 @@ export default function Timetable() {
         if (typeof window === 'undefined') return;
         
         // Get token and decode it
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = getCookie('accessToken');
         const tokenInfo = decodeToken();
         
         if (!accessToken || !tokenInfo) {
@@ -276,8 +278,17 @@ export default function Timetable() {
           return;
         }
 
+        let userId = tokenInfo.userId;
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryUserId = urlParams.get('userId');
+        
+        // Kiểm tra quyền admin hoặc staff để xem lịch của người khác
+        if (queryUserId && (tokenInfo.role === 'admin' || tokenInfo.role === 'staff')) {
+          userId = queryUserId; // Admin và staff có thể xem lịch của bất kỳ người dùng nào
+        }
+
         // Fetch schedule from API
-        const response = await fetch(`http://localhost:3002/get-schedule?userId=${tokenInfo.userId}`, {
+        const response = await fetch(`http://localhost:3002/get-schedule?userId=${userId}`, {
           headers: {
             "Authorization": `Bearer ${accessToken}`
           }

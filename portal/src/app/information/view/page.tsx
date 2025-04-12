@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Layout from "@/app/componets/layout";
 import { FaUser, FaEnvelope, FaPhone, FaGraduationCap, FaUserTag, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
+import { getCookie } from "cookies-next";
 
 // Định nghĩa interface cho dữ liệu người dùng
 interface UserInfo {
@@ -72,7 +73,7 @@ export default function InformationViewPage() {
         }
 
         // Lấy token của người dùng hiện tại để xác thực API
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = getCookie('accessToken');
         if (!accessToken) {
           setError("Authentication required. Please log in.");
           setLoading(false);
@@ -119,7 +120,7 @@ export default function InformationViewPage() {
       }
 
       // Get token for authentication
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken');
       if (!accessToken) {
         setError("Authentication required. Please log in.");
         setLoading(false);
