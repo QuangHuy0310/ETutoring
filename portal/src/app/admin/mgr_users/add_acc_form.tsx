@@ -300,10 +300,10 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
               disabled={isLoading}
             >
               <option value="">Select Role</option>
-              <option value="student">Student</option>
+              <option value="user">User</option>
               <option value="admin">Admin</option>
-              <option value="coordinator">Coordinator</option>
-              <option value="manager">Manager</option>
+              <option value="staff">Staff</option>
+              <option value="tutor">Tutor</option>
             </select>
             {errors.role && (
               <p className="text-red-500 text-xs mt-1">{errors.role}</p>

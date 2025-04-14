@@ -1,253 +1,188 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import AdminLayout from "@/app/admin/AdminLayout";
-import AddFacultyModal from "@/app/admin/mgr_faculties/add_faculty_form";
+import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import AddFacultyModal from "./add_faculty_form";
+import EditFacultyModal from "./edit_faculty_form"
+import AdminLayout from "../AdminLayout";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { getCookie } from "cookies-next";
 
 interface Faculty {
-  id?: number;
+  _id: string;
   name: string;
+  // Thêm các trường khác nếu cần
 }
 
-const FacultyManagerPage: React.FC = () => {
+export default function FacultyManagement() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Lấy dữ liệu faculty từ API khi component được tải
-  useEffect(() => {
-    const accessToken = getCookie('accessToken');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [showEditForm, setShowEditForm] = useState<boolean>(false);
+  const [currentFaculty, setCurrentFaculty] = useState<Faculty | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-    if (!accessToken) {
-      console.error("Access token not found in cookies");
-      setError("Access token is required.");
-      setLoading(false);
-      return;
-    }
-
-    fetch("http://localhost:3002/get-major", {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
-        // Kiểm tra nếu response là 401 Unauthorized
-        if (response.status === 401) {
-          throw new Error("Unauthorized: Your session has expired. Please login again.");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.statusCode === 200) {
-          setFaculties(data.data);
-          setError(null);
-        } else {
-          setError(data.message || "Failed to fetch faculties.");
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching faculties:", err);
-        
-        // Không cần xóa cookie ở đây vì middleware sẽ xử lý việc chuyển hướng
-        setError("Failed to connect to the server. Please try again later.");
-        setLoading(false);
-      });
-  }, []);
-  
-  const filteredFaculties = faculties.filter(faculty => 
-    faculty && faculty.name && faculty.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const deleteFaculty = (id?: number) => {
-    if (!id) {
-      setError("Cannot delete faculty with undefined ID.");
-      return;
-    }
-    
-    if (window.confirm("Are you sure you want to delete this faculty?")) {
-      const accessToken = getCookie('accessToken');
-      
-      if (!accessToken) {
-        setError("Access token is required for this operation.");
-        return;
-      }
-      
-      setLoading(true);
-      
-      fetch(`http://localhost:3002/delete-major/${id}`, {
-        method: "DELETE",
+  // Lấy danh sách khoa
+  const fetchFaculties = async () => {
+    setIsLoading(true);
+    try {
+      const token = getCookie("accessToken");
+      const response = await axios.get(`http://localhost:3002/get-major`, {
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.statusCode === 200) {
-            setFaculties(faculties.filter((faculty) => faculty.id !== id));
-            setError(null);
-          } else {
-            setError(data.message || "Failed to delete faculty.");
-          }
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Error deleting faculty:", err);
-          setError("Failed to connect to the server. Please try again later.");
-          setLoading(false);
-        });
-    }
-  };
-  
-  const editFaculty = (id?: number) => {
-    if (!id) {
-      setError("Cannot edit faculty with undefined ID.");
-      return;
-    }
-    alert(`Edit faculty with ID: ${id}`);
-  };
-  
-  const createFaculty = () => {
-    setIsAddModalOpen(true);
-  };
-
-  // Cập nhật hàm handleSaveFaculty
-  const handleSaveFaculty = (newFaculty: Faculty) => {
-    const accessToken = getCookie('accessToken');
-    
-    if (!accessToken) {
-      setError("Access token is required for this operation.");
-      return;
-    }
-    
-    setLoading(true);
-    
-    // Trong trường hợp API chỉ cần tên faculty
-    const payload = {
-      name: newFaculty.name
-    };
-    
-    fetch("http://localhost:3002/new-major", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    })
-      .then((response) => {
-        // Kiểm tra nếu response là 401 Unauthorized
-        if (response.status === 401) {
-          throw new Error("Unauthorized: Your session has expired. Please login again.");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("API Response:", data);
-        
-        if (data.statusCode === 200 || data.statusCode === 201) {
-          // Thêm faculty mới vào danh sách
-          const newFacultyData = data.data || { ...payload, id: Math.random() };
-          setFaculties(prevFaculties => [...prevFaculties, newFacultyData]);
-          setIsAddModalOpen(false);
-          setError(null);
-        } else {
-          setError(data.message || "Failed to create faculty.");
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error creating faculty:", err);
-        setError(`Failed to connect to the server: ${err.message}`);
-        setLoading(false);
       });
+      setFaculties(response.data.data);
+    } catch (error) {
+      console.error("Error fetching faculties:", error);
+      toast.error("Failed to fetch faculties");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Hàm này có thể không cần vì bạn chỉ cần thêm name
-  const getLastFacultyId = () => {
-    return 0; // Không cần ID vì server sẽ tự tạo
+  useEffect(() => {
+    fetchFaculties();
+  }, []);
+
+  // Thêm khoa mới
+  const handleAddFaculty = async (faculty: { name: string }) => {
+    try {
+      const token = getCookie("accessToken");
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/faculty`, faculty, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setFaculties([...faculties, response.data.data]);
+      setShowAddForm(false);
+      toast.success("Faculty added successfully");
+    } catch (error) {
+      console.error("Error adding faculty:", error);
+      toast.error("Failed to add faculty");
+    }
   };
+
+  // Cập nhật khoa
+  const handleUpdateFaculty = async (updatedFaculty: Faculty) => {
+    try {
+      const token = getCookie("accessToken");
+      await axios.patch(
+        `http://localhost:3002/edit-major?id=${updatedFaculty._id}`,
+        { name: updatedFaculty.name },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setFaculties(
+        faculties.map((faculty) =>
+          faculty._id === updatedFaculty._id ? updatedFaculty : faculty
+        )
+      );
+      setShowEditForm(false);
+      toast.success("Faculty updated successfully");
+    } catch (error) {
+      console.error("Error updating faculty:", error);
+      toast.error("Failed to update faculty");
+    }
+  };
+
+  // Xóa khoa
+  const handleDeleteFaculty = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this faculty?")) {
+      try {
+        const token = getCookie("accessToken");
+        await axios.delete(`http://localhost:3002/delete-major?id=${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setFaculties(faculties.filter((faculty) => faculty._id !== id));
+        toast.success("Faculty deleted successfully");
+      } catch (error) {
+        console.error("Error deleting faculty:", error);
+        toast.error("Failed to delete faculty");
+      }
+    }
+  };
+
+  // Lọc dựa trên tìm kiếm
+  const filteredFaculties = faculties.filter((faculty) =>
+    faculty.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Faculties</h1>
-
-        <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-2">
-          <div className="relative w-full md:w-64">
+      <div>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="admin-heading">Faculty Management</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="admin-button-primary flex items-center"
+            >
+              <FaPlus className="mr-2" /> Add Faculty
+            </button>
             <input
               type="text"
-              placeholder="Search by faculty name..."
+              placeholder="Search faculties..."
+              className="admin-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              🔍
-            </span>
           </div>
-          <button
-            onClick={createFaculty}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition w-full md:w-auto"
-          >
-            Create Faculty
-          </button>
         </div>
 
-        {/* Hiển thị thông báo lỗi nếu có */}
-        {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {/* Hiển thị trạng thái loading */}
-        {loading ? (
-          <div className="flex justify-center items-center py-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+        {/* Faculties List */}
+        {isLoading ? (
+          <div className="flex justify-center my-10">
+            <div className="admin-spinner"></div>
           </div>
         ) : (
-          <div className="border rounded-lg p-4 bg-white text-black">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border p-2">Name</th>
-                  <th className="border p-2">Actions</th>
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="admin-table-header">
+                    Faculty Name
+                  </th>
+                  <th scope="col" className="admin-table-header text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredFaculties.length > 0 ? (
-                  filteredFaculties.map((faculty, index) => (
-                    <tr key={`faculty-${faculty.id || index}`} className="text-center">
-                      <td className="border p-2">{faculty.name}</td>
-                      <td className="border p-2">
-                        <div className="flex justify-center space-x-2">
-                          <button
-                            onClick={() => editFaculty(faculty.id)}
-                            className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => deleteFaculty(faculty.id)}
-                            className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                  filteredFaculties.map((faculty) => (
+                    <tr key={faculty._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">{faculty.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            setCurrentFaculty(faculty);
+                            setShowEditForm(true);
+                          }}
+                          className="text-emerald-600 hover:text-emerald-900 mr-3"
+                        >
+                          <FaEdit className="inline text-lg" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFaculty(faculty._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <FaTrash className="inline text-lg" />
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr key="no-data">
-                    <td colSpan={2} className="text-center py-4">
-                      {searchTerm ? "No matching faculties found" : "No faculties found"}
+                  <tr>
+                    <td colSpan={2} className="px-6 py-4 text-center text-gray-500">
+                      No faculties found
                     </td>
                   </tr>
                 )}
@@ -255,17 +190,26 @@ const FacultyManagerPage: React.FC = () => {
             </table>
           </div>
         )}
-        
-        {/* Sửa form modal để chỉ cần nhập name */}
-        <AddFacultyModal 
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSave={handleSaveFaculty}
-          lastId={getLastFacultyId()}
+
+        {/* Add Faculty Modal */}
+        <AddFacultyModal
+          isOpen={showAddForm}
+          onClose={() => setShowAddForm(false)}
+          onSave={handleAddFaculty}
         />
+
+        {/* Edit Faculty Modal */}
+        {currentFaculty && (
+          <EditFacultyModal
+            isOpen={showEditForm}
+            onClose={() => setShowEditForm(false)}
+            onSave={handleUpdateFaculty}
+            faculty={currentFaculty}
+          />
+        )}
+
+        <ToastContainer position="bottom-right" />
       </div>
     </AdminLayout>
   );
-};
-
-export default FacultyManagerPage;
+}

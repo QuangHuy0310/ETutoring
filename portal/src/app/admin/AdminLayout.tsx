@@ -1,130 +1,139 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { FaHome, FaUsers, FaUniversity, FaBlog, FaSignOutAlt, FaCog, FaChalkboardTeacher, FaChartBar } from "react-icons/fa";
+import { deleteCookie, getCookie } from "cookies-next";
 import { useRouter } from "next/navigation";
-import { getCookie } from "cookies-next";
-import Header from "@/app/componets/Header_for_ad";
 
-const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+interface AdminLayoutProps {
+  children: React.ReactNode;
+}
+
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [adminName, setAdminName] = useState("Admin");
+  const pathname = usePathname();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Kiểm tra token và role khi component được tải
   useEffect(() => {
-    const checkAuth = () => {
-      const token = getCookie('accessToken');
-      
-      if (!token) {
-        // Nếu không có token, chuyển hướng về trang login
-        router.push('/login');
-        return;
-      }
+    // Lấy thông tin admin từ cookie hoặc local storage
+    const accessToken = getCookie("accessToken");
+    if (!accessToken) {
+      router.push("/login");
+    }
 
-      try {
-        // Giải mã token để kiểm tra role
-        const tokenParts = token.toString().split('.');
-        if (tokenParts.length !== 3) {
-          throw new Error('Invalid token format');
-        }
-
-        const payload = JSON.parse(atob(tokenParts[1]));
-        
-        // Kiểm tra nếu token hết hạn
-        if (payload.exp * 1000 < Date.now()) {
-          throw new Error('Token expired');
-        }
-
-        // Kiểm tra role
-        if (payload.role !== 'admin') {
-          router.push('/unauthorized');
-          return;
-        }
-
-        setIsAuthorized(true);
-      } catch (error) {
-        console.error('Auth error:', error);
-        router.push('/login');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
+    // Đây chỉ là giả định, cần cập nhật theo cách lưu trữ thực tế
+    const storedAdminName = localStorage.getItem("adminName");
+    if (storedAdminName) {
+      setAdminName(storedAdminName);
+    }
   }, [router]);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+  const handleLogout = () => {
+    // Xóa cookie hoặc localStorage
+    deleteCookie("accessToken");
+    localStorage.removeItem("adminName");
+    router.push("/login");
   };
 
-  // Hiển thị loading spinner khi đang kiểm tra xác thực
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  // Danh sách các mục menu
+  const menuItems = [
+    { name: "Dashboard", icon: <FaChartBar />, path: "/admin" },
+    { name: "User Management", icon: <FaUsers />, path: "/admin/mgr_users" },
+    { name: "Faculty Management", icon: <FaUniversity />, path: "/admin/mgr_faculties" },
+    { name: "Tutor Management", icon: <FaChalkboardTeacher />, path: "/admin/mgr_tutors" },
+    { name: "Blog Management", icon: <FaBlog />, path: "/admin/mgr_blogs" },
+    { name: "Settings", icon: <FaCog />, path: "/admin/settings" },
+  ];
 
-  // Không hiển thị gì cả khi người dùng không có quyền (để tránh flash of content)
-  if (!isAuthorized) {
-    return null;
-  }
+  const isActive = (path: string) => {
+    return pathname === path;
+  };
 
-  // Hiển thị layout khi đã xác thực thành công
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white">
-      {/* Header with toggleSidebar function */}
-      <Header toggleSidebar={toggleSidebar} />
+    <div className="flex h-screen bg-leaf-green">
+      {/* Sidebar */}
+      <div
+        className={`h-full bg-white p-4 shadow-md transition-all duration-300 flex flex-col ${
+          isCollapsed ? "w-20" : "w-64"
+        }`}
+      >
+        {/* Logo và toggle */}
+        <div className="flex items-center justify-between mb-8">
+          {!isCollapsed && (
+            <h1 className="text-xl font-bold text-green-700">Admin Portal</h1>
+          )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 rounded-lg hover:bg-leaf-green"
+          >
+            {isCollapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M15 10a.75.75 0 01-.75.75H7.612l2.158 1.96a.75.75 0 11-1.04 1.08l-3.5-3.25a.75.75 0 010-1.08l3.5-3.25a.75.75 0 111.04 1.08L7.612 9.25h6.638A.75.75 0 0115 10z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M7.22 14.78a.75.75 0 001.06 0l3.5-3.5a.75.75 0 000-1.06l-3.5-3.5a.75.75 0 00-1.06 1.06L9.94 10l-2.72 2.72a.75.75 0 000 1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
 
-      <div className="flex flex-1 relative">
-        {/* Sidebar - conditionally rendered based on state */}
-        <aside 
-          className={`${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } transform transition-transform duration-300 ease-in-out fixed md:static z-20 w-64 bg-gray-800 p-4 flex flex-col items-center h-[calc(100vh-theme(spacing.16))]`}
+        {/* Admin info - no avatar */}
+        <div className="mb-6 pb-4 border-b border-gray-200">
+          <p className={`font-medium text-gray-800 ${isCollapsed ? "text-center" : ""}`}>
+            {isCollapsed ? "Admin" : `Welcome, ${adminName}`}
+          </p>
+        </div>
+
+        {/* Menu Items */}
+        <nav className="flex-1">
+          <ul className="space-y-2">
+            {menuItems.map((item) => (
+              <li key={item.name}>
+                <Link href={item.path}>
+                  <div
+                    className={`flex items-center p-3 rounded-lg transition-colors ${
+                      isActive(item.path)
+                        ? "bg-leaf-green text-green-700 font-medium"
+                        : "hover:bg-leaf-green/50 hover:text-green-700 text-gray-700"
+                    }`}
+                  >
+                    <span className="text-xl mr-3">{item.icon}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center p-3 mt-6 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
-          <div className="w-24 h-24 bg-gray-600 rounded-full mb-4"></div>
-          <p className="text-lg font-semibold mb-6">Avatar</p>
-          <nav className="w-full">
-            <button
-              className="w-full py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              onClick={() => router.push("/admin")}
-            >
-              Dashboard
-            </button>
-            <button
-              className="w-full py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              onClick={() => router.push("/admin/mgr_account")}
-            >
-              Account Manager
-            </button>
-            <button
-              className="w-full py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              onClick={() => router.push("/admin/mgr_faculties")}
-            >
-              Manager Faculties
-            </button>
-            <button
-              className="w-full py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              onClick={() => router.push("/admin/mgr_risk")}
-            >
-              Manager Risk
-            </button>
-          </nav>
-        </aside>
-
-        {/* Main content - adjusts padding when sidebar is closed */}
-        <main className={`flex-1 p-6 ${!sidebarOpen ? 'pl-4' : ''} bg-gray-900`}>
-          {children}
-        </main>
+          <FaSignOutAlt className="text-xl mr-3" />
+          {!isCollapsed && <span>Logout</span>}
+        </button>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white text-center py-2 text-gray-900 font-semibold">
-        © 2025 ProjectGW. All Rights Reserved.
-      </footer>
+      {/* Main Content */}
+      <div className="flex-1 p-6 overflow-auto">
+        <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-sm p-6">
+          {children}
+        </div>
+      </div>
     </div>
   );
 };

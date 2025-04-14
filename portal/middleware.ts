@@ -13,10 +13,11 @@ interface DecodedToken {
 
 // Định nghĩa route restriction - chỉ có admin, user, tutor và staff
 const ADMIN_ROUTES = ['/admin', '/dashboard/admin'];
-const USER_ROUTES = ['/profile', '/dashboard/user'];
-const TUTOR_ROUTES = ['/tutor', '/dashboard/tutor'];
+const USER_ROUTES = ['/', '/dashboard/user'];
+const TUTOR_ROUTES = ['/', '/dashboard/tutor'];
 const STAFF_ROUTES = ['/staff', '/staff/listofuser', '/staff/matching', '/staff/managerblog', '/staff/managermatching'];
-const PUBLIC_ROUTES = ['/login', '/register', '/about', '/contact', '/debug-token'];
+// Chỉ giữ lại những route không yêu cầu login
+const AUTH_FREE_ROUTES = ['/login', '/register'];
 
 // Middleware sẽ chạy trước khi request đến server
 export function middleware(request: NextRequest) {
@@ -37,13 +38,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Thêm route debug-token để xem thông tin về token
-  if (pathname === '/debug-token') {
-    return NextResponse.next();
-  }
-
-  // Cho phép truy cập public routes mà không cần token
-  if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+  // Cho phép truy cập các route không cần xác thực
+  if (AUTH_FREE_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
     return NextResponse.next();
   }
 
@@ -67,6 +63,11 @@ export function middleware(request: NextRequest) {
 
     // Kiểm tra role và phân quyền truy cập
     const { role } = decodedToken;
+    
+    // Nếu user đang cố gắng truy cập trang chủ (/) và có role là user hoặc tutor
+    if (pathname === '/' && (role === 'user' || role === 'tutor')) {
+      return NextResponse.next();
+    }
     
     // Kiểm tra quyền truy cập cho admin routes
     if (ADMIN_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
@@ -97,6 +98,20 @@ export function middleware(request: NextRequest) {
       if (role !== 'staff' && role !== 'admin') {
         // Nếu không phải staff hoặc admin, chuyển hướng đến trang không có quyền
         return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
+    }
+    
+    // Tự động chuyển hướng user và tutor đến trang home nếu đang truy cập trang khác không được phép
+    if (role === 'user' || role === 'tutor') {
+      const isUserAllowed = USER_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
+      const isTutorAllowed = TUTOR_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
+      
+      if (role === 'user' && !isUserAllowed) {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+      
+      if (role === 'tutor' && !isTutorAllowed) {
+        return NextResponse.redirect(new URL('/', request.url));
       }
     }
     

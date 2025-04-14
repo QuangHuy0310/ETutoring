@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSocket } from '@/app/contexts/SocketContext';
 
 interface HeaderForUserProps {
   toggleSidebar?: () => void; // Optional function to toggle sidebar
@@ -15,6 +16,16 @@ interface SearchResult {
   role?: string;
 }
 
+interface Notification {
+  id: number;
+  title: string;
+  message?: string;
+  time: string;
+  isRead: boolean;
+  type?: string;
+  link?: string;
+}
+
 const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -26,6 +37,12 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
   const [searchBy, setSearchBy] = useState<'name' | 'email'>('name');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
+  
+  // Notification states
+  const { socket } = useSocket();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
   
   // Lấy thông tin người dùng từ localStorage khi component mount
   useEffect(() => {
@@ -46,6 +63,113 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     }
   }, []);
   
+  // Listen for notifications
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Listen for general notifications
+    socket.on('newNotification', (notification) => {
+      console.log('Received notification:', notification);
+      addNotification({
+        id: Date.now(),
+        title: typeof notification === 'string' ? notification : notification.title || 'New notification',
+        message: typeof notification === 'object' ? notification.message : undefined,
+        time: new Date().toISOString(),
+        isRead: false,
+        type: typeof notification === 'object' ? notification.type : 'general'
+      });
+    });
+    
+    // Listen for matching request notifications
+    socket.on('newMatchingRequestNotification', (notification) => {
+      console.log('Received matching request:', notification);
+      addNotification({
+        id: Date.now(),
+        title: 'New Matching Request',
+        message: typeof notification === 'string' ? notification : 'You have a new matching request',
+        time: new Date().toISOString(),
+        isRead: false,
+        type: 'matching-request'
+      });
+    });
+    
+    // Listen for comment notifications
+    socket.on('newComment', (data) => {
+      console.log('Received comment notification:', data);
+      addNotification({
+        id: Date.now(),
+        title: 'New Comment',
+        message: `New comment on document: ${data.documentId || 'Unknown'}`,
+        time: new Date().toISOString(),
+        isRead: false,
+        type: 'comment',
+        link: data.documentId ? `/document/${data.documentId}` : undefined
+      });
+    });
+    
+    return () => {
+      socket.off('newNotification');
+      socket.off('newMatchingRequestNotification');
+      socket.off('newComment');
+    };
+  }, [socket]);
+  
+  // Function to add a notification
+  const addNotification = (notification: Notification) => {
+    setNotifications(prev => [notification, ...prev].slice(0, 20)); // Keep only 20 most recent notifications
+  };
+  
+  // Function to mark notification as read
+  const markAsRead = (id: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, isRead: true } : notif
+      )
+    );
+  };
+  
+  // Function to mark all notifications as read
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, isRead: true }))
+    );
+  };
+  
+  // Function to handle notification click
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    // Handle navigation if link exists
+    if (notification.link) {
+      router.push(notification.link);
+    }
+    
+    // Close dropdown
+    setShowNotifications(false);
+  };
+  
+  // Count unread notifications
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  
+  // Format time for display
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  };
+  
   // Xử lý click bên ngoài dropdown để đóng dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -54,6 +178,9 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
       }
       if (searchResultsRef.current && !searchResultsRef.current.contains(event.target as Node)) {
         setSearchResults([]);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     }
     
@@ -270,9 +397,74 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
 
       {/* Actions Section */}
       <div className="flex items-center gap-4">
-        <button className="px-4 py-2 hover:bg-gray-50 text-gray-700">
-          Notification
-        </button>
+        {/* Notification Component */}
+        <div className="relative" ref={notificationRef}>
+          <button 
+            className="px-4 py-2 hover:bg-gray-50 text-gray-700 relative"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            <span className="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </span>
+          </button>
+          
+          {/* Notification Dropdown */}
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 z-20 max-h-96 overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-700">Notifications</h3>
+                {unreadCount > 0 && (
+                  <button 
+                    className="text-sm text-blue-500 hover:text-blue-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAllAsRead();
+                    }}
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+              
+              <div className="overflow-y-auto flex-1">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No notifications
+                  </div>
+                ) : (
+                  <div>
+                    {notifications.map((notification) => (
+                      <div 
+                        key={notification.id}
+                        className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`w-2 h-2 mt-2 rounded-full mr-2 ${!notification.isRead ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{notification.title}</p>
+                            {notification.message && (
+                              <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">{formatTimeAgo(notification.time)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* User Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>

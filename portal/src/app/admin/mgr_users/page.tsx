@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/app/admin/AdminLayout";
-import AddAccountForm from "@/app/admin/mgr_account/add_acc_form";
-import EditAccount from "@/app/admin/mgr_account/edit_acc";
+import AddAccountForm from "@/app/admin/mgr_users/add_acc_form";
+import EditAccount from "@/app/admin/mgr_users/edit_acc";
 import { getCookie } from "cookies-next";
 
 interface User {
@@ -83,10 +83,29 @@ const AccountManagerPage: React.FC = () => {
   
   // Calculate page numbers to display
   const getPageNumbers = () => {
+    const maxPagesToShow = 5; // Số lượng trang tối đa hiển thị cùng lúc
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pages.push(i);
+    
+    if (totalPages <= maxPagesToShow) {
+      // Nếu tổng số trang ít hơn số lượng trang tối đa, hiển thị tất cả
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Nếu tổng số trang nhiều hơn, hiển thị một phạm vi giới hạn
+      let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+      let endPage = startPage + maxPagesToShow - 1;
+      
+      if (endPage > totalPages) {
+        endPage = totalPages;
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
     }
+    
     return pages;
   };
 
@@ -263,8 +282,10 @@ const AccountManagerPage: React.FC = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Roles</option>
-                <option value="user_tutor">Users & Tutors</option>
+                <option value="user">User</option>
+                <option value="tutor">Tutor</option>
                 <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
           </div>
@@ -354,19 +375,74 @@ const AccountManagerPage: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-center mt-4">
-          {getPageNumbers().map((page) => (
+        {totalPages > 0 && (
+          <div className="flex justify-center mt-4 space-x-1">
+            {/* Nút Previous */}
             <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`px-3 py-1 mx-1 rounded ${
-                currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded ${
+                currentPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 hover:bg-gray-300"
               }`}
             >
-              {page}
+              &laquo;
             </button>
-          ))}
-        </div>
+            
+            {/* Hiển thị trang đầu tiên nếu không nằm trong phạm vi hiển thị */}
+            {getPageNumbers()[0] > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
+                >
+                  1
+                </button>
+                {getPageNumbers()[0] > 2 && (
+                  <span className="px-3 py-1">...</span>
+                )}
+              </>
+            )}
+            
+            {/* Các số trang */}
+            {getPageNumbers().map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-1 rounded ${
+                  currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            
+            {/* Hiển thị trang cuối cùng nếu không nằm trong phạm vi hiển thị */}
+            {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+              <>
+                {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
+                  <span className="px-3 py-1">...</span>
+                )}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+            
+            {/* Nút Next */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded ${
+                currentPage === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 hover:bg-gray-300"
+              }`}
+            >
+              &raquo;
+            </button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

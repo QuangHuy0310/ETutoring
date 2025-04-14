@@ -1,19 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-interface AddFacultyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (faculty: { name: string }) => void;
-  lastId?: number; // Có thể không cần thiết nếu backend tự tạo ID
+interface Faculty {
+  _id: string;
+  name: string;
 }
 
-const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
+interface EditFacultyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (faculty: Faculty) => void;
+  faculty: Faculty;
+}
+
+const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  faculty,
 }) => {
   const [facultyName, setFacultyName] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (faculty) {
+      setFacultyName(faculty.name);
+    }
+  }, [faculty]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,20 +35,15 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
       return;
     }
     
-    onSave({ name: facultyName.trim() });
-    
-    // Đặt lại form và đóng form
-    setFacultyName("");
-    setError("");
-    onClose(); // Thêm dòng này để đảm bảo form được đóng sau khi submit
+    onSave({ _id: faculty._id, name: facultyName.trim() });
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md text-black shadow-xl">
-        <h2 className="text-xl font-bold mb-4 text-emerald-800 border-b pb-2">Add New Faculty</h2>
+      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl text-black">
+        <h2 className="text-xl font-bold mb-4 text-emerald-800 border-b pb-2">Edit Faculty</h2>
         
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="mb-4">
@@ -66,7 +73,7 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
               type="submit"
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
-              Save
+              Update
             </button>
           </div>
         </form>
@@ -75,4 +82,4 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
   );
 };
 
-export default AddFacultyModal;
+export default EditFacultyModal;

@@ -4,7 +4,7 @@
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
+  --background-start-rgb: 231, 245, 220; /* Màu xanh nhạt đọt chuối */
   --background-end-rgb: 255, 255, 255;
 }
 
@@ -12,7 +12,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 0, 0, 0; /* Màu chữ đen */
-    --background-start-rgb: 214, 219, 220;
+    --background-start-rgb: 231, 245, 220; /* Màu xanh nhạt đọt chuối */
     --background-end-rgb: 255, 255, 255;
   }
 }
@@ -38,4 +38,56 @@ body {
 .modal-form textarea,
 .modal-form label {
   color: black;
+}
+
+/* Custom utilities cho admin dashboard */
+.bg-leaf-green {
+  background-color: #E7F5DC;
+}
+
+.hover-emerald:hover {
+  background-color: rgba(16, 185, 129, 0.1); /* emerald-500 với opacity thấp */
+}
+
+.sidebar-shadow {
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* CSS cho components trong admin panel */
+.admin-card {
+  @apply bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg border border-emerald-100;
+}
+
+.admin-button-primary {
+  @apply bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors;
+}
+
+.admin-button-secondary {
+  @apply border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors;
+}
+
+.admin-heading {
+  @apply text-2xl font-bold text-emerald-800 mb-4;
+}
+
+.admin-table {
+  @apply min-w-full divide-y divide-gray-200 bg-white rounded-lg shadow overflow-hidden;
+}
+
+.admin-table-header {
+  @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+}
+
+.admin-link {
+  @apply text-emerald-600 hover:text-emerald-800 transition-colors;
+}
+
+/* Input styles */
+.admin-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500;
+}
+
+/* Loading spinner */
+.admin-spinner {
+  @apply animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-emerald-500;
 }
