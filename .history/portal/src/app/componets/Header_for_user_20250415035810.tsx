@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { io, Socket } from 'socket.io-client';
+import { getCookie } from "cookies-next";
 
 interface HeaderForUserProps {
   toggleSidebar?: () => void; // Optional function to toggle sidebar
@@ -17,10 +17,13 @@ interface SearchResult {
 }
 
 interface Notification {
-  id: string;
+  id: number;
   title: string;
-  createdAt: string;
-  read: boolean;
+  message?: string;
+  time: string;
+  isRead: boolean;
+  type?: string;
+  link?: string;
 }
 
 const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
@@ -34,170 +37,138 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
   const [searchBy, setSearchBy] = useState<'name' | 'email'>('name');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
+  
+  // Notification states
+  const { socket } = useSocket();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   
-  // Thêm state cho notification
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [showNotifications, setShowNotifications] = useState<boolean>(false);
-  const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
-
-  // Khởi tạo socket và kết nối khi component mount
+  // Lấy thông tin người dùng từ cookies khi component mount
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) return;
-
-    // Khởi tạo kết nối socket
-    const socketInstance = io('http://localhost:3008', {
-      transports: ['websocket'],
-      query: { token: accessToken }
-    });
-
-    socketInstance.on('connect', () => {
-      console.log('Socket connected!');
-      setConnectionStatus('connected');
-    });
-
-    socketInstance.on('disconnect', () => {
-      console.log('Socket disconnected!');
-      setConnectionStatus('disconnected');
-    });
-
-    socketInstance.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
-      setConnectionStatus('error');
-    });
-
-    // Lắng nghe các sự kiện thông báo
-    socketInstance.on('newNotification', (notification) => {
-      console.log('Received notification:', notification);
-      handleNewNotification(notification);
-    });
-
-    socketInstance.on('newMessage', (msg) => {
-      console.log('Received new message:', msg);
-      handleNewNotification({
-        id: Date.now().toString(),
-        title: `New message from ${msg.senderId}`,
-        createdAt: new Date().toISOString(),
-        read: false
-      });
-    });
-
-    socketInstance.on('newComment', (data) => {
-      console.log('Received new comment:', data);
-      handleNewNotification({
-        id: Date.now().toString(),
-        title: `New comment in ${data.roomId || 'a document'}`,
-        createdAt: new Date().toISOString(),
-        read: false
-      });
-    });
-
-    socketInstance.on('newMatchingRequestNotification', (notification) => {
-      console.log('Received matching request:', notification);
-      handleNewNotification({
-        id: Date.now().toString(),
-        title: notification,
-        createdAt: new Date().toISOString(),
-        read: false
-      });
-    });
-
-    setSocket(socketInstance);
-
-    // Cleanup function to disconnect socket when component unmounts
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, []); // Empty dependency array to run only once when component mounts
-
-  // Xử lý thông báo mới
-  const handleNewNotification = (notification: any) => {
-    // Chuyển đổi notification từ string thành object nếu cần
-    let formattedNotification: Notification;
-    
-    if (typeof notification === 'string') {
-      formattedNotification = {
-        id: Date.now().toString(),
-        title: notification,
-        createdAt: new Date().toISOString(),
-        read: false
-      };
-    } else if (typeof notification === 'object') {
-      formattedNotification = {
-        id: notification.id || Date.now().toString(),
-        title: notification.title || 'New notification',
-        createdAt: notification.createdAt || new Date().toISOString(),
-        read: false
-      };
-    } else {
-      return; // Không xử lý nếu không đúng định dạng
-    }
-
-    setNotifications(prev => [formattedNotification, ...prev].slice(0, 20)); // Giữ tối đa 20 thông báo
-    setUnreadCount(prev => prev + 1);
-    
-    // Hiển thị thông báo trên trình duyệt nếu được hỗ trợ
-    if (Notification.permission === 'granted') {
-      new Notification('ProjectGW Notification', {
-        body: formattedNotification.title,
-      });
-    }
-  };
-
-  // Đánh dấu tất cả thông báo là đã đọc
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-    setUnreadCount(0);
-  };
-
-  // Đánh dấu một thông báo là đã đọc
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
-  };
-
-  // Toggle hiển thị thông báo
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
-    if (!showNotifications) {
-      setTimeout(() => markAllAsRead(), 2000); // Đánh dấu đã đọc sau khi mở 2s
-    }
-  };
-  
-  // Lấy thông tin người dùng từ localStorage khi component mount
-  useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    // Đầu tiên thử lấy userName từ localStorage
-    const storedUserName = localStorage.getItem('userName');
-    
-    if (storedUserName) {
-      setUserName(storedUserName);
-    } else if (accessToken) {
+    const accessToken = getCookie('accessToken') as string;
+    if (accessToken) {
       try {
-        // Giải mã JWT để lấy thông tin nếu không có trong localStorage
+        // Giải mã JWT để lấy thông tin
         const tokenParts = accessToken.split('.');
         if (tokenParts.length === 3) {
           const payload = JSON.parse(atob(tokenParts[1]));
           if (payload.name) {
             setUserName(payload.name);
-            // Lưu vào localStorage để lần sau không cần giải mã nữa
-            localStorage.setItem('userName', payload.name);
           }
         }
       } catch (error) {
         console.error('Error decoding token:', error);
-        // Nếu có lỗi, thiết lập userName mặc định
-        setUserName("User");
       }
     }
   }, []);
+  
+  // Listen for notifications
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Listen for general notifications
+    socket.on('newNotification', (notification) => {
+      console.log('Received notification:', notification);
+      addNotification({
+        id: Date.now(),
+        title: typeof notification === 'string' ? notification : notification.title || 'New notification',
+        message: typeof notification === 'object' ? notification.message : undefined,
+        time: new Date().toISOString(),
+        isRead: false,
+        type: typeof notification === 'object' ? notification.type : 'general'
+      });
+    });
+    
+    // Listen for matching request notifications
+    socket.on('newMatchingRequestNotification', (notification) => {
+      console.log('Received matching request:', notification);
+      addNotification({
+        id: Date.now(),
+        title: 'New Matching Request',
+        message: typeof notification === 'string' ? notification : 'You have a new matching request',
+        time: new Date().toISOString(),
+        isRead: false,
+        type: 'matching-request'
+      });
+    });
+    
+    // Listen for comment notifications
+    socket.on('newComment', (data) => {
+      console.log('Received comment notification:', data);
+      addNotification({
+        id: Date.now(),
+        title: 'New Comment',
+        message: `New comment on document: ${data.documentId || 'Unknown'}`,
+        time: new Date().toISOString(),
+        isRead: false,
+        type: 'comment',
+        link: data.documentId ? `/document/${data.documentId}` : undefined
+      });
+    });
+    
+    return () => {
+      socket.off('newNotification');
+      socket.off('newMatchingRequestNotification');
+      socket.off('newComment');
+    };
+  }, [socket]);
+  
+  // Function to add a notification
+  const addNotification = (notification: Notification) => {
+    setNotifications(prev => [notification, ...prev].slice(0, 20)); // Keep only 20 most recent notifications
+  };
+  
+  // Function to mark notification as read
+  const markAsRead = (id: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, isRead: true } : notif
+      )
+    );
+  };
+  
+  // Function to mark all notifications as read
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, isRead: true }))
+    );
+  };
+  
+  // Function to handle notification click
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    // Handle navigation if link exists
+    if (notification.link) {
+      router.push(notification.link);
+    }
+    
+    // Close dropdown
+    setShowNotifications(false);
+  };
+  
+  // Count unread notifications
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  
+  // Format time for display
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  };
   
   // Xử lý click bên ngoài dropdown để đóng dropdown
   useEffect(() => {
@@ -219,20 +190,21 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     };
   }, []);
 
-  // Yêu cầu quyền thông báo
-  useEffect(() => {
-    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-      Notification.requestPermission();
-    }
-  }, []);
-
+  // Xử lý chuyển đến trang profile của người dùng
+  const viewUserProfile = (userId: string) => {
+    if (!userId) return;
+    router.push(`/information/view?idUser=${userId}`);
+    setSearchResults([]);
+    setSearchTerm("");
+  };
+  
   // Hàm tìm kiếm
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
     
     setIsSearching(true);
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken') as string;
       let url;
       
       // Xác định URL dựa vào option tìm kiếm
@@ -289,7 +261,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     setIsLoggingOut(true);
     
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken') as string;
       
       if (accessToken) {
         // Gọi API logout
@@ -304,17 +276,17 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
         });
       }
       
-      // Xóa dữ liệu từ localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('userEmail');
+      // Xóa cookie thay vì localStorage
+      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "userEmail=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       // Chuyển hướng đến trang đăng nhập
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Xóa token và chuyển hướng ngay cả khi có lỗi
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('userEmail');
+      // Xóa cookie và chuyển hướng ngay cả khi có lỗi
+      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "userEmail=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       router.push('/login');
     } finally {
       setIsLoggingOut(false);
@@ -325,26 +297,6 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
   // Toggle dropdown của user
   const toggleUserDropdown = () => {
     setShowDropdown(!showDropdown);
-  };
-
-  // Navigate to user profile page when a search result is clicked
-  const viewUserProfile = (userId: string) => {
-    if (!userId) {
-      console.error('Invalid user ID');
-      return;
-    }
-    
-    // Close search results
-    setSearchResults([]);
-    
-    // Clear search input
-    setSearchTerm('');
-    
-    // Navigate to the user profile page
-    router.push(`/user-profile/${userId}`);
-    
-    // Optionally track this interaction
-    console.log(`Viewing profile for user: ${userId}`);
   };
 
   return (
@@ -445,67 +397,71 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
 
       {/* Actions Section */}
       <div className="flex items-center gap-4">
-        {/* Notification Button */}
+        {/* Notification Component */}
         <div className="relative" ref={notificationRef}>
           <button 
             className="px-4 py-2 hover:bg-gray-50 text-gray-700 relative"
-            onClick={toggleNotifications}
+            onClick={() => setShowNotifications(!showNotifications)}
           >
-            <span className="text-gray-700">Notification</span>
-            {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
+            <span className="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </span>
           </button>
           
-          {/* Notifications Dropdown */}
+          {/* Notification Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 z-20 max-h-96 overflow-auto">
-              <div className="flex justify-between items-center p-3 border-b border-gray-200">
-                <h3 className="font-medium">Notifications</h3>
-                <button 
-                  onClick={markAllAsRead} 
-                  className="text-xs text-blue-500 hover:text-blue-700"
-                >
-                  Mark all as read
-                </button>
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 z-20 max-h-96 overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-700">Notifications</h3>
+                {unreadCount > 0 && (
+                  <button 
+                    className="text-sm text-blue-500 hover:text-blue-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAllAsRead();
+                    }}
+                  >
+                    Mark all as read
+                  </button>
+                )}
               </div>
               
-              {notifications.length > 0 ? (
-                <ul>
-                  {notifications.map((notification) => (
-                    <li 
-                      key={notification.id} 
-                      className={`p-3 border-b border-gray-100 hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}
-                      onClick={() => markAsRead(notification.id)}
-                    >
-                      <div className="flex items-start">
-                        <div className={`w-2 h-2 mt-2 rounded-full mr-3 ${!notification.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                        <div>
-                          <p className="text-sm">{notification.title}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(notification.createdAt).toLocaleString()}
-                          </p>
+              <div className="overflow-y-auto flex-1">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No notifications
+                  </div>
+                ) : (
+                  <div>
+                    {notifications.map((notification) => (
+                      <div 
+                        key={notification.id}
+                        className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`w-2 h-2 mt-2 rounded-full mr-2 ${!notification.isRead ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{notification.title}</p>
+                            {notification.message && (
+                              <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">{formatTimeAgo(notification.time)}</p>
+                          </div>
                         </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="p-4 text-center text-gray-500">
-                  No notifications yet
-                </div>
-              )}
-              
-              {connectionStatus !== 'connected' && (
-                <div className="p-2 text-center text-xs">
-                  <span className={`inline-block w-3 h-3 rounded-full mr-1 ${
-                    connectionStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                  }`}></span>
-                  {connectionStatus === 'error' ? 'Connection error' : 'Disconnected'}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

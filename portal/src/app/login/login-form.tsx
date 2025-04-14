@@ -77,7 +77,8 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userRole = payload.role;
       
-      // Lưu thông tin user vào localStorage
+      // Lưu thông tin user vào localStorage để có sẵn cho client-side
+      localStorage.setItem('accessToken', token);
       localStorage.setItem('userId', payload.id || payload.sub || '');
       localStorage.setItem('userEmail', payload.email || '');
       localStorage.setItem('userName', payload.name || '');
@@ -103,7 +104,10 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
         ROLE_REDIRECTS[userRole as keyof typeof ROLE_REDIRECTS] || ROLE_REDIRECTS.default;
       
       console.log(`Chuyển hướng role ${userRole} đến ${redirectPath}`);
-      router.push(redirectPath);
+      
+      // Sử dụng window.location.href thay vì router.push để đảm bảo việc chuyển hướng hoạt động đúng
+      // Đây là sự thay đổi quan trọng để khắc phục vấn đề chuyển hướng sau đăng nhập
+      window.location.href = redirectPath;
     } catch (decodeError) {
       console.error("Lỗi khi giải mã token:", decodeError);
       setError("Không thể xác thực thông tin đăng nhập. Vui lòng thử lại.");
