@@ -1,35 +1,44 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Socket, io } from 'socket.io-client';
+import { getCookie } from 'cookies-next';
 
 interface SocketContextType {
   socket: Socket | null;
   connected: boolean;
 }
 
-const SocketContext = createContext<SocketContextType>({
-  socket: null,
-  connected: false
-});
+const SocketContext = createContext<SocketContextType | null>(null);
 
-export const useSocket = () => useContext(SocketContext);
+export const useSocket = (): SocketContextType => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error('useSocket must be used within a SocketProvider');
+  }
+  return context;
+};
 
-export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    // Chỉ khởi tạo socket ở phía client
-    if (typeof window === 'undefined') return;
+    // Lấy token từ cookie thay vì hardcode hoặc từ localStorage
+    const token = getCookie('accessToken');
     
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) return;
-    
-    // Kết nối socket
+    if (!token) {
+      console.error('No access token available for socket connection');
+      return;
+    }
+
     const socketInstance = io('http://localhost:3008', {
       transports: ['websocket'],
       auth: {
-        token: accessToken
+        token: token
+      },
+      query: {
+        token: token
       }
     });
     
@@ -41,6 +50,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketInstance.on('disconnect', () => {
       console.log('Socket disconnected');
       setConnected(false);
+    });
+    
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message);
     });
     
     setSocket(socketInstance);

@@ -7,6 +7,7 @@ import { ChatMessage } from "@/app/chatbox/chatmessage";
 import { FaPhone, FaVideo, FaCog } from "react-icons/fa";
 import Layout from "@/app/componets/layout";
 import ChatSidebar from "@/app/chatbox/chatsidebar";
+import { getCookie } from "cookies-next";
 
 let socket: Socket;
 
@@ -29,7 +30,7 @@ export default function ChatboxPage() {
   const bottomRef = useRef<HTMLDivElement | null>(null); // 👈 Scroll ref
 
   const fetchMessages = async (roomId: string) => {
-    const token = localStorage.getItem("accessToken");
+    const token = getCookie("accessToken");
     if (!token) return;
 
     try {
@@ -62,13 +63,22 @@ export default function ChatboxPage() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    const uid = localStorage.getItem("userId");
+    const token = getCookie("accessToken");
 
-    if (!token || !uid) return;
+    if (!token) return;
 
-    setUserId(uid);
-    userIdRef.current = uid;
+    try {
+      // Parse userId from token
+      const tokenParts = token.toString().split(".");
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        const uid = payload.userId || payload.id || payload.sub;
+        setUserId(uid);
+        userIdRef.current = uid;
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi parse token:", error);
+    }
 
     socket = io("http://localhost:3008", {
       transports: ["websocket"],
@@ -76,7 +86,9 @@ export default function ChatboxPage() {
     });
 
     socket.on("connect", () => console.log("✅ Socket connected"));
-    socket.on("disconnect", (reason) => console.warn("❌ Socket disconnected:", reason));
+    socket.on("disconnect", (reason) =>
+      console.warn("❌ Socket disconnected:", reason)
+    );
 
     socket.on("newMessage", (msg: any) => {
       if (msg.roomId === currentRoomRef.current) {
@@ -137,7 +149,7 @@ export default function ChatboxPage() {
 
   const handleSend = async (message: string) => {
     if (!currentRoom) return alert("Bạn chưa chọn phòng");
-    const token = localStorage.getItem("accessToken");
+    const token = getCookie("accessToken");
     if (!token) return alert("Token không tồn tại");
 
     const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
@@ -195,9 +207,16 @@ export default function ChatboxPage() {
               </span>
             </div>
             <div className="flex space-x-4">
-              <button className="p-2 bg-gray-700 text-white rounded"><FaPhone /></button>
-              <button className="p-2 bg-gray-700 text-white rounded"><FaVideo /></button>
-              <button className="p-2 bg-gray-700 text-white rounded" onClick={() => setShowSidebar(true)}>
+              <button className="p-2 bg-gray-700 text-white rounded">
+                <FaPhone />
+              </button>
+              <button className="p-2 bg-gray-700 text-white rounded">
+                <FaVideo />
+              </button>
+              <button
+                className="p-2 bg-gray-700 text-white rounded"
+                onClick={() => setShowSidebar(true)}
+              >
                 <FaCog />
               </button>
             </div>

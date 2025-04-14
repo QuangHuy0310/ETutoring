@@ -4,9 +4,10 @@ import { jwtDecode } from 'jwt-decode';
 
 // Định nghĩa cấu trúc của token sau khi giải mã
 interface DecodedToken {
-  sub: string;
+  id: string;
   email: string;
   role: string;
+  name?: string; 
   exp: number;
   iat: number;
 }
@@ -63,63 +64,43 @@ export function middleware(request: NextRequest) {
 
     // Kiểm tra role và phân quyền truy cập
     const { role } = decodedToken;
+    console.log('User role:', role, 'Pathname:', pathname);
     
-    // Nếu user đang cố gắng truy cập trang chủ (/) và có role là user hoặc tutor
-    if (pathname === '/' && (role === 'user' || role === 'tutor')) {
-      return NextResponse.next();
-    }
-    
-    // Kiểm tra quyền truy cập cho admin routes
-    if (ADMIN_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-      if (role !== 'admin') {
-        // Nếu không phải admin, chuyển hướng đến trang không có quyền
-        return NextResponse.redirect(new URL('/unauthorized', request.url));
-      }
-    }
-    
-    // Kiểm tra quyền truy cập cho user routes
-    if (USER_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-      if (role !== 'user' && role !== 'admin') {
-        // Nếu không phải user hoặc admin, chuyển hướng đến trang không có quyền
-        return NextResponse.redirect(new URL('/unauthorized', request.url));
-      }
-    }
-
-    // Kiểm tra quyền truy cập cho tutor routes
-    if (TUTOR_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-      if (role !== 'tutor' && role !== 'admin') {
-        // Nếu không phải tutor hoặc admin, chuyển hướng đến trang không có quyền
-        return NextResponse.redirect(new URL('/unauthorized', request.url));
-      }
-    }
-
-    // Kiểm tra quyền truy cập cho staff routes
-    if (STAFF_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-      if (role !== 'staff' && role !== 'admin') {
-        // Nếu không phải staff hoặc admin, chuyển hướng đến trang không có quyền
-        return NextResponse.redirect(new URL('/unauthorized', request.url));
-      }
-    }
-    
-    // Tự động chuyển hướng user và tutor đến trang home nếu đang truy cập trang khác không được phép
-    if (role === 'user' || role === 'tutor') {
-      const isUserAllowed = USER_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
-      const isTutorAllowed = TUTOR_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
+    // Xử lý theo role và path
+    switch(role) {
+      case 'admin':
+        // Admin có quyền truy cập tất cả các trang
+        return NextResponse.next();
       
-      if (role === 'user' && !isUserAllowed) {
+      case 'user':
+        // Nếu là trang chính hoặc trang user được phép
+        if (USER_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+          return NextResponse.next();
+        }
+        // Nếu không, chuyển hướng về trang chính
         return NextResponse.redirect(new URL('/', request.url));
-      }
       
-      if (role === 'tutor' && !isTutorAllowed) {
+      case 'tutor':
+        // Nếu là trang chính hoặc trang tutor được phép
+        if (TUTOR_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+          return NextResponse.next();
+        }
+        // Nếu không, chuyển hướng về trang chính
         return NextResponse.redirect(new URL('/', request.url));
-      }
+        
+      case 'staff':
+        // Nếu là trang staff được phép
+        if (STAFF_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+          return NextResponse.next();
+        }
+        // Nếu không, chuyển hướng về trang staff
+        return NextResponse.redirect(new URL('/staff', request.url));
+        
+      default:
+        // Với các role khác không xác định, chuyển về login
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
     
-    // Thêm header cho các thông tin có thể cần thiết
-    const response = NextResponse.next();
-    response.headers.set('x-user-role', role);
-    
-    return response;
   } catch (error) {
     // Nếu có lỗi khi giải mã token, chuyển hướng đến trang login
     console.error('Token verification failed:', error);

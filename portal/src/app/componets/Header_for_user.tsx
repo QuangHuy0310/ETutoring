@@ -3,7 +3,18 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSocket } from '@/app/contexts/SocketContext';
+import { io } from "socket.io-client";
+import { getCookie } from "cookies-next";
 
+// Lấy token từ Cookies hoặc từ context
+const token = getCookie('accessToken') || 'default-dev-token';
+
+// Kết nối đến server với token
+const socket = io("http://localhost:3002", {
+  extraHeaders: {
+    Authorization: `Bearer ${token}`
+  }
+});
 interface HeaderForUserProps {
   toggleSidebar?: () => void; // Optional function to toggle sidebar
 }
@@ -44,9 +55,9 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   
-  // Lấy thông tin người dùng từ localStorage khi component mount
+  // Lấy thông tin người dùng từ cookies khi component mount
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
+    const accessToken = getCookie('accessToken') as string;
     if (accessToken) {
       try {
         // Giải mã JWT để lấy thông tin
@@ -204,7 +215,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     
     setIsSearching(true);
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken') as string;
       let url;
       
       // Xác định URL dựa vào option tìm kiếm
@@ -261,7 +272,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     setIsLoggingOut(true);
     
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getCookie('accessToken') as string;
       
       if (accessToken) {
         // Gọi API logout
@@ -276,17 +287,17 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
         });
       }
       
-      // Xóa dữ liệu từ localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('userEmail');
+      // Xóa cookie thay vì localStorage
+      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "userEmail=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       // Chuyển hướng đến trang đăng nhập
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Xóa token và chuyển hướng ngay cả khi có lỗi
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('userEmail');
+      // Xóa cookie và chuyển hướng ngay cả khi có lỗi
+      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "userEmail=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       router.push('/login');
     } finally {
       setIsLoggingOut(false);

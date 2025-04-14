@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
+import { getCookie } from "cookies-next";
 
 interface ChatboxFormProps {
   onSend: (message: string) => void;
@@ -55,7 +56,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   const uploadImageToServer = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("image", file);
-    const token = localStorage.getItem("accessToken");
+    const token = getCookie('accessToken');
     if (!token) return null;
 
     try {

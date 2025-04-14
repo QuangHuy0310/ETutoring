@@ -80,7 +80,6 @@ const AdminDashboard = () => {
     { title: 'Students', count: stats.totalStudents, icon: <FaUserGraduate className="text-3xl text-green-700" />, href: '/admin/mgr_students' },
     { title: 'Tutors', count: stats.totalTutors, icon: <FaChalkboardTeacher className="text-3xl text-green-700" />, href: '/admin/mgr_tutors' },
     { title: 'Faculties', count: stats.totalFaculties, icon: <FaUniversity className="text-3xl text-green-700" />, href: '/admin/mgr_faculties' },
-    { title: 'Blog Posts', count: stats.totalBlogs, icon: <FaBlog className="text-3xl text-green-700" />, href: '/admin/mgr_blogs' }
   ];
 
   return (

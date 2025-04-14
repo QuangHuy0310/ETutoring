@@ -12,7 +12,8 @@ interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {}
 const ROLE_REDIRECTS = {
   admin: "/admin",
   user: "/",
-  tutor: "/tutor",
+  tutor: "/",
+  staff: "/staff",
   default: "/login"
 };
 
@@ -53,7 +54,8 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
 
       const { accessToken } = result.data;
 
-      // Lưu token vào cookie thay vì localStorage
+      // Lưu token vào cả cookie và localStorage
+      // Cookie cần thiết cho middleware
       setCookie('accessToken', accessToken, {
         maxAge: 30 * 24 * 60 * 60, // 30 ngày (tính bằng giây)
         path: '/',
@@ -74,24 +76,33 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userRole = payload.role;
+      
+      // Lưu thông tin user vào localStorage
+      localStorage.setItem('userId', payload.id || payload.sub || '');
+      localStorage.setItem('userEmail', payload.email || '');
+      localStorage.setItem('userName', payload.name || '');
+      localStorage.setItem('userRole', userRole || '');
 
       // Lưu user ID và email vào cookie
-      if (payload.sub) {
-        setCookie('userId', payload.sub, { 
-          maxAge: 30 * 24 * 60 * 60,
-          path: '/' 
-        });
-      }
-
-      if (payload.email) {
-        setCookie('userEmail', payload.email, { 
-          maxAge: 30 * 24 * 60 * 60,
-          path: '/' 
-        });
-      }
+      setCookie('userId', payload.id || payload.sub || '', { 
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/' 
+      });
+      
+      setCookie('userEmail', payload.email || '', { 
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/' 
+      });
+      
+      setCookie('userName', payload.name || '', { 
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/' 
+      });
 
       const redirectPath =
         ROLE_REDIRECTS[userRole as keyof typeof ROLE_REDIRECTS] || ROLE_REDIRECTS.default;
+      
+      console.log(`Chuyển hướng role ${userRole} đến ${redirectPath}`);
       router.push(redirectPath);
     } catch (decodeError) {
       console.error("Lỗi khi giải mã token:", decodeError);
