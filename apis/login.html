@@ -57,19 +57,24 @@
             const errorMessage = document.getElementById('error-message');
             errorMessage.textContent = '';
 
-            const response = await fetch('http://localhost:3002/api/v1/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
+            try {
+                const response = await fetch('https://1640-production.up.railway.app/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
 
-            const result = await response.json();
-            
-            if (response.ok && result.data && result.data.accessToken) {
-                localStorage.setItem('accessToken', result.data.accessToken);
-                window.location.href = 'index.html';
-            } else {
-                errorMessage.textContent = 'Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.';
+                const result = await response.json();
+
+                if (response.ok && result.data && result.data.accessToken) {
+                    localStorage.setItem('accessToken', result.data.accessToken);
+                    window.location.href = 'index.html';
+                } else {
+                    errorMessage.textContent = result.message || 'Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.';
+                }
+            } catch (error) {
+                console.error('Lỗi khi gửi yêu cầu đăng nhập:', error);
+                errorMessage.textContent = 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.';
             }
         }
     </script>

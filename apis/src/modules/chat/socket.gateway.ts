@@ -18,9 +18,13 @@ import { InforService } from '@modules/infor/infor.service';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bull';
 
-@WebSocketGateway(3008, { transports: ['websocket'] })
+@WebSocketGateway({ transports: ['websocket'], cors: {
+  origin: '*',
+  credentials: true,
+} })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private clients: { [key: string]: Socket } = {};
+  private ownerId: string;
   @WebSocketServer()
   server: Server
 
@@ -44,18 +48,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const decodedToken = this.jwtService.verify(token); // Giải mã token
       const userId = decodedToken.sub; // Lấy userId từ payload
-
+      this.ownerId
       if (userId) {
         this.clients[userId] = client;
         console.log(`User ${userId} connected`);
         client.join(userId);
 
-        const rooms = await this.handleGetRoom(userId)
-
-        rooms.forEach(room => {
-          client.join(room);
-          console.log(`User ${userId} joined room ${room}`);
-        })
+        
 
       } else {
         throw new UnauthorizedException('Invalid token');
@@ -81,10 +80,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return rooms
   }
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() roomId: string) {
-    console.log(`📢 ${client.id} yêu cầu join room:`, roomId);
-    client.join(roomId);
-    console.log(`✅ Socket ${client.id} đã join room ${roomId}`);
+  async handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() roomId: string) {
+    const rooms = await this.handleGetRoom(this.ownerId)
+
+        rooms.forEach(room => {
+          client.join(room);
+          console.log(`User ${this.ownerId} joined room ${room}`);
+        })
   }
 
   @SubscribeMessage('sendMessage')
