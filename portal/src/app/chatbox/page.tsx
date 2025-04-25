@@ -27,7 +27,7 @@ export default function ChatboxPage() {
 
   const userIdRef = useRef<string | null>(null);
   const currentRoomRef = useRef<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null); // 👈 Scroll ref
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMessages = async (roomId: string) => {
     const token = getCookie("accessToken");
@@ -35,7 +35,7 @@ export default function ChatboxPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:3002/api/v1/chat/chat/messages?roomId=${roomId}&limit=50`,
+        `http://localhost:3002/api/v1/chat/chat/messages?roomId=${roomId}&limit=1000`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -62,13 +62,17 @@ export default function ChatboxPage() {
     }
   };
 
+  const handleJoinRoom = (roomId: string) => {
+    if (!socket) return;
+    socket.emit("joinRoom", roomId);
+    console.log("🔗 [Socket Emit] joinRoom:", roomId);
+  };
+
   useEffect(() => {
     const token = getCookie("accessToken");
-
     if (!token) return;
 
     try {
-      // Parse userId from token
       const tokenParts = token.toString().split(".");
       if (tokenParts.length === 3) {
         const payload = JSON.parse(atob(tokenParts[1]));
@@ -80,28 +84,47 @@ export default function ChatboxPage() {
       console.error("❌ Lỗi khi parse token:", error);
     }
 
-    socket = io("http://localhost:3008", {
+    socket = io("http://localhost:3002", {
       transports: ["websocket"],
       query: { token },
     });
 
-    socket.on("connect", () => console.log("✅ Socket connected"));
-    socket.on("disconnect", (reason) =>
-      console.warn("❌ Socket disconnected:", reason)
-    );
+    socket.on("connect", () => {
+      console.log("🛰️ [Socket Connected]:", socket.id);
+    });
 
+    socket.on("disconnect", (reason) => {
+      console.warn("🔌 [Socket Disconnected]:", reason);
+    });
+
+    // ✅ LUÔN GẮN listener, không phụ thuộc connect
     socket.on("newMessage", (msg: any) => {
-      if (msg.roomId === currentRoomRef.current) {
-        const senderType = msg.senderId === userIdRef.current ? "me" : "other";
+      console.log("📩 [Socket] Nhận newMessage event:", msg);
+
+      if (!msg || !msg.roomId || !msg.senderId || !msg.message) {
+        console.warn("❌ [Socket] Payload không hợp lệ:", msg);
+        return;
+      }
+
+      const roomFromSocket = String(msg.roomId).trim();
+      const current = String(currentRoomRef.current).trim();
+
+      console.log("💬 So sánh roomId:", { roomFromSocket, current });
+
+      if (roomFromSocket === current) {
+        console.log("✅ roomId match, render message");
+
         setMessages((prev) => [
           ...prev,
           {
             text: msg.message,
-            sender: senderType,
+            sender: msg.senderId === userIdRef.current ? "me" : "other",
             senderId: msg.senderId,
-            createdAt: msg.createdAt,
+            createdAt: msg.createdAt || new Date().toISOString(),
           },
         ]);
+      } else {
+        console.warn("⚠️ roomId mismatch, không render");
       }
     });
 
@@ -120,11 +143,7 @@ export default function ChatboxPage() {
         setRooms(roomList);
 
         if (roomList.length > 0) {
-          const firstRoom = roomList[0];
-          setCurrentRoom(firstRoom);
-          roomList.forEach((roomId) => {
-            socket.emit("joinRoom", roomId);
-          });
+          setCurrentRoom(roomList[0]);
         }
       })
       .catch((err) => console.error("❌ Lỗi khi fetch get-room:", err));
@@ -137,10 +156,10 @@ export default function ChatboxPage() {
   useEffect(() => {
     if (!currentRoom || !userId) return;
     currentRoomRef.current = currentRoom;
+    handleJoinRoom(currentRoom);
     fetchMessages(currentRoom);
   }, [currentRoom, userId]);
 
-  // 👇 Scroll xuống cuối khi có tin nhắn mới
   useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
@@ -151,6 +170,13 @@ export default function ChatboxPage() {
     if (!currentRoom) return alert("Bạn chưa chọn phòng");
     const token = getCookie("accessToken");
     if (!token) return alert("Token không tồn tại");
+
+    console.log(
+      "✉️ [REST API] Đang gửi message:",
+      message,
+      "vào room:",
+      currentRoom
+    );
 
     const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
     url.searchParams.append("roomId", currentRoom);
@@ -169,7 +195,9 @@ export default function ChatboxPage() {
         return;
       }
 
-      console.log("✅ Tin nhắn đã gửi, chờ socket update UI...");
+      console.log(
+        "✅ [REST API] Tin nhắn đã gửi thành công, chờ socket update..."
+      );
     } catch (err) {
       console.error("❌ Lỗi khi gửi tin nhắn:", err);
     }
@@ -178,7 +206,7 @@ export default function ChatboxPage() {
   return (
     <Layout>
       <div className="flex flex-row flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl">
-        {/* Sidebar trái: danh sách phòng */}
+        {/* Sidebar trái */}
         <div className="w-[300px] bg-black border-r border-gray-700 p-4">
           <h2 className="text-xl font-semibold text-white mb-4">Chat Rooms</h2>
           <ul>
@@ -188,7 +216,10 @@ export default function ChatboxPage() {
                 className={`p-2 rounded cursor-pointer hover:bg-gray-700 ${
                   room === currentRoom ? "bg-gray-700" : ""
                 }`}
-                onClick={() => setCurrentRoom(room)}
+                onClick={() => {
+                  setCurrentRoom(room);
+                  handleJoinRoom(room);
+                }}
               >
                 🏠 Room: {room.slice(0, 8)}...
               </li>
@@ -234,7 +265,7 @@ export default function ChatboxPage() {
                   createdAt={msg.createdAt}
                 />
               ))}
-              <div ref={bottomRef} /> {/* 👈 Element để cuộn tới */}
+              <div ref={bottomRef} />
             </div>
           </div>
 
@@ -244,7 +275,7 @@ export default function ChatboxPage() {
           </div>
         </div>
 
-        {/* Sidebar phải: ChatSidebar */}
+        {/* Sidebar phải */}
         {showSidebar && (
           <div className="w-[350px] h-full max-h-full overflow-y-auto border-l border-gray-700">
             <ChatSidebar

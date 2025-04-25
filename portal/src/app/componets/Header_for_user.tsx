@@ -49,7 +49,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     if (!accessToken) return;
 
     // Khởi tạo kết nối socket
-    const socketInstance = io('http://localhost:3008', {
+    const socketInstance = io('http://localhost:3002', {
       transports: ['websocket'],
       query: { token: accessToken }
     });
