@@ -27,6 +27,11 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
+  const currentRoom =
+    typeof window !== "undefined"
+      ? localStorage.getItem("currentRoom") || null
+      : null;
+
   const addEmoji = (emoji: string) => {
     setInput((prev) => prev + emoji);
   };
@@ -56,7 +61,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   const uploadImageToServer = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("image", file);
-    const token = getCookie('accessToken');
+    const token = getCookie("accessToken");
     if (!token) return null;
 
     try {
@@ -73,37 +78,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       return null;
     }
   };
-
-  const uploadDocToServer = async (
-    file: File
-  ): Promise<{ fileUrl: string; name: string; type: string } | null> => {
-    const formData = new FormData();
-    formData.append("image", file); // 👈 trick here
-    const token = localStorage.getItem("accessToken");
-    if (!token) return null;
-  
-    try {
-      const res = await fetch("http://localhost:3002/upload", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-  
-      const result = await res.json();
-      if (result.data?.fileUrl) {
-        return {
-          fileUrl: result.data.fileUrl,
-          name: file.name,
-          type: file.type || "unknown",
-        };
-      }
-      return null;
-    } catch (err) {
-      console.error("❌ Upload doc failed:", err);
-      return null;
-    }
-  };
-  
 
   const handleMultiFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -123,7 +97,20 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   };
 
   const sendAllFiles = async () => {
-    // Upload ảnh trước
+    const token = getCookie("accessToken");
+    const room = currentRoom;
+
+    if (!token) {
+      alert("⚠️ Bạn chưa đăng nhập hoặc token hết hạn.");
+      return;
+    }
+
+    if (!room) {
+      alert("⚠️ Không có phòng hiện tại được chọn.");
+      return;
+    }
+
+    // Upload ảnh
     if (imageFiles.length > 0) {
       const uploaded: string[] = [];
 
@@ -143,28 +130,58 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       setImageFiles([]);
     }
 
-    // Upload docs
-    if (docFiles.length > 0) {
-      for (const file of docFiles) {
-        const uploaded = await uploadDocToServer(file);
-        if (uploaded) {
-          const docMessage = {
-            type: "doc-attachment",
-            filename: uploaded.name,
-            fileUrl: uploaded.fileUrl,
-            mime: uploaded.type,
-          };
-          onSend(JSON.stringify(docMessage));
-        }
-      }
+    // Upload document và tạo document
+    for (const file of docFiles) {
+      const formData = new FormData();
+      formData.append("image", file);
 
-      setDocFiles([]);
+      try {
+        const uploadRes = await fetch("http://localhost:3002/upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+
+        const result = await uploadRes.json();
+        const fileUrl = result.data?.fileUrl;
+
+        if (!fileUrl) continue;
+
+        const createDocUrl = new URL("http://localhost:3002/new-document");
+        createDocUrl.searchParams.set("roomId", room);
+        createDocUrl.searchParams.set("name", file.name);
+        createDocUrl.searchParams.set("title", file.name);
+        createDocUrl.searchParams.set("path", fileUrl);
+
+        const docRes = await fetch(createDocUrl.toString(), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!docRes.ok) {
+          console.error("❌ Lỗi tạo document:", await docRes.text());
+          alert("❌ Không thể tạo tài liệu: " + file.name);
+          continue;
+        }
+
+        const docMessage = {
+          type: "doc-attachment",
+          filename: file.name,
+          fileUrl,
+          mime: file.type || "application/octet-stream",
+        };
+        onSend(JSON.stringify(docMessage));
+      } catch (err) {
+        console.error("❌ Upload + tạo document lỗi:", err);
+        alert("❌ Có lỗi xảy ra khi gửi file: " + file.name);
+      }
     }
+
+    setDocFiles([]);
   };
 
   return (
     <div className="flex items-center p-4 border-t border-gray-700 bg-gray-800 relative">
-      {/* Menu "+" */}
       <Menu as="div" className="relative">
         <Menu.Button className="mx-2 p-2 hover:bg-gray-700 rounded transition">
           <FaPlus className="text-white" />
@@ -195,7 +212,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </Transition>
       </Menu>
 
-      {/* FILE PREVIEW */}
       {(imageFiles.length > 0 || docFiles.length > 0) && (
         <div className="absolute bottom-16 left-4 w-96 bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-lg z-50">
           {imageFiles.length > 0 && (
@@ -252,7 +268,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </div>
       )}
 
-      {/* Booking Button */}
       <button
         onClick={toggleBookingForm}
         className="mx-2 p-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
@@ -260,7 +275,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         <FaCalendarAlt />
       </button>
 
-      {/* Booking Form */}
       {showBookingForm && (
         <div className="absolute bottom-16 left-4 w-96 p-4 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50">
           <h3 className="text-lg font-semibold text-white text-center">
@@ -315,7 +329,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </div>
       )}
 
-      {/* Emoji */}
       <Menu as="div" className="relative">
         <Menu.Button className="mx-2 p-2 hover:bg-gray-700 rounded transition">
           <FaSmile className="text-white" />
@@ -331,7 +344,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </Transition>
       </Menu>
 
-      {/* Input & Send */}
       <input
         type="text"
         value={input}

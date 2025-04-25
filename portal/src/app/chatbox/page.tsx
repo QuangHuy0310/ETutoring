@@ -97,7 +97,6 @@ export default function ChatboxPage() {
       console.warn("🔌 [Socket Disconnected]:", reason);
     });
 
-    // ✅ LUÔN GẮN listener, không phụ thuộc connect
     socket.on("newMessage", (msg: any) => {
       console.log("📩 [Socket] Nhận newMessage event:", msg);
 
@@ -109,11 +108,7 @@ export default function ChatboxPage() {
       const roomFromSocket = String(msg.roomId).trim();
       const current = String(currentRoomRef.current).trim();
 
-      console.log("💬 So sánh roomId:", { roomFromSocket, current });
-
       if (roomFromSocket === current) {
-        console.log("✅ roomId match, render message");
-
         setMessages((prev) => [
           ...prev,
           {
@@ -144,6 +139,7 @@ export default function ChatboxPage() {
 
         if (roomList.length > 0) {
           setCurrentRoom(roomList[0]);
+          localStorage.setItem("currentRoom", roomList[0]); // ✅ GHI NHỚ room
         }
       })
       .catch((err) => console.error("❌ Lỗi khi fetch get-room:", err));
@@ -171,13 +167,6 @@ export default function ChatboxPage() {
     const token = getCookie("accessToken");
     if (!token) return alert("Token không tồn tại");
 
-    console.log(
-      "✉️ [REST API] Đang gửi message:",
-      message,
-      "vào room:",
-      currentRoom
-    );
-
     const url = new URL("http://localhost:3002/api/v1/chat/chat/newMessage");
     url.searchParams.append("roomId", currentRoom);
     url.searchParams.append("message", message);
@@ -195,9 +184,7 @@ export default function ChatboxPage() {
         return;
       }
 
-      console.log(
-        "✅ [REST API] Tin nhắn đã gửi thành công, chờ socket update..."
-      );
+      console.log("✅ [REST API] Tin nhắn đã gửi thành công");
     } catch (err) {
       console.error("❌ Lỗi khi gửi tin nhắn:", err);
     }
@@ -218,6 +205,7 @@ export default function ChatboxPage() {
                 }`}
                 onClick={() => {
                   setCurrentRoom(room);
+                  localStorage.setItem("currentRoom", room); // ✅ LƯU MỖI KHI CHỌN
                   handleJoinRoom(room);
                 }}
               >
@@ -229,7 +217,6 @@ export default function ChatboxPage() {
 
         {/* Nội dung chat */}
         <div className="flex flex-col flex-1 h-full">
-          {/* Header */}
           <div className="flex items-center justify-between p-4 bg-black border-b border-gray-700">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gray-600 rounded-full" />
@@ -253,7 +240,6 @@ export default function ChatboxPage() {
             </div>
           </div>
 
-          {/* Danh sách tin nhắn */}
           <div className="flex-1 overflow-auto p-4 bg-black flex flex-col">
             <div className="flex flex-col flex-1 justify-end">
               {messages.map((msg, index) => (
@@ -269,13 +255,11 @@ export default function ChatboxPage() {
             </div>
           </div>
 
-          {/* Form nhập */}
           <div className="p-4 bg-black border-t border-gray-700 relative">
             <ChatboxForm onSend={handleSend} />
           </div>
         </div>
 
-        {/* Sidebar phải */}
         {showSidebar && (
           <div className="w-[350px] h-full max-h-full overflow-y-auto border-l border-gray-700">
             <ChatSidebar
