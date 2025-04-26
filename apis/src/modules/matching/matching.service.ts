@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import { CreateMatchingDto } from './dto/matching.dto';
 import { NotificationService } from '@modules/notification/notification.service';
 import { RoomService } from '@modules/room/room.service';
-import { UserService } from '@modules/user/user.service';
+import { InforService } from '@modules/infor/infor.service'; // Thêm import này
 import { MailService } from '@modules/mail/mail.service';
 
 @Injectable()
@@ -16,8 +16,8 @@ export class MatchingService {
         private readonly notificationService: NotificationService,
         @Inject(forwardRef(() => RoomService))
         private readonly roomService: RoomService,
-        private readonly userService: UserService,
-        private readonly mailService: MailService
+        private readonly inforService: InforService,
+        private readonly mailService: MailService,
     ) {}
 
     async createMatching(matching: CreateMatchingDto): Promise<Matching> {
@@ -27,44 +27,48 @@ export class MatchingService {
             to: matching.tutorId,
         };
 
+        const [studentInfos, tutorInfos] = await Promise.all([
+            this.inforService.getInfor(matching.studentId, matching.studentId),
+            this.inforService.getInfor(matching.tutorId, matching.tutorId),
+        ]);
+
+
+        const studentInfo = studentInfos[0];
+        const tutorInfo = tutorInfos[0];
+
+        const roomResult = await this.roomService.createRoom(matching.studentId, matching.tutorId);
+
+        if (!roomResult || typeof roomResult !== 'string') {
+            throw new HttpException('Failed to create room', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        const roomIdMatch = roomResult.match(/room ([^ ]+)/);
+        if (!roomIdMatch || !roomIdMatch[1]) {
+            throw new HttpException('Failed to extract roomId from room creation result', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        const roomId = roomIdMatch[1];
+
+        // Gọi các tác vụ song song
         await Promise.all([
-            // Pass a custom title for p0, even though createMatchingNotification doesn't use it
             this.notificationService.createMatchingNotification(
                 payload.from,
                 payload.to,
-                `Matching created between student ${payload.from} and tutor ${payload.to}`
+                `Matching created between student ${payload.from} and tutor ${payload.to}`,
             ),
-            this.roomService.createRoom(payload.from, payload.to),
-            // Fetch student and tutor information from the users collection
-            (async () => {
-                const student = await this.userService.findById(matching.studentId);
-                const tutor = await this.userService.findById(matching.tutorId);
-
-                // Throw an error if student or tutor is not found
-                if (!student || !tutor) {
-                    throw new HttpException('Student or tutor not found', HttpStatus.NOT_FOUND);
-                }
-
-                // Prepare email content for the student
-                const studentSubject = 'You have been matched with a tutor!';
-                const studentText = `Hello,\n\nYou have been successfully matched with a tutor (ID: ${matching.tutorId}). Start your learning journey now!\n\nBest regards,\nThe Matching Team`;
-                const studentHtml = `<h1>Matching Successful!</h1><p>You have been matched with a tutor (ID: ${matching.tutorId}). Start your learning journey now!</p><p>Best regards,<br>The Matching Team</p>`;
-
-                // Prepare email content for the tutor
-                const tutorSubject = 'You have been matched with a student!';
-                const tutorText = `Hello,\n\nYou have been successfully matched with a student (ID: ${matching.studentId}). Start teaching now!\n\nBest regards`;
-                const tutorHtml = `<h1>Matching Successful!</h1><p>You have been matched with a student (ID: ${matching.studentId}). Start teaching now!</p><p>Best regards</p>`;
-
-                // Send emails to student and tutor
-                await Promise.all([
-                    this.mailService.sendMail(student.email, studentSubject, studentText, studentHtml).catch(err => {
-                        console.error(`Failed to send email to student: ${err.message}`);
-                    }),
-                    this.mailService.sendMail(tutor.email, tutorSubject, tutorText, tutorHtml).catch(err => {
-                        console.error(`Failed to send email to tutor: ${err.message}`);
-                    }),
-                ]);
-            })()
+            this.mailService.sendMatchingNotificationToStudent(
+                studentInfo.email,
+                studentInfo.name || 'Student',
+                matching.tutorId,
+            ).catch(err => {
+                console.error(`Failed to send email to student: ${err.message}`);
+            }),
+            this.mailService.sendMatchingNotificationToTutor(
+                tutorInfo.email,
+                tutorInfo.name || 'Tutor',
+                matching.studentId,
+            ).catch(err => {
+                console.error(`Failed to send email to tutor: ${err.message}`);
+            }),
         ]);
 
         return newMatching.save();

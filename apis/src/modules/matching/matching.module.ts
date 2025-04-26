@@ -6,7 +6,8 @@ import { MatchingController } from './matching.controller';
 import { UserModule } from '@modules/user/user.module';
 import { MailModule } from '@modules/mail/mail.module';
 import { RoomModule } from '@modules/room/room.module';
-import { NotificationModule } from '@modules/notification/notification.module'; // Add this import
+import { NotificationModule } from '@modules/notification/notification.module';
+import { InforModule } from '@modules/infor/infor.module'; 
 
 @Module({
     imports: [
@@ -16,7 +17,8 @@ import { NotificationModule } from '@modules/notification/notification.module'; 
         UserModule,
         MailModule,
         RoomModule,
-        NotificationModule, 
+        NotificationModule,
+        InforModule,
     ],
     controllers: [MatchingController],
     providers: [MatchingService],
