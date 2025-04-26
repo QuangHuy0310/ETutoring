@@ -33,7 +33,7 @@ export class RoomService {
         const newRoom = await new this.roomModel()
         newRoom.userId.push(userId)
         newRoom.userId.push(tutorId)
-        newRoom.save()
+        await newRoom.save()
 
         return this.inforService.pushMany(userId, tutorId, newRoom._id)
     }
