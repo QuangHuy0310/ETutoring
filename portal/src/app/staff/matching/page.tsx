@@ -7,8 +7,10 @@ import { getCookie } from "cookies-next";
 
 interface User {
   id: string;
+  userId: string; // 🆕 Thêm userId để dùng API
   name: string;
   email: string;
+  avatar?: string;
 }
 
 const MatchingPage = () => {
@@ -26,7 +28,38 @@ const MatchingPage = () => {
   const [loadingTutors, setLoadingTutors] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Hàm fetch dữ liệu từ API
+  // 🛠️ Hàm gửi API Matching
+  const handleConfirmMatching = async (studentId: string, tutorId: string) => {
+    try {
+      const token = getCookie("accessToken");
+      if (!token) {
+        alert("Không tìm thấy token");
+        return;
+      }
+
+      const res = await fetch(`http://localhost:3002/matching?studentId=${studentId}&tutorId=${tutorId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        console.error("❌ Matching thất bại:", res.status);
+        alert("Matching thất bại!");
+        return;
+      }
+
+      alert("✅ Matching thành công!");
+      setSelectedStudent(null);
+      setSelectedTutor(null);
+    } catch (err) {
+      console.error("❌ Lỗi matching:", err);
+      alert("Có lỗi xảy ra khi matching!");
+    }
+  };
+
+  // 🛠️ Fetch Users
   const fetchUsers = async (
     role: "user" | "tutor",
     setUsers: React.Dispatch<React.SetStateAction<User[]>>,
@@ -54,7 +87,17 @@ const MatchingPage = () => {
       }
 
       const data = await response.json();
-      setUsers(data.data || []); // Lấy danh sách từ `data.data`
+
+      // ⚡ Map lại userId chuẩn
+      const mapped = (data.data || []).map((u: any) => ({
+        id: u._id || "",
+        userId: u.userId,
+        name: u.name,
+        email: u.email,
+        avatar: u.path || "", // avatar nếu có
+      }));
+
+      setUsers(mapped);
     } catch (err: any) {
       console.error(`Error fetching ${role} data:`, err);
       setError(err.message || "An error occurred while fetching data.");
@@ -69,7 +112,7 @@ const MatchingPage = () => {
     fetchUsers("tutor", setTutors, setLoadingTutors);
   }, []);
 
-  // Cập nhật danh sách tìm kiếm khi nhập từ khóa
+  // Cập nhật danh sách tìm kiếm
   useEffect(() => {
     setFilteredStudents(
       students.filter((student) =>
@@ -99,9 +142,7 @@ const MatchingPage = () => {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
             >
-              <option value="Subject" disabled>
-                Subject
-              </option>
+              <option value="Subject" disabled>Subject</option>
               <option value="IT">IT</option>
               <option value="Business">Business</option>
               <option value="Graphic">Graphic</option>
@@ -111,9 +152,7 @@ const MatchingPage = () => {
               value={slot}
               onChange={(e) => setSlot(e.target.value)}
             >
-              <option value="Slot" disabled>
-                Slot
-              </option>
+              <option value="Slot" disabled>Slot</option>
               <option value="Slot 1: 8:00-10:00">Slot 1: 8:00-10:00</option>
               <option value="Slot 2: 10:00-12:00">Slot 2: 10:00-12:00</option>
               <option value="Slot 3: 13:00-15:00">Slot 3: 13:00-15:00</option>
@@ -163,6 +202,11 @@ const MatchingPage = () => {
               selectedTutor={selectedTutor}
               setSelectedStudent={setSelectedStudent}
               setSelectedTutor={setSelectedTutor}
+              onConfirmMatch={() => {
+                if (selectedStudent && selectedTutor) {
+                  handleConfirmMatching(selectedStudent.userId, selectedTutor.userId);
+                }
+              }}
             />
           </div>
 
