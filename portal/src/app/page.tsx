@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image"; // Import Image của Next.js
+import Image from "next/image";
 import Layout from "@/app/componets/layout";
 import PostForm from "@/app/Blog/form";
 
 interface User {
   id: string;
   name: string;
+  avatar?: string;
 }
 
 interface Comment {
@@ -17,22 +18,18 @@ interface Comment {
   blogId: string;
   comment: string;
   createdAt: string;
-  path?: string[]; // Mảng chứa URL ảnh nếu có
-  user?: { name: string; path?: string };
+  path?: string[];
+  user?: { name: string; path?: string }[];
 }
 
 interface BlogPost {
-  id: string; // map từ _id của API (string)
-  user: {
-    id: string; // từ userId của API
-    name: string; // từ userInfo.name
-    avatar?: string; // từ userInfo.path
-  };
-  title: string; // mapping từ tags (danh sách tag, join thành chuỗi)
-  content: string; // mapping từ caption
-  imageUrl?: string; // mapping từ path (lấy phần tử đầu tiên nếu có)
-  createdAt: number; // GET từ API
-  comments: Comment[]; // Lấy từ API, không dùng cục bộ
+  id: string;
+  user: User;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: number;
+  comments: Comment[];
 }
 
 const HomePage = () => {
@@ -41,29 +38,62 @@ const HomePage = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({});
-  // State lưu URL ảnh cho comment, tương tự như blog
   const [commentImageInputs, setCommentImageInputs] = useState<{ [key: string]: string }>({});
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Check authentication
+  // 🛡️ Function fetch thông tin user từ userId
+  const fetchUserNameById = async (userId: string): Promise<{ name: string; avatar?: string }> => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return { name: "Anonymous" };
+
+    try {
+      const res = await fetch(
+        `http://localhost:3002/get-infors?idUser=${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      if (!res.ok) {
+        console.error("Failed to fetch user info:", userId);
+        return { name: "Anonymous" };
+      }
+      const data = await res.json();
+      if (!data.data || data.data.length === 0) {
+        return { name: "Anonymous" };
+      }
+      return {
+        name: data.data[0]?.name || "Anonymous",
+        avatar: data.data[0]?.path || undefined,
+      };
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+      return { name: "Anonymous" };
+    }
+  };
+
+  // ✅ Check Auth 1 lần duy nhất
   useEffect(() => {
     const checkAuth = () => {
       const accessToken = localStorage.getItem("accessToken");
       if (!accessToken) {
         router.push("/login");
-      } else {
+        return;
+      }
+
+      try {
         const payload = JSON.parse(atob(accessToken.split(".")[1]));
         setUser({ id: payload.id, name: payload.name });
+      } catch (error) {
+        console.error("Invalid token format:", error);
+        router.push("/login");
       }
     };
 
     checkAuth();
-    const interval = setInterval(checkAuth, 1000); // Kiểm tra mỗi giây
-
-    return () => clearInterval(interval);
   }, [router]);
 
-  // Hàm fetch comment cho mỗi blog
+  // 📦 Fetch comment từng bài viết
   const fetchCommentsForPost = async (blogId: string) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -83,7 +113,6 @@ const HomePage = () => {
         return [];
       }
       const data = await res.json();
-      // Giả sử backend trả về mảng comment trong data.data
       return data.data || [];
     } catch (error) {
       console.error("Error fetching comments for blog:", blogId, error);
@@ -91,7 +120,7 @@ const HomePage = () => {
     }
   };
 
-  // Fetch blogs và sau đó fetch comments cho từng blog
+  // 📦 Fetch bài viết và lấy thêm user name
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
@@ -115,26 +144,21 @@ const HomePage = () => {
           return;
         }
 
-        // Map dữ liệu blog và gọi API get comment cho từng blog
         const mappedPosts: BlogPost[] = await Promise.all(
           data.data.item.map(async (post: any) => {
             const comments = await fetchCommentsForPost(post._id);
+            const userInfo = await fetchUserNameById(post.userId);
+
             return {
               id: post._id,
               user: {
                 id: post.userId || "unknown",
-                name: post.userInfo?.name || "Anonymous",
-                avatar: post.userInfo?.path || "",
+                name: userInfo.name,
+                avatar: userInfo.avatar || "",
               },
-              title:
-                post.tags && Array.isArray(post.tags)
-                  ? post.tags.join(", ")
-                  : "No Title",
+              title: Array.isArray(post.tags) ? post.tags.join(", ") : "No Title",
               content: post.caption || "No Content",
-              imageUrl:
-                post.path && Array.isArray(post.path) && post.path.length > 0
-                  ? post.path[0]
-                  : "",
+              imageUrl: Array.isArray(post.path) && post.path.length > 0 ? post.path[0] : "",
               createdAt: new Date(post.createdAt).getTime(),
               comments: comments,
             };
@@ -150,11 +174,12 @@ const HomePage = () => {
     fetchBlogs();
   }, []);
 
-  // Hàm thêm blog mới sau khi POST thành công (dùng cho PostForm)
+  // 🛠️ Hàm thêm blog mới sau khi POST thành công
   const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
+    if (!user) return;
     const newBlog: BlogPost = {
       id: Date.now().toString(),
-      user: user!,
+      user,
       title: post.title,
       content: post.content,
       imageUrl: post.imageUrl,
@@ -165,7 +190,7 @@ const HomePage = () => {
     setIsModalOpen(false);
   };
 
-  // Hàm upload file ảnh cho comment, dùng API "/upload" (giả sử trả về fileUrl)
+  // 🛠️ Upload ảnh cho comment
   const handleCommentFileUpload = async (file: File, postId: string) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -193,7 +218,6 @@ const HomePage = () => {
     }
   };
 
-  // Hàm xử lý khi file được chọn cho comment
   const handleCommentFileChange = (e: ChangeEvent<HTMLInputElement>, postId: string) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -202,15 +226,12 @@ const HomePage = () => {
       return;
     }
     handleCommentFileUpload(file, postId);
+    e.target.value = "";
   };
 
-  // Hàm POST comment (có hỗ trợ gửi ảnh) lên backend
   const addComment = async (postId: string) => {
     const commentText = commentInputs[postId]?.trim();
-    // Lấy URL ảnh cho comment từ state commentImageInputs
     const imageUrl = commentImageInputs[postId];
-
-    // Yêu cầu phải có nội dung hoặc ảnh
     if (!commentText && !imageUrl) return;
 
     try {
@@ -227,7 +248,6 @@ const HomePage = () => {
           },
           body: JSON.stringify({
             comment: commentText,
-            // Nếu có URL ảnh thì gửi vào mảng, nếu không thì mảng rỗng
             path: imageUrl ? [imageUrl] : []
           }),
         }
@@ -239,7 +259,6 @@ const HomePage = () => {
       }
 
       const newComment = await res.json();
-      // Giả sử newComment trả về đối tượng comment mới được tạo
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId
@@ -247,7 +266,6 @@ const HomePage = () => {
             : post
         )
       );
-      // Reset input và ảnh của comment
       setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
       setCommentImageInputs((prev) => ({ ...prev, [postId]: "" }));
     } catch (error) {
@@ -265,7 +283,7 @@ const HomePage = () => {
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-[#1E2432] p-6 rounded-lg shadow-lg">
-              <PostForm user={user} onPost={addPost} onClose={() => setIsModalOpen(false)} />
+            <PostForm onPost={addPost} onClose={() => setIsModalOpen(false)} />
             </div>
           </div>
         )}
@@ -309,7 +327,6 @@ const HomePage = () => {
                     width={400}
                     height={250}
                     className="mt-2 w-[400px] h-[250px] object-cover rounded-lg shadow-lg"
-                    onClick={() => post.imageUrl && setSelectedImage(post.imageUrl)}
                     unoptimized
                   />
                 )}
@@ -323,10 +340,11 @@ const HomePage = () => {
                       <div key={index} className="mt-1">
                         <p className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md">
                           <span className="font-bold text-white">
-                            {comment.user?.name || "Anonymous"}:
+                            {comment.user?.[0]?.name || "Anonymous"}
                           </span>{" "}
                           {comment.comment}
                         </p>
+                    
                         {comment.path && comment.path.length > 0 && (
                           <div className="mt-1">
                             <Image
@@ -353,7 +371,6 @@ const HomePage = () => {
                       placeholder="Write a comment..."
                       className="flex-1 p-2 bg-[#2A4E89] rounded-lg text-white"
                     />
-                    {/* File input cho ảnh của comment */}
                     <input
                       type="file"
                       accept="image/*"

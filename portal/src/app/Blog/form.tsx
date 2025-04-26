@@ -1,26 +1,54 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image"; 
-
-interface User {
-  id: string;
-  name: string;
-}
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface PostFormProps {
-  user: User;
   onPost: (post: { title: string; content: string; imageUrl?: string }) => void;
   onClose: () => void;
 }
 
-const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
+const PostForm: React.FC<PostFormProps> = ({ onPost, onClose }) => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // ✅ Thêm state chứa thông tin user
+  const [author, setAuthor] = useState<{ name: string; avatar?: string }>({ name: "Anonymous" });
+
+  // ✅ Fetch user info từ userId lưu trong localStorage
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      const userId = localStorage.getItem("userId");
+      const accessToken = localStorage.getItem("accessToken");
+      if (!userId || !accessToken) return;
+
+      try {
+        const res = await fetch(`http://localhost:3002/get-infors?idUser=${userId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch user info");
+
+        const data = await res.json();
+        if (data.data && data.data.length > 0) {
+          setAuthor({
+            name: data.data[0].name || "Anonymous",
+            avatar: data.data[0].path || undefined,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching user info in PostForm:", err);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   const handleUpload = async (file: File) => {
     const formData = new FormData();
@@ -67,6 +95,7 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
     }
 
     handleUpload(file);
+    e.target.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,9 +115,9 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
     setError("");
 
     const postData = {
-      tags: [title], // 🟢 Map title → tags
-      caption: content, // 🟢 Map content → caption
-      path: imageUrl ? [imageUrl] : [], // 🟢 Map imageUrl → path
+      tags: [title],
+      caption: content,
+      path: imageUrl ? [imageUrl] : [],
     };
 
     try {
@@ -106,7 +135,6 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
       const newPost = await response.json();
       onPost({ title, content, imageUrl: imageUrl || undefined });
 
-
       setTitle("");
       setContent("");
       setImageUrl(null);
@@ -122,9 +150,13 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
   return (
     <form onSubmit={handleSubmit} className="bg-[#1E2432] p-6 rounded-lg w-[500px] flex flex-col space-y-4">
       <div className="flex items-center space-x-4">
-        <div className="w-12 h-12 bg-gray-500 rounded-full"></div>
+        {author.avatar ? (
+          <img src={author.avatar} className="w-12 h-12 rounded-full" alt="avatar" />
+        ) : (
+          <div className="w-12 h-12 bg-gray-500 rounded-full" />
+        )}
         <div>
-          <p className="text-white font-bold">{user.name}</p>
+          <p className="text-white font-bold">{author.name}</p>
           <p className="text-gray-400 text-sm">Just now</p>
         </div>
       </div>
@@ -168,8 +200,8 @@ const PostForm: React.FC<PostFormProps> = ({ user, onPost, onClose }) => {
         <button type="button" className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg" onClick={onClose}>
           Close
         </button>
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           className={`px-4 py-2 rounded-lg ${
             isUploading || isSubmitting ? "bg-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
           }`}
