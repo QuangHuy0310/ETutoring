@@ -2,7 +2,7 @@ import { Matching, MatchingDocument } from '@entities/matching.entities';
 import { forwardRef, Inject, Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateMatchingDto } from './dto/matching.dto';
+import { CreateBulkMatchingDto, CreateMatchingDto } from './dto/matching.dto';
 import { NotificationService } from '@modules/notification/notification.service';
 import { RoomService } from '@modules/room/room.service';
 import { InforService } from '@modules/infor/infor.service'; // Thêm import này
@@ -27,6 +27,7 @@ export class MatchingService {
             to: matching.tutorId,
         };
 
+        // Lấy thông tin MoreInformation của student và tutor
         const [studentInfos, tutorInfos] = await Promise.all([
             this.inforService.getInfor(matching.studentId, matching.studentId),
             this.inforService.getInfor(matching.tutorId, matching.tutorId),
@@ -36,17 +37,11 @@ export class MatchingService {
         const studentInfo = studentInfos[0];
         const tutorInfo = tutorInfos[0];
 
+        // Tạo phòng chat
         const roomResult = await this.roomService.createRoom(matching.studentId, matching.tutorId);
-
         if (!roomResult || typeof roomResult !== 'string') {
             throw new HttpException('Failed to create room', HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
-        const roomIdMatch = roomResult.match(/room ([^ ]+)/);
-        if (!roomIdMatch || !roomIdMatch[1]) {
-            throw new HttpException('Failed to extract roomId from room creation result', HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        const roomId = roomIdMatch[1];
 
         // Gọi các tác vụ song song
         await Promise.all([
@@ -57,14 +52,14 @@ export class MatchingService {
             ),
             this.mailService.sendMatchingNotificationToStudent(
                 studentInfo.email,
-                studentInfo.name || 'Student',
+                studentInfo.name,
                 matching.tutorId,
             ).catch(err => {
                 console.error(`Failed to send email to student: ${err.message}`);
             }),
             this.mailService.sendMatchingNotificationToTutor(
                 tutorInfo.email,
-                tutorInfo.name || 'Tutor',
+                tutorInfo.name,
                 matching.studentId,
             ).catch(err => {
                 console.error(`Failed to send email to tutor: ${err.message}`);
@@ -72,5 +67,45 @@ export class MatchingService {
         ]);
 
         return newMatching.save();
+    }
+
+    async createBulkMatching(bulkMatching: CreateBulkMatchingDto): Promise<Matching[]> {
+        const { studentIds, tutorId, status } = bulkMatching;
+
+        if (studentIds.length > 10) {
+            throw new HttpException('Cannot match more than 10 students at a time', HttpStatus.BAD_REQUEST);
+        }
+
+        const tutorInfos = await this.inforService.getInfor(tutorId, tutorId);
+        if (!tutorInfos || tutorInfos.length === 0) {
+            throw new HttpException('MoreInformation not found for tutor', HttpStatus.NOT_FOUND);
+        }
+
+        const studentInfosPromises = studentIds.map(studentId =>
+            this.inforService.getInfor(studentId, studentId)
+        );
+        const studentInfosResults = await Promise.all(studentInfosPromises);
+
+        studentInfosResults.forEach((info, index) => {
+            if (!info || info.length === 0) {
+                throw new HttpException(
+                    `MoreInformation not found for student ${studentIds[index]}`,
+                    HttpStatus.NOT_FOUND
+                );
+            }
+        });
+
+        const matchings = await Promise.all(
+            studentIds.map(async (studentId) => {
+                const matchingDto: CreateMatchingDto = {
+                    studentId,
+                    tutorId,
+                    status,
+                };
+                return this.createMatching(matchingDto);
+            })
+        );
+
+        return matchings;
     }
 }

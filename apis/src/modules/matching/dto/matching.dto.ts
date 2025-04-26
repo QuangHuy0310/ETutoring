@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { IsArray, IsOptional, IsString } from "class-validator";
 
 export class CreateMatchingDto {
     @ApiProperty()
@@ -12,5 +12,20 @@ export class CreateMatchingDto {
 
     @ApiPropertyOptional({default: 'on'})
     @IsOptional()
+    status: string;
+}
+
+export class CreateBulkMatchingDto {
+    @ApiProperty({ type: [String] })
+    @IsArray()
+    @IsString({ each: true })
+    studentIds: string[];
+
+    @ApiProperty()
+    @IsString()
+    tutorId: string;
+
+    @ApiProperty()
+    @IsString()
     status: string;
 }
