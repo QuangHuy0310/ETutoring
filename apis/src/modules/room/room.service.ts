@@ -47,4 +47,34 @@ export class RoomService {
         }
         return this.createRoom(userId, tutorId)
     }
+
+    async getUserByRoomId(roomId: string): Promise<any> {
+        const result = await this.roomModel.aggregate([
+            {
+                $match: { _id: roomId, deletadAt: null }
+            },
+            {
+                $lookup: {
+                    from: 'moreinformations',
+                    localField: 'userId',
+                    foreignField: 'userId',
+                    as: 'userInfos'
+                }
+            },
+            {
+                $unwind: '$userInfos' 
+            },
+            {
+                $replaceRoot: { newRoot: '$userInfos' } 
+            },
+            {
+                $project: {
+                    _id: 0,
+                    userId: 1,
+                    name: 1
+                }
+            }
+        ]);
+        return result;
+    }
 }
