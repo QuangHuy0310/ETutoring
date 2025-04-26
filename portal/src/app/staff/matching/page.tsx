@@ -7,7 +7,7 @@ import { getCookie } from "cookies-next";
 
 interface User {
   id: string;
-  userId: string; // 🆕 Thêm userId để dùng API
+  userId: string;
   name: string;
   email: string;
   avatar?: string;
@@ -18,7 +18,7 @@ const MatchingPage = () => {
   const [tutors, setTutors] = useState<User[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<User[]>([]);
   const [filteredTutors, setFilteredTutors] = useState<User[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+  const [selectedStudents, setSelectedStudents] = useState<User[]>([]);
   const [selectedTutor, setSelectedTutor] = useState<User | null>(null);
   const [subject, setSubject] = useState("Subject");
   const [slot, setSlot] = useState("Slot");
@@ -28,8 +28,8 @@ const MatchingPage = () => {
   const [loadingTutors, setLoadingTutors] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🛠️ Hàm gửi API Matching
-  const handleConfirmMatching = async (studentId: string, tutorId: string) => {
+  // 🛠️ Bulk Matching API
+  const handleConfirmMatching = async (studentIds: string[], tutorId: string) => {
     try {
       const token = getCookie("accessToken");
       if (!token) {
@@ -37,21 +37,27 @@ const MatchingPage = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:3002/matching?studentId=${studentId}&tutorId=${tutorId}`, {
+      const res = await fetch(`http://localhost:3002/bulk-matching`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          studentIds,
+          tutorId,
+          status: "on",
+        }),
       });
 
       if (!res.ok) {
-        console.error("❌ Matching thất bại:", res.status);
+        console.error("❌ Bulk Matching thất bại:", res.status);
         alert("Matching thất bại!");
         return;
       }
 
       alert("✅ Matching thành công!");
-      setSelectedStudent(null);
+      setSelectedStudents([]);
       setSelectedTutor(null);
     } catch (err) {
       console.error("❌ Lỗi matching:", err);
@@ -69,7 +75,7 @@ const MatchingPage = () => {
     setError(null);
 
     try {
-      const accessToken = getCookie('accessToken');
+      const accessToken = getCookie("accessToken");
       if (!accessToken) {
         throw new Error("Authentication token not found. Please login again.");
       }
@@ -87,14 +93,12 @@ const MatchingPage = () => {
       }
 
       const data = await response.json();
-
-      // ⚡ Map lại userId chuẩn
       const mapped = (data.data || []).map((u: any) => ({
         id: u._id || "",
         userId: u.userId,
         name: u.name,
         email: u.email,
-        avatar: u.path || "", // avatar nếu có
+        avatar: u.path || "",
       }));
 
       setUsers(mapped);
@@ -106,13 +110,11 @@ const MatchingPage = () => {
     }
   };
 
-  // Fetch students và tutors khi component mount
   useEffect(() => {
     fetchUsers("user", setStudents, setLoadingStudents);
     fetchUsers("tutor", setTutors, setLoadingTutors);
   }, []);
 
-  // Cập nhật danh sách tìm kiếm
   useEffect(() => {
     setFilteredStudents(
       students.filter((student) =>
@@ -130,6 +132,18 @@ const MatchingPage = () => {
       )
     );
   }, [tutorSearch, tutors]);
+
+  // 🛠️ Toggle select student
+  const toggleSelectStudent = (student: User) => {
+    setSelectedStudents((prev) => {
+      const exists = prev.find((s) => s.id === student.id);
+      if (exists) {
+        return prev.filter((s) => s.id !== student.id);
+      } else {
+        return [...prev, student];
+      }
+    });
+  };
 
   return (
     <StaffLayout>
@@ -178,33 +192,37 @@ const MatchingPage = () => {
             ) : error ? (
               <p className="text-red-500">{error}</p>
             ) : (
-              filteredStudents.map((student) => (
-                <div
-                  key={student.id}
-                  className={`flex items-center gap-4 p-3 border rounded-lg cursor-pointer transition-all ${
-                    selectedStudent?.id === student.id ? "bg-[#3A6AB4]" : "hover:bg-[#2A4E89]"
-                  }`}
-                  onClick={() => setSelectedStudent(student)}
-                >
-                  <div>
-                    <p className="font-bold">{student.name}</p>
-                    <p className="text-sm text-gray-300">{student.email}</p>
+              filteredStudents.map((student) => {
+                const isSelected = selectedStudents.some((s) => s.id === student.id);
+                return (
+                  <div
+                    key={student.id}
+                    className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-all ${
+                      isSelected ? "bg-[#3A6AB4]" : "hover:bg-[#2A4E89]"
+                    }`}
+                    onClick={() => toggleSelectStudent(student)}
+                  >
+                    <input type="checkbox" readOnly checked={isSelected} />
+                    <div>
+                      <p className="font-bold">{student.name}</p>
+                      <p className="text-sm text-gray-300">{student.email}</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
           {/* Matching Form */}
           <div className="bg-[#1E2432] p-4 rounded-lg shadow-md h-full flex items-start justify-center">
             <MatchingForm
-              selectedStudent={selectedStudent}
+              selectedStudents={selectedStudents}
               selectedTutor={selectedTutor}
-              setSelectedStudent={setSelectedStudent}
+              setSelectedStudents={setSelectedStudents}
               setSelectedTutor={setSelectedTutor}
               onConfirmMatch={() => {
-                if (selectedStudent && selectedTutor) {
-                  handleConfirmMatching(selectedStudent.userId, selectedTutor.userId);
+                if (selectedStudents.length > 0 && selectedTutor) {
+                  handleConfirmMatching(selectedStudents.map((s) => s.userId), selectedTutor.userId);
                 }
               }}
             />
