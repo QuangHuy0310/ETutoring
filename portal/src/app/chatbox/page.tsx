@@ -18,9 +18,15 @@ interface ChatMessageItem {
   createdAt?: string;
 }
 
+interface RoomInfo {
+  roomId: string;
+  name: string;
+  avatarPath?: string;
+}
+
 export default function ChatboxPage() {
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
-  const [rooms, setRooms] = useState<string[]>([]);
+  const [roomInfos, setRoomInfos] = useState<RoomInfo[]>([]);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -36,9 +42,7 @@ export default function ChatboxPage() {
     try {
       const res = await fetch(
         `http://localhost:3002/api/v1/chat/chat/messages?roomId=${roomId}&limit=1000`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const response = await res.json();
@@ -98,8 +102,6 @@ export default function ChatboxPage() {
     });
 
     socket.on("newMessage", (msg: any) => {
-      console.log("📩 [Socket] Nhận newMessage event:", msg);
-
       if (!msg || !msg.roomId || !msg.senderId || !msg.message) {
         console.warn("❌ [Socket] Payload không hợp lệ:", msg);
         return;
@@ -118,31 +120,74 @@ export default function ChatboxPage() {
             createdAt: msg.createdAt || new Date().toISOString(),
           },
         ]);
-      } else {
-        console.warn("⚠️ roomId mismatch, không render");
       }
     });
 
-    fetch("http://localhost:3002/get-room", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((response) => {
+    const fetchRoomsAndNames = async () => {
+      try {
+        const res = await fetch("http://localhost:3002/get-room", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const response = await res.json();
         const roomList = response?.data;
         if (!Array.isArray(roomList)) {
           console.error("❌ API /get-room không trả mảng:", roomList);
-          setRooms([]);
           return;
         }
 
-        setRooms(roomList);
+        const fetchNames = await Promise.all(
+          roomList.map(async (roomId: string) => {
+            try {
+              const res = await fetch(
+                `http://localhost:3002/get-user-by-roomId?roomId=${roomId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const result = await res.json();
+              const users = result?.data;
+
+              if (!Array.isArray(users)) {
+                return { roomId, name: "Unknown", avatarPath: null };
+              }
+
+              const otherUser = users.find((user: any) => user.userId !== userIdRef.current);
+
+              if (!otherUser) {
+                return { roomId, name: "Unknown", avatarPath: null };
+              }
+
+              // 🎯 Gọi tiếp /get-infors
+              const infoRes = await fetch(
+                `http://localhost:3002/get-infors?idUser=${otherUser.userId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const infos = await infoRes.json();
+              const infoData = infos?.data?.[0];
+
+              return {
+                roomId,
+                name: otherUser.name || "Unknown",
+                avatarPath: infoData?.path || null,
+              };
+            } catch (error) {
+              console.error("❌ Lỗi fetch userInfo:", error);
+              return { roomId, name: "Unknown", avatarPath: null };
+            }
+          })
+        );
+
+        setRoomInfos(fetchNames);
 
         if (roomList.length > 0) {
           setCurrentRoom(roomList[0]);
-          localStorage.setItem("currentRoom", roomList[0]); // ✅ GHI NHỚ room
+          localStorage.setItem("currentRoom", roomList[0]);
         }
-      })
-      .catch((err) => console.error("❌ Lỗi khi fetch get-room:", err));
+      } catch (err) {
+        console.error("❌ Lỗi khi fetch get-room:", err);
+      }
+    };
+
+    fetchRoomsAndNames();
 
     return () => {
       socket.disconnect();
@@ -174,9 +219,7 @@ export default function ChatboxPage() {
     try {
       const res = await fetch(url.toString(), {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
@@ -190,38 +233,50 @@ export default function ChatboxPage() {
     }
   };
 
+  const currentRoomInfo = roomInfos.find((room) => room.roomId === currentRoom);
+
   return (
     <Layout>
       <div className="flex flex-row flex-1 h-full bg-black border border-gray-700 rounded-lg shadow-xl">
-        {/* Sidebar trái */}
+        {/* Sidebar */}
         <div className="w-[300px] bg-black border-r border-gray-700 p-4">
           <h2 className="text-xl font-semibold text-white mb-4">Chat Rooms</h2>
           <ul>
-            {rooms.map((room) => (
+            {roomInfos.map((room) => (
               <li
-                key={room}
+                key={room.roomId}
                 className={`p-2 rounded cursor-pointer hover:bg-gray-700 ${
-                  room === currentRoom ? "bg-gray-700" : ""
+                  room.roomId === currentRoom ? "bg-gray-700" : ""
                 }`}
                 onClick={() => {
-                  setCurrentRoom(room);
-                  localStorage.setItem("currentRoom", room); // ✅ LƯU MỖI KHI CHỌN
-                  handleJoinRoom(room);
+                  setCurrentRoom(room.roomId);
+                  localStorage.setItem("currentRoom", room.roomId);
+                  handleJoinRoom(room.roomId);
                 }}
               >
-                🏠 Room: {room.slice(0, 8)}...
+                🏠 {room.name}
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Nội dung chat */}
+        {/* Chat Content */}
         <div className="flex flex-col flex-1 h-full">
           <div className="flex items-center justify-between p-4 bg-black border-b border-gray-700">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gray-600 rounded-full" />
+              <img
+                src={
+                  currentRoomInfo?.avatarPath
+                    ? currentRoomInfo.avatarPath.startsWith("http")
+                      ? currentRoomInfo.avatarPath
+                      : "/default-avatar.png"
+                    : "/default-avatar.png"
+                }
+                alt="Avatar"
+                className="w-10 h-10 rounded-full object-cover"
+              />
               <span className="text-lg font-semibold text-white">
-                Room: {currentRoom ?? "None"}
+                {currentRoomInfo?.name || "Đang chọn phòng..."}
               </span>
             </div>
             <div className="flex space-x-4">
