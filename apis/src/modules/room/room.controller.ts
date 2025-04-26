@@ -1,5 +1,5 @@
 import { RoomService } from '@modules/room/room.service';
-import { Controller, Post, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { RequiredByUserRoles } from '@utils/decorator';
 import { CreateRoomDto } from './dto/room.dto';
 
@@ -13,6 +13,12 @@ export class RoomController {
     @Post('room')
     async createRoom(@Query() input: CreateRoomDto) {
         return this.roomService.handleCreateRoom(input);
+    }
+    
+    @RequiredByUserRoles()
+    @Get('get-user-by-roomId')
+    async getUserByRoomId(@Query('roomId') roomId: string) {
+        return this.roomService.getUserByRoomId(roomId);
     }
 
  }
