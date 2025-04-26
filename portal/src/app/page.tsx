@@ -154,7 +154,7 @@ const HomePage = () => {
               user: {
                 id: post.userId || "unknown",
                 name: userInfo.name,
-                avatar: userInfo.avatar || "",
+                avatar: userInfo.avatar || undefined,
               },
               title: Array.isArray(post.tags) ? post.tags.join(", ") : "No Title",
               content: post.caption || "No Content",
@@ -307,10 +307,10 @@ const HomePage = () => {
                 <div className="flex items-center mb-2">
                   {post.user.avatar && (
                     <img
-                      src={post.user.avatar}
-                      alt="Avatar"
-                      className="w-10 h-10 rounded-full mr-2"
-                    />
+                    src={post.user.avatar?.startsWith("http") ? post.user.avatar : "/default-avatar.png"}
+                    alt="Avatar"
+                    className="w-10 h-10 rounded-full mr-2"
+                  />                  
                   )}
                   <span className="font-bold text-white">{post.user.name}</span>
                   <span className="text-gray-400 text-sm ml-2">

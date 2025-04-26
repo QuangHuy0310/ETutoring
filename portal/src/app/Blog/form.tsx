@@ -150,11 +150,16 @@ const PostForm: React.FC<PostFormProps> = ({ onPost, onClose }) => {
   return (
     <form onSubmit={handleSubmit} className="bg-[#1E2432] p-6 rounded-lg w-[500px] flex flex-col space-y-4">
       <div className="flex items-center space-x-4">
-        {author.avatar ? (
-          <img src={author.avatar} className="w-12 h-12 rounded-full" alt="avatar" />
-        ) : (
-          <div className="w-12 h-12 bg-gray-500 rounded-full" />
-        )}
+      <img
+  src={
+    author.avatar?.startsWith("http")
+      ? author.avatar
+      : "/default-avatar.png"
+  }
+  alt="avatar"
+  className="w-12 h-12 rounded-full"
+/>
+
         <div>
           <p className="text-white font-bold">{author.name}</p>
           <p className="text-gray-400 text-sm">Just now</p>
