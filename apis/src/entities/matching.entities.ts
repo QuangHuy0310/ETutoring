@@ -10,6 +10,9 @@ export class Matching extends BaseEntity {
     @Prop({ type: String, required: true })
     tutorId: string;
 
+    @Prop({ type: String, required: true })
+    roomId: string;
+
     @Prop({ type: String, required: true, default: 'on' })
     status: string;
 }
