@@ -186,4 +186,12 @@ export class UserService {
 
         return user.save();
     }
+
+    async getRoleById(id: string): Promise<USER_ROLE> {
+        const user = await this.userModel.findById(id, { role: 1 });
+        if (!user) {
+            throw new BadRequestException('User not found');
+        }
+        return user.role;
+    }
 }
