@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react"; // 🆕 Import Suspense
+import { Suspense } from "react";
 import Layout from "@/app/componets/layout";
 
 export default function ViewTutorPage() {
@@ -13,7 +13,7 @@ export default function ViewTutorPage() {
   );
 }
 
-// --- Nội dung Content.tsx (hoặc copy luôn function Content bên dưới) ---
+// --- Nội dung Content ---
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getCookie } from "cookies-next";
@@ -47,7 +47,8 @@ function Content() {
           return;
         }
 
-        const res = await fetch(`http://localhost:3002/get-infors`, {
+        // 🛠️ Sửa URL, thêm idUser vào query
+        const res = await fetch(`http://localhost:3002/get-infors?idUser=${idUser}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
@@ -56,9 +57,7 @@ function Content() {
         }
 
         const data = await res.json();
-        const found = Array.isArray(data.data)
-          ? data.data.find((user: any) => user.userId === idUser)
-          : null;
+        const found = Array.isArray(data.data) ? data.data[0] : null;
 
         if (!found) {
           throw new Error("Tutor not found.");
@@ -71,7 +70,7 @@ function Content() {
           phoneNumber: found.phone || found.phoneNumber || "N/A",
           address: found.address || "N/A",
           description: found.description || "No description provided.",
-          avatar: found.avatar || "/placeholder-avatar.jpg",
+          avatar: found.path || "/placeholder-avatar.jpg", // 🛠️ dùng path nếu có
         });
       } catch (err: any) {
         setError(err.message || "Unexpected error");
@@ -116,7 +115,7 @@ function Content() {
           />
         </div>
 
-        {/* Avatar & User Info */}
+        {/* Avatar & Info */}
         <div className="flex items-center absolute left-8 -bottom-10">
           <div className="w-24 h-24 bg-gray-500 rounded-full border-4 border-black shadow-lg overflow-hidden">
             <img

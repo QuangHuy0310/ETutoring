@@ -3,7 +3,7 @@
 import React, { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link"; // 🆕 thêm Link
+import Link from "next/link";
 import Layout from "@/app/componets/layout";
 import PostForm from "@/app/Blog/form";
 
@@ -31,7 +31,7 @@ interface BlogPost {
   imageUrl?: string;
   createdAt: number;
   comments: Comment[];
-  userRole?: string; // 🆕 thêm userRole để phân biệt Tutor hay Student
+  userRole?: string;
 }
 
 const HomePage = () => {
@@ -42,117 +42,107 @@ const HomePage = () => {
   const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({});
   const [commentImageInputs, setCommentImageInputs] = useState<{ [key: string]: string }>({});
 
-  // 🛡️ Fetch thông tin user từ userId
-  const fetchUserNameById = async (userId: string): Promise<{ name: string; avatar?: string }> => {
+  const fetchUserInfo = async (userId: string) => {
     const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) return { name: "Anonymous" };
+    if (!accessToken) return { name: "Anonymous", avatar: undefined };
 
     try {
       const res = await fetch(`http://localhost:3002/get-infors?idUser=${userId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!res.ok) return { name: "Anonymous" };
+
       const data = await res.json();
-      if (!data.data || data.data.length === 0) return { name: "Anonymous" };
+      const user = data.data?.[0];
       return {
-        name: data.data[0]?.name || "Anonymous",
-        avatar: data.data[0]?.path || undefined,
+        name: user?.name || "Anonymous",
+        avatar: user?.path || undefined,
       };
-    } catch (error) {
-      return { name: "Anonymous" };
+    } catch {
+      return { name: "Anonymous", avatar: undefined };
     }
   };
 
-  // 🛡️ Fetch role của user từ userId
-  const fetchUserRoleById = async (userId: string): Promise<string> => {
+  const fetchUserRole = async (userId: string) => {
     const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) return "User";
+    if (!accessToken) return "user";
 
     try {
       const res = await fetch(`http://localhost:3002/api/v1/users/get-role-byId?id=${userId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!res.ok) return "User";
+
       const data = await res.json();
-      return data.role || "User";
-    } catch (error) {
-      return "User";
+      return (data.data.role || "user").toLowerCase(); // ép luôn lowercase từ lúc fetch
+    } catch {
+      return "user";
     }
   };
 
   useEffect(() => {
-    const checkAuth = () => {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
-        router.push("/login");
-        return;
-      }
-      try {
-        const payload = JSON.parse(atob(accessToken.split(".")[1]));
-        setUser({ id: payload.id, name: payload.name });
-      } catch (error) {
-        router.push("/login");
-      }
-    };
-    checkAuth();
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(accessToken.split(".")[1]));
+      setUser({ id: payload.id, name: payload.name });
+    } catch {
+      router.push("/login");
+    }
   }, [router]);
 
-  const fetchCommentsForPost = async (blogId: string) => {
+  const fetchComments = async (blogId: string) => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return [];
+
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) return [];
       const res = await fetch(`http://localhost:3002/api/v1/comments/get-comment?blogId=${blogId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!res.ok) return [];
       const data = await res.json();
       return data.data || [];
-    } catch (error) {
+    } catch {
       return [];
     }
   };
 
   useEffect(() => {
     const fetchBlogs = async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) return;
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) return;
 
-        const response = await fetch("http://localhost:3002/api/v1/blog/blogs", {
+      try {
+        const res = await fetch("http://localhost:3002/api/v1/blog/blogs", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
-        if (!response.ok) return;
+        const data = await res.json();
+        const blogs = data.data?.item || [];
 
-        const data = await response.json();
-        if (!data.data || !data.data.item) return;
-
-        const mappedPosts: BlogPost[] = await Promise.all(
-          data.data.item.map(async (post: any) => {
-            const comments = await fetchCommentsForPost(post._id);
-            const userInfo = await fetchUserNameById(post.userId);
-            const userRole = await fetchUserRoleById(post.userId);
+        const posts = await Promise.all(
+          blogs.map(async (post: any) => {
+            const userInfo = await fetchUserInfo(post.userId);
+            const userRole = await fetchUserRole(post.userId);
+            const comments = await fetchComments(post._id);
 
             return {
               id: post._id,
-              user: {
-                id: post.userId || "unknown",
-                name: userInfo.name,
-                avatar: userInfo.avatar,
-              },
+              user: { id: post.userId, name: userInfo.name, avatar: userInfo.avatar },
               title: Array.isArray(post.tags) ? post.tags.join(", ") : "No Title",
               content: post.caption || "No Content",
-              imageUrl: Array.isArray(post.path) && post.path.length > 0 ? post.path[0] : "",
+              imageUrl: post.path?.[0] || undefined,
               createdAt: new Date(post.createdAt).getTime(),
-              comments: comments,
-              userRole: userRole, // 🆕 lưu lại role
+              comments,
+              userRole,
             };
           })
         );
 
-        setPosts(mappedPosts);
+        setPosts(posts);
       } catch (error) {
-        console.error(error);
+        console.error("🛑 Error fetching blogs:", error);
       }
     };
     fetchBlogs();
@@ -160,7 +150,7 @@ const HomePage = () => {
 
   const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
     if (!user) return;
-    const newBlog: BlogPost = {
+    const newPost: BlogPost = {
       id: Date.now().toString(),
       user,
       title: post.title,
@@ -169,38 +159,38 @@ const HomePage = () => {
       createdAt: Date.now(),
       comments: [],
     };
-    setPosts((prevPosts) => [newBlog, ...prevPosts]);
+    setPosts((prev) => [newPost, ...prev]);
     setIsModalOpen(false);
   };
 
-  const handleCommentFileUpload = async (file: File, postId: string) => {
-    const formData = new FormData();
-    formData.append("image", file);
+  const handleCommentChange = (e: ChangeEvent<HTMLInputElement>, postId: string) => {
+    setCommentInputs((prev) => ({ ...prev, [postId]: e.target.value }));
+  };
+
+  const handleCommentFileChange = async (e: ChangeEvent<HTMLInputElement>, postId: string) => {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    if (!file.type.startsWith("image/")) return;
+
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) return;
 
+    const formData = new FormData();
+    formData.append("image", file);
+
     try {
-      const response = await fetch("http://localhost:3002/upload", {
+      const res = await fetch("http://localhost:3002/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
-      if (!response.ok) return;
-      const result = await response.json();
-      if (result.data?.fileUrl) {
-        setCommentImageInputs((prev) => ({ ...prev, [postId]: result.data.fileUrl }));
+      const data = await res.json();
+      if (data.data?.fileUrl) {
+        setCommentImageInputs((prev) => ({ ...prev, [postId]: data.data.fileUrl }));
       }
     } catch (error) {
       console.error(error);
     }
-  };
-
-  const handleCommentFileChange = (e: ChangeEvent<HTMLInputElement>, postId: string) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    if (!file.type.startsWith("image/")) return;
-    handleCommentFileUpload(file, postId);
-    e.target.value = "";
   };
 
   const addComment = async (postId: string) => {
@@ -208,21 +198,18 @@ const HomePage = () => {
     const imageUrl = commentImageInputs[postId];
     if (!commentText && !imageUrl) return;
 
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) return;
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
 
+    try {
       const res = await fetch(`http://localhost:3002/api/v1/comments/new-comment?id=${postId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ comment: commentText, path: imageUrl ? [imageUrl] : [] }),
       });
-
-      if (!res.ok) return;
-
       const newComment = await res.json();
-      setPosts((prevPosts) =>
-        prevPosts.map((post) =>
+      setPosts((prev) =>
+        prev.map((post) =>
           post.id === postId ? { ...post, comments: [...post.comments, newComment] } : post
         )
       );
@@ -237,111 +224,83 @@ const HomePage = () => {
 
   return (
     <Layout>
-      <div className="flex flex-col min-h-screen bg-[#0B0F19] text-white w-full">
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">All Blogs</h2>
+          <button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+            Create Blog
+          </button>
+        </div>
+
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-[#1E2432] p-6 rounded-lg shadow-lg">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+            <div className="bg-[#1E2432] p-6 rounded-lg">
               <PostForm onPost={addPost} onClose={() => setIsModalOpen(false)} />
             </div>
           </div>
         )}
 
-        <div className="p-6 bg-[#1E2432] border border-[#2A4E89] rounded-lg shadow-md">
-          <div className="flex justify-between mb-4">
-            <h2 className="text-xl font-bold">All Blogs</h2>
-            <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">
-              Create Blog
-            </button>
-          </div>
-
-          {posts.length === 0 ? (
-            <p className="text-gray-400">No posts yet</p>
-          ) : (
-            posts.map((post) => (
-              <div key={post.id} className="p-4 border border-[#2A4E89] rounded-lg bg-[#161b25] mb-4">
-                <div className="flex items-center mb-2">
-                  {post.user.avatar && (
-                    <Link href={post.userRole === "TUTOR" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
-                      <img
-                        src={post.user.avatar?.startsWith("http") ? post.user.avatar : "/default-avatar.png"}
-                        alt="Avatar"
-                        className="w-10 h-10 rounded-full mr-2 cursor-pointer"
-                      />
-                    </Link>
-                  )}
-                  <Link href={post.userRole === "TUTOR" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
-                    <span className="font-bold text-white hover:underline cursor-pointer">{post.user.name}</span>
-                  </Link>
-                  <span className="text-gray-400 text-sm ml-2">{new Date(post.createdAt).toLocaleString()}</span>
-                </div>
-
-                <h3 className="text-lg font-bold">{post.title}</h3>
-                <p className="text-gray-300">{post.content}</p>
-
-                {post.imageUrl && (
-                  <Image
-                    src={post.imageUrl}
-                    alt="Uploaded"
-                    width={400}
-                    height={250}
-                    className="mt-2 w-[400px] h-[250px] object-cover rounded-lg shadow-lg"
-                    unoptimized
+        {posts.length === 0 ? (
+          <p className="text-gray-400">No posts yet</p>
+        ) : (
+          posts.map((post) => (
+            <div key={post.id} className="p-4 bg-[#161b25] border border-[#2A4E89] rounded-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <Link href={post.userRole === "tutor" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
+                  <img
+                    src={post.user.avatar || "/default-avatar.png"}
+                    alt="Avatar"
+                    className="w-10 h-10 rounded-full object-cover cursor-pointer"
                   />
-                )}
+                </Link>
+                <Link href={post.userRole === "tutor" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
+                  <span className="font-bold hover:underline">{post.user.name}</span>
+                </Link>
+              </div>
 
-                {/* Comments */}
-                <div className="mt-4 border-t border-gray-600 pt-2">
-                  <h4 className="text-sm text-gray-400">Comments:</h4>
-                  {post.comments.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No comments yet</p>
-                  ) : (
-                    post.comments.map((comment, index) => (
-                      <div key={index} className="mt-1">
-                        <p className="text-gray-300 text-sm bg-[#2A4E89] p-2 rounded-md">
-                          <span className="font-bold text-white">{comment.user?.[0]?.name || "Anonymous"}</span> {comment.comment}
-                        </p>
-                        {comment.path && comment.path.length > 0 && (
-                          <div className="mt-1">
-                            <Image
-                              src={comment.path[0]}
-                              alt="Comment attachment"
-                              width={200}
-                              height={150}
-                              className="object-cover rounded-md"
-                              unoptimized
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
+              <h3 className="text-lg font-bold">{post.title}</h3>
+              <p className="text-gray-400">{post.content}</p>
 
-                  <div className="mt-2 flex flex-col gap-2">
-                    <input
-                      type="text"
-                      value={commentInputs[post.id] || ""}
-                      onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                      placeholder="Write a comment..."
-                      className="flex-1 p-2 bg-[#2A4E89] rounded-lg text-white"
-                    />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleCommentFileChange(e, post.id)}
-                      className="text-white"
-                    />
-                    <button
-                      onClick={() => addComment(post.id)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
-                    >
-                      Send
-                    </button>
+              {post.imageUrl && (
+                <Image
+                  src={post.imageUrl}
+                  alt="Post Image"
+                  width={500}
+                  height={300}
+                  className="rounded-lg mt-4"
+                  unoptimized
+                />
+              )}
+
+              {/* Comments */}
+              <div className="mt-4">
+                <h4 className="text-sm text-gray-400 mb-2">Comments</h4>
+                {post.comments.map((c, idx) => (
+                  <div key={idx} className="text-sm text-gray-300 bg-[#2A4E89] p-2 rounded mb-2">
+                    <strong>{c.user?.[0]?.name || "Anonymous"}:</strong> {c.comment}
                   </div>
+                ))}
+
+                <div className="flex flex-col space-y-2 mt-2">
+                  <input
+                    value={commentInputs[post.id] || ""}
+                    onChange={(e) => handleCommentChange(e, post.id)}
+                    placeholder="Write a comment..."
+                    className="bg-[#2A4E89] rounded p-2"
+                  />
+                  <input
+                    type="file"
+                    onChange={(e) => handleCommentFileChange(e, post.id)}
+                    className="text-white"
+                  />
+                  <button onClick={() => addComment(post.id)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">
+                    Send
+                  </button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          ))
+        )}
       </div>
     </Layout>
   );

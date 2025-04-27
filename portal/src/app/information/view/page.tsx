@@ -22,13 +22,6 @@ interface UserInfo {
   description?: string;
 }
 
-interface TokenInfo {
-  userId: string;
-  email: string;
-  role?: string;
-  name?: string;
-}
-
 export default function InformationViewPage() {
   return (
     <Layout>
@@ -63,7 +56,8 @@ function Content() {
           return;
         }
 
-        const response = await fetch(`http://localhost:3002/get-infors`, {
+        // FIX: truyền idUser vào query param
+        const response = await fetch(`http://localhost:3002/get-infors?idUser=${idUser}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -72,44 +66,29 @@ function Content() {
         if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data = await response.json();
 
-        let userInfo;
+        const user = Array.isArray(data.data)
+          ? data.data.find((u: any) => u.userId === idUser || u._id === idUser || u.id === idUser)
+          : data.data;
 
-        if (data && data.data && Array.isArray(data.data)) {
-          userInfo = data.data.find((user: any) =>
-            user.userId === idUser || user._id === idUser || user.id === idUser
-          );
-        } else if (Array.isArray(data)) {
-          userInfo = data.find((user: any) =>
-            user.userId === idUser || user._id === idUser || user.id === idUser
-          );
-        } else if (typeof data === 'object') {
-          if (data.userId === idUser || data._id === idUser || data.id === idUser) {
-            userInfo = data;
-          } else if (data.data && (data.data.userId === idUser || data.data._id === idUser || data.data.id === idUser)) {
-            userInfo = data.data;
-          }
-        }
+        if (!user) throw new Error("User information not found.");
 
-        if (userInfo) {
-          setUserData({
-            id: userInfo.id || userInfo._id || "",
-            userId: userInfo.userId || "",
-            name: userInfo.name || "User",
-            email: userInfo.email || "",
-            phoneNumber: userInfo.phone || userInfo.phoneNumber || "",
-            major: userInfo.major || "",
-            avatar: userInfo.avatar || "",
-            role: userInfo.role || "User",
-            address: userInfo.address || "",
-            country: userInfo.country || "",
-            description: userInfo.description || "",
-          });
-        } else {
-          throw new Error("User information not found.");
-        }
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-        setError("Failed to fetch user information.");
+        setUserData({
+          id: user._id || user.id,
+          userId: user.userId,
+          name: user.name || "User",
+          email: user.email,
+          phoneNumber: user.phone || user.phoneNumber || "Not provided",
+          major: user.major || "",
+          avatar: user.avatar || "",
+          role: user.role || "User",
+          address: user.address || "",
+          country: user.country || "",
+          description: user.description || "",
+        });
+
+      } catch (err: any) {
+        console.error("Error fetching user info:", err);
+        setError(err.message || "Failed to fetch user information.");
       } finally {
         setLoading(false);
       }
@@ -119,7 +98,7 @@ function Content() {
   }, [idUser]);
 
   const getInitialAvatar = () => {
-    return userData?.name ? userData.name.charAt(0).toUpperCase() : 'U';
+    return userData?.name ? userData.name.charAt(0).toUpperCase() : "U";
   };
 
   if (loading) {
@@ -155,37 +134,25 @@ function Content() {
         </div>
 
         <div className="flex items-end absolute left-8 -bottom-16">
-          <div className="w-32 h-32 bg-gray-500 rounded-full border-4 border-black shadow-lg">
-            <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-white rounded-full overflow-hidden">
-              {userData.avatar ? (
-                <img
-                  src={userData.avatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover rounded-full"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.textContent = getInitialAvatar();
-                  }}
-                />
-              ) : (
-                <div>{getInitialAvatar()}</div>
-              )}
-            </div>
+          <div className="w-32 h-32 bg-gray-500 rounded-full border-4 border-black shadow-lg overflow-hidden">
+            {userData.avatar ? (
+              <img src={userData.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <div className="flex items-center justify-center text-4xl font-bold text-white">
+                {getInitialAvatar()}
+              </div>
+            )}
           </div>
+
           <div className="ml-4 mb-4">
             <h2 className="text-2xl font-semibold text-white bg-black bg-opacity-50 px-2 py-1 rounded-md">
               {userData.name}
             </h2>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="text-gray-400 text-sm py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
+              <span className="text-gray-400 text-sm py-1 px-2 bg-gray-800 rounded">
                 <FaEnvelope className="inline mr-1 text-xs" /> {userData.email}
               </span>
               <span className="bg-gray-800 text-xs px-2 py-1 rounded text-gray-300">{userData.role}</span>
-              {userData.userId && (
-                <span className="text-gray-400 text-xs py-1 px-2 bg-gray-800 bg-opacity-70 rounded">
-                  ID: {userData.userId.substring(0, 8)}...
-                </span>
-              )}
             </div>
           </div>
         </div>
