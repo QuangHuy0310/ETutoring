@@ -29,3 +29,17 @@ export class CreateBulkMatchingDto {
     @IsString()
     status: string;
 }
+
+export class GetUserByRoomIdDto {
+    @ApiProperty()
+    @IsString()
+    roomId: string;
+
+    @ApiProperty()
+    @IsString()
+    userId: string;
+
+    @ApiProperty()
+    @IsString()
+    tutorId: string;
+}

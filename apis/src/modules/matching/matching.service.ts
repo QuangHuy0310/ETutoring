@@ -2,7 +2,7 @@ import { Matching, MatchingDocument } from '@entities/matching.entities';
 import { forwardRef, Inject, Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateBulkMatchingDto, CreateMatchingDto } from './dto/matching.dto';
+import { CreateBulkMatchingDto, CreateMatchingDto, GetUserByRoomIdDto } from './dto/matching.dto';
 import { NotificationService } from '@modules/notification/notification.service';
 import { RoomService } from '@modules/room/room.service';
 import { InforService } from '@modules/infor/infor.service'; // Thêm import này
@@ -18,10 +18,16 @@ export class MatchingService {
         private readonly roomService: RoomService,
         private readonly inforService: InforService,
         private readonly mailService: MailService,
-    ) {}
+    ) { }
 
     async createMatching(matching: CreateMatchingDto): Promise<Matching> {
-        const newMatching = new this.matchingModel(matching);
+        // Tạo phòng chat
+        const roomResult = await this.roomService.createRoom(matching.studentId, matching.tutorId);
+        if (!roomResult || typeof roomResult !== 'string') {
+            throw new HttpException('Failed to create room', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        const newMatching = new this.matchingModel({ ...matching, roomId: roomResult });
         const payload = {
             from: matching.studentId,
             to: matching.tutorId,
@@ -37,11 +43,7 @@ export class MatchingService {
         const studentInfo = studentInfos[0];
         const tutorInfo = tutorInfos[0];
 
-        // Tạo phòng chat
-        const roomResult = await this.roomService.createRoom(matching.studentId, matching.tutorId);
-        if (!roomResult || typeof roomResult !== 'string') {
-            throw new HttpException('Failed to create room', HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+
 
         // Gọi các tác vụ song song
         await Promise.all([
@@ -107,5 +109,16 @@ export class MatchingService {
         );
 
         return matchings;
+    }
+
+
+    async getMatchingByRoomId(roomId: string) {
+        const room = await this.matchingModel.findOne({ roomId: roomId })
+        const payload = {
+            roomId: room.roomId,
+            stuId: room.studentId,
+            tutId: room.tutorId,
+        }
+        return await this.inforService.removeRoomId(payload)
     }
 }
