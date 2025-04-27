@@ -131,4 +131,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendMatchingRequestNotification(to: string, notification: string) {
     this.server.to(to).emit('newMatchingRequestNotification', notification);
   }
+
+  @SubscribeMessage('removeRoom')
+  removeRoom(stu: string, tut: string, roomId: string) {
+    this.server.to(stu).emit('removeRoom', roomId);
+    this.server.to(tut).emit('removeRoom', roomId);
+  }
 }

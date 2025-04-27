@@ -16,3 +16,13 @@ export class CreateRoomDto {
     @IsString()
     tutorId: string;
 }
+
+export class GetUserByRoomIdDto {
+    @ApiProperty()
+    @IsString()
+    user1: string;
+
+    @ApiProperty()
+    @IsString()
+    user2: string;
+}
