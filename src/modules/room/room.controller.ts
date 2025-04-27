@@ -1,7 +1,7 @@
 import { RoomService } from '@modules/room/room.service';
 import { Controller, Get, Post, Query } from '@nestjs/common';
 import { RequiredByUserRoles } from '@utils/decorator';
-import { CreateRoomDto, GetUserByRoomIdDto } from './dto/room.dto';
+import { CreateRoomDto, GetUserByRoomIdDto, PaginationDto } from './dto/room.dto';
 import { ApiQuery } from '@nestjs/swagger';
 
 @Controller()
@@ -28,6 +28,14 @@ export class RoomController {
     @ApiQuery({ name: 'user2', type: String, required: true })
     async getRoomByIds(@Query() dto: GetUserByRoomIdDto) {
         return this.roomService.getRoomByUserIds(dto);
+    }
+
+    @RequiredByUserRoles()
+    @Get('get-all-room')
+    @ApiQuery({ name: 'page', type: Number, required: false })
+    @ApiQuery({ name: 'limit', type: Number, required: false })
+    async getAllRoom(@Query() dto: PaginationDto) {
+        return this.roomService.getAllRoom(dto);
     }
 
 }
