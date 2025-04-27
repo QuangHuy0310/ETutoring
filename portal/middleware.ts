@@ -15,7 +15,7 @@ interface DecodedToken {
 // Định nghĩa route restriction - chỉ có admin, user, tutor và staff
 const ADMIN_ROUTES = ['/admin', '/dashboard/admin'];
 const USER_ROUTES = ['/', '/dashboard/user'];
-const TUTOR_ROUTES = ['/', '/dashboard/tutor'];
+const TUTOR_ROUTES = ['/', '/dashboard/tutor', '/tutor'];
 const STAFF_ROUTES = ['/staff', '/staff/listofuser', '/staff/matching', '/staff/managerblog', '/staff/managermatching'];
 // Chỉ giữ lại những route không yêu cầu login
 const AUTH_FREE_ROUTES = ['/login', '/register'];
