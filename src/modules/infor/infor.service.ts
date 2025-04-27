@@ -4,7 +4,7 @@ import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nest
 import { InjectModel } from '@nestjs/mongoose';
 import { USER_ERRORS } from '@utils/data-types/constants';
 import { Model } from 'mongoose';
-import { CreateInforDto, FilterInformationDto, UpdateDto } from './dto/infor.dto';
+import { CreateInforDto, FilterInformationDto, RemoveRoomDto, UpdateDto } from './dto/infor.dto';
 
 @Injectable()
 export class InforService {
@@ -69,7 +69,7 @@ export class InforService {
             },
             {
                 $match: {
-                    ...(filters.role ? { 'user.role': filters.role } : {}), 
+                    ...(filters.role ? { 'user.role': filters.role } : {}),
                 },
             },
             {
@@ -179,5 +179,26 @@ export class InforService {
             message: 'Information updated successfully',
             data: updatedInformation,
         };
+    }
+
+    async removeRoomId(dto: RemoveRoomDto): Promise<any> {
+        const { stuId, tutId, roomId } = dto;
+
+        const [student, tutor] = await Promise.all([
+            await this.moreInformationModel.updateOne(
+                { userId: stuId, roomId: roomId },
+                { $pull: { roomId: roomId } }
+            ),
+
+            await this.moreInformationModel.updateOne(
+                { userId: tutId, roomId: roomId },
+                { $pull: { roomId: roomId } }
+            )
+        ])
+
+        if (student.matchedCount === 0 || tutor.matchedCount === 0) {
+            throw new HttpException('User or Room ID not found', HttpStatus.NOT_FOUND);
+        }
+        return `success to remove roomId ${roomId} from userId ${stuId} and ${tutId}`;
     }
 }

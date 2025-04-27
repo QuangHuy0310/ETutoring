@@ -35,7 +35,9 @@ export class RoomService {
         newRoom.userId.push(tutorId)
         await newRoom.save()
 
-        return this.inforService.pushMany(userId, tutorId, newRoom._id)
+        await this.inforService.pushMany(userId, tutorId, newRoom._id)
+
+        return newRoom._id
     }
 
     async handleCreateRoom(handleCreate: CreateRoomDto) {
