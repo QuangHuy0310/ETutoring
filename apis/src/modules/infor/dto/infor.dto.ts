@@ -132,3 +132,17 @@ export class FilterInformationDto {
     role: string;
 
 }
+
+export class RemoveRoomDto{
+    @ApiProperty()
+    @IsString()
+    roomId: string;
+
+    @ApiProperty()
+    @IsString()
+    stuId: string;
+
+    @ApiProperty()
+    @IsString()
+    tutId: string;
+}

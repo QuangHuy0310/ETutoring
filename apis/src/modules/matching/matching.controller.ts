@@ -1,5 +1,5 @@
 import { MatchingService } from '@modules/matching/matching.service';
-import { Controller, Post, Query, Body } from '@nestjs/common';
+import { Controller, Post, Query, Body, Put } from '@nestjs/common';
 import { ApiQuery, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { RequiredByUserRoles } from '@utils/decorator';
 import { CreateMatchingDto, CreateBulkMatchingDto } from './dto/matching.dto';
@@ -24,5 +24,13 @@ export class MatchingController {
     @ApiBody({ type: CreateBulkMatchingDto })
     async createBulkMatching(@Body() createBulkMatchingDto: CreateBulkMatchingDto) {
         return await this.matchService.createBulkMatching(createBulkMatchingDto);
+    }
+
+
+    @RequiredByUserRoles()
+    @ApiQuery({ name: 'roomId', type: String, required: true })
+    @Put('Update-Status-Matching')
+    async updateStatusMatching(@Query('roomId') roomId: string) {
+        return await this.matchService.getMatchingByRoomId(roomId);
     }
 }
