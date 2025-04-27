@@ -2,7 +2,7 @@ import { Room, RoomDocument } from '@entities/room.entities';
 import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateRoomDto, GetRoomDto } from './dto/room.dto';
+import { CreateRoomDto, GetRoomDto, GetUserByRoomIdDto } from './dto/room.dto';
 import { InforService } from '@modules/index-service';
 import { USER_ERRORS } from '@utils/data-types/constants';
 
@@ -78,5 +78,15 @@ export class RoomService {
             }
         ]);
         return result;
+    }
+
+    async getRoomByUserIds(dto: GetUserByRoomIdDto): Promise<any> {
+        const { user1, user2 } = dto;
+
+        const room = await this.roomModel.findOne({
+            userId: { $all: [user1, user2] },
+            deletedAt: null,
+        });
+        return room;
     }
 }
