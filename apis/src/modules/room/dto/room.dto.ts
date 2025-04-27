@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString } from "class-validator";
 
 export class GetRoomDto{
     @ApiProperty()
@@ -25,4 +25,14 @@ export class GetUserByRoomIdDto {
     @ApiProperty()
     @IsString()
     user2: string;
+}
+
+export class PaginationDto {
+    @ApiPropertyOptional()
+    @IsOptional()
+    page: number = 1;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    limit: number = 10;
 }

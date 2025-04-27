@@ -2,7 +2,7 @@ import { Room, RoomDocument } from '@entities/room.entities';
 import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateRoomDto, GetRoomDto, GetUserByRoomIdDto } from './dto/room.dto';
+import { CreateRoomDto, GetRoomDto, GetUserByRoomIdDto, PaginationDto } from './dto/room.dto';
 import { InforService } from '@modules/index-service';
 import { USER_ERRORS } from '@utils/data-types/constants';
 
@@ -64,10 +64,10 @@ export class RoomService {
                 }
             },
             {
-                $unwind: '$userInfos' 
+                $unwind: '$userInfos'
             },
             {
-                $replaceRoot: { newRoot: '$userInfos' } 
+                $replaceRoot: { newRoot: '$userInfos' }
             },
             {
                 $project: {
@@ -89,4 +89,57 @@ export class RoomService {
         });
         return room;
     }
+
+    async getAllRoom(dto: PaginationDto): Promise<{ data: GetRoomDto[]; total: number; totalPages: number }> {
+        const { page, limit } = dto;
+
+        const [rooms, total] = await Promise.all([
+            this.roomModel.aggregate([
+                {
+                    $skip: (page - 1) * limit,
+                },
+                {
+                    $limit: limit,
+                },
+                {
+                    $lookup: {
+                        from: 'moreinformations',
+                        localField: 'userId',
+                        foreignField: 'userId',
+                        as: 'userInfos',
+                    },
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        createdAt: 1,
+                        updatedAt: 1,
+                        userInfos: {
+                            $map: {
+                                input: '$userInfos',
+                                as: 'user',
+                                in: {
+                                    userId: '$$user.userId',
+                                    name: '$$user.name',
+                                    path: '$$user.path',
+                                    major: '$$user.major',
+                                },
+                            },
+                        },
+                    },
+                },
+            ]),
+            this.roomModel.countDocuments(),
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            data: rooms,
+            total,
+            totalPages,
+        };
+    }
+
+
 }
