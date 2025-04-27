@@ -119,6 +119,12 @@ export class MatchingService {
             stuId: room.studentId,
             tutId: room.tutorId,
         }
+        if (!room) {
+            throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
+        }
+
+        const update = await room.updateOne({ status: 'off' })
+        update.save()
         return await this.inforService.removeRoomId(payload)
     }
 }
