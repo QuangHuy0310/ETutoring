@@ -27,6 +27,7 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userName, setUserName] = useState<string>("User");
+  const [userRole, setUserRole] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -176,26 +177,31 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     const accessToken = localStorage.getItem('accessToken');
     // Đầu tiên thử lấy userName từ localStorage
     const storedUserName = localStorage.getItem('userName');
-    
-    if (storedUserName) {
-      setUserName(storedUserName);
-    } else if (accessToken) {
+    let decodedRole = "";
+    if (accessToken) {
       try {
-        // Giải mã JWT để lấy thông tin nếu không có trong localStorage
         const tokenParts = accessToken.split('.');
         if (tokenParts.length === 3) {
           const payload = JSON.parse(atob(tokenParts[1]));
           if (payload.name) {
             setUserName(payload.name);
-            // Lưu vào localStorage để lần sau không cần giải mã nữa
             localStorage.setItem('userName', payload.name);
+          }
+          if (payload.role) {
+            decodedRole = payload.role;
+            setUserRole(payload.role);
+            localStorage.setItem('userRole', payload.role);
           }
         }
       } catch (error) {
         console.error('Error decoding token:', error);
-        // Nếu có lỗi, thiết lập userName mặc định
         setUserName("User");
       }
+    }
+    // Nếu không lấy được từ token, thử lấy từ localStorage
+    if (!decodedRole && storedUserName) {
+      const storedRole = localStorage.getItem('userRole');
+      if (storedRole) setUserRole(storedRole);
     }
   }, []);
   
@@ -345,6 +351,19 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
     
     // Optionally track this interaction
     console.log(`Viewing profile for user: ${userId}`);
+  };
+
+  // Mới: Xử lý navigation đến trang thông tin dựa theo role
+  const handleNavigateToInfo = () => {
+    // Đóng dropdown
+    setShowDropdown(false);
+    
+    // Chuyển hướng dựa theo role
+    if (userRole === 'tutor') {
+      router.push('/tutor');
+    } else {
+      router.push('/information');
+    }
   };
 
   return (
@@ -525,9 +544,12 @@ const Header_for_user: React.FC<HeaderForUserProps> = ({ toggleSidebar }) => {
           {/* Dropdown Menu */}
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
-              <Link href="/information" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+              <button
+                onClick={handleNavigateToInfo}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >
                 Information
-              </Link>
+              </button>
               <button 
                 className={`w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 ${isLoggingOut ? 'opacity-50' : ''}`}
                 onClick={handleLogout}
