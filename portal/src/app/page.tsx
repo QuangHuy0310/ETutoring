@@ -69,7 +69,7 @@ const HomePage = () => {
     if (!accessToken) return "User";
 
     try {
-      const res = await fetch(`http://localhost:3002/get-role-byId?id=${userId}`, {
+      const res = await fetch(`http://localhost:3002/api/v1/users/get-role-byId?id=${userId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) return "User";
