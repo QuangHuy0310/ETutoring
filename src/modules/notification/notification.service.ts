@@ -28,7 +28,7 @@ export class NotificationService {
             title: `You are matched: ${from} with ${to}`,
             status: 'unread'
         };
-        
+
         const notification = new this.notificationModel(payload);
 
         await this.socketGate.matchingNotification(from, to, payload.title)
@@ -47,5 +47,9 @@ export class NotificationService {
         const notification = new this.notificationModel(payload);
         await this.socketGate.sendMatchingRequestNotification(to, payload.title); // Send to staff only
         return notification.save();
+    }
+
+    async NotificationStatusMatching(stuId: string, tutId: string, roomId: string): Promise<any> {
+        return await this.socketGate.removeRoom(stuId, tutId, roomId)
     }
 }
