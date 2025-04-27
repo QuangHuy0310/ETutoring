@@ -105,7 +105,7 @@ export class UserController {
 
     @ApiQuery({ name: 'id', required: true })
     @ApiOperation({ summary: 'Get role of a user by ID' })
-    @RequiredByUserRoles(USER_ROLE.ADMIN)
+    @RequiredByUserRoles(USER_ROLE.STAFF)
     @Get('/get-role-byId')
     async getRoleById(@Query('id') id: string) {
         const role = await this.userService.getRoleById(id);
