@@ -6,9 +6,7 @@ import Layout from "@/app/componets/layout";
 export default function ViewTutorPage() {
   return (
     <Layout>
-      <Suspense fallback={<div className="text-white p-8">Loading Tutor Info...</div>}>
-        <Content />
-      </Suspense>
+      <Content />
     </Layout>
   );
 }
@@ -17,7 +15,7 @@ export default function ViewTutorPage() {
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getCookie } from "cookies-next";
-import { jwtDecode } from "jwt-decode"; // 🛠️ Thêm để lấy studentId từ token
+import { jwtDecode } from "jwt-decode";
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
 
 interface UserInfo {
@@ -47,6 +45,7 @@ function Content() {
   const [studentId, setStudentId] = useState<string>("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [matched, setMatched] = useState(false);
 
   useEffect(() => {
     const fetchTutorInfo = async () => {
@@ -59,7 +58,8 @@ function Content() {
         }
 
         const decoded = jwtDecode<DecodedToken>(accessToken.toString());
-        setStudentId(decoded.userId || decoded.id || decoded.sub || "");
+        const studentIdDecoded = decoded.userId || decoded.id || decoded.sub || "";
+        setStudentId(studentIdDecoded);
 
         const res = await fetch(`http://localhost:3002/get-infors?idUser=${idUser}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -85,6 +85,25 @@ function Content() {
           description: found.description || "No description provided.",
           avatar: found.path || "/placeholder-avatar.jpg",
         });
+
+        // 🛠️ Check room existence
+        if (studentIdDecoded && idUser) {
+          console.log(`🔎 Checking room existence between studentId: ${studentIdDecoded} and tutorId: ${idUser}`);
+
+          const checkRes = await fetch(`http://localhost:3002/get-room-by-ids?user1=${studentIdDecoded}&user2=${idUser}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          const checkData = await checkRes.json();
+          console.log("📦 Room Check Response:", checkData);
+
+          if (checkRes.ok && checkData?.data?._id) {
+            console.log("✅ Room exists! Matched!");
+            setMatched(true);
+          } else {
+            console.log("🚫 No existing room between these users.");
+          }
+        }
       } catch (err: any) {
         setError(err.message || "Unexpected error");
       } finally {
@@ -97,18 +116,18 @@ function Content() {
 
   const handleSendRequest = async () => {
     if (!studentId || !idUser) {
-      console.error("Missing studentId or tutorId"); // 🛠️ Log thiếu ID
+      console.error("Missing studentId or tutorId");
       return;
     }
     try {
       setSendingRequest(true);
       const accessToken = getCookie("accessToken");
-  
-      console.log("Sending matching request with data:", {
+
+      console.log("🚀 Sending matching request with data:", {
         studentId,
         tutorId: idUser,
-      }); // 🛠️ Log dữ liệu trước khi gửi
-  
+      });
+
       const res = await fetch("http://localhost:3002/matching-request/send-request", {
         method: "POST",
         headers: {
@@ -120,25 +139,25 @@ function Content() {
           tutorId: idUser,
         }),
       });
-  
-      const responseData = await res.json(); // 🆕 Lấy luôn body response để debug
-  
+
+      const responseData = await res.json();
+
       if (!res.ok) {
-        console.error("Server responded with error:", responseData);
+        console.error("❌ Server responded with error:", responseData);
         throw new Error(responseData?.message || "Failed to send matching request");
       }
-  
-      console.log("Matching request sent successfully:", responseData);
+
+      console.log("✅ Matching request sent successfully:", responseData);
       setRequestSent(true);
       alert("🎯 Request đã gửi thành công!");
     } catch (error: any) {
-      console.error("Error sending matching request:", error);
+      console.error("❌ Error sending matching request:", error);
       alert("❌ Gửi request thất bại, thử lại!");
     } finally {
       setSendingRequest(false);
     }
   };
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -183,17 +202,25 @@ function Content() {
             </h2>
             <p className="text-gray-400 text-sm">Tutor</p>
 
-            {/* Nút gửi matching request */}
+            {/* Nút */}
             {studentId !== idUser && (
-              <button
-                className={`mt-2 bg-green-600 hover:bg-green-700 px-4 py-1 rounded text-sm ${
-                  requestSent ? "bg-gray-500 cursor-not-allowed" : ""
-                }`}
-                disabled={requestSent || sendingRequest}
-                onClick={handleSendRequest}
-              >
-                {requestSent ? "Đã gửi yêu cầu" : sendingRequest ? "Đang gửi..." : "Gửi Matching Request"}
-              </button>
+              <>
+                {matched ? (
+                  <span className="mt-2 inline-block bg-blue-600 px-4 py-1 rounded text-sm text-white">
+                    Đã Matched
+                  </span>
+                ) : (
+                  <button
+                    className={`mt-2 bg-green-600 hover:bg-green-700 px-4 py-1 rounded text-sm ${
+                      requestSent ? "bg-gray-500 cursor-not-allowed" : ""
+                    }`}
+                    disabled={requestSent || sendingRequest}
+                    onClick={handleSendRequest}
+                  >
+                    {requestSent ? "Đã gửi yêu cầu" : sendingRequest ? "Đang gửi..." : "Gửi Matching Request"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
