@@ -17,6 +17,7 @@ export default function ViewTutorPage() {
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getCookie } from "cookies-next";
+import { jwtDecode } from "jwt-decode"; // 🛠️ Thêm để lấy studentId từ token
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
 
 interface UserInfo {
@@ -29,6 +30,13 @@ interface UserInfo {
   avatar?: string;
 }
 
+interface DecodedToken {
+  id?: string;
+  userId?: string;
+  sub?: string;
+  email: string;
+}
+
 function Content() {
   const searchParams = useSearchParams();
   const idUser = searchParams.get("idUser");
@@ -36,6 +44,9 @@ function Content() {
   const [tutorData, setTutorData] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string>("");
+  const [sendingRequest, setSendingRequest] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     const fetchTutorInfo = async () => {
@@ -47,7 +58,9 @@ function Content() {
           return;
         }
 
-        // 🛠️ Sửa URL, thêm idUser vào query
+        const decoded = jwtDecode<DecodedToken>(accessToken.toString());
+        setStudentId(decoded.userId || decoded.id || decoded.sub || "");
+
         const res = await fetch(`http://localhost:3002/get-infors?idUser=${idUser}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -70,7 +83,7 @@ function Content() {
           phoneNumber: found.phone || found.phoneNumber || "N/A",
           address: found.address || "N/A",
           description: found.description || "No description provided.",
-          avatar: found.path || "/placeholder-avatar.jpg", // 🛠️ dùng path nếu có
+          avatar: found.path || "/placeholder-avatar.jpg",
         });
       } catch (err: any) {
         setError(err.message || "Unexpected error");
@@ -82,6 +95,50 @@ function Content() {
     fetchTutorInfo();
   }, [idUser]);
 
+  const handleSendRequest = async () => {
+    if (!studentId || !idUser) {
+      console.error("Missing studentId or tutorId"); // 🛠️ Log thiếu ID
+      return;
+    }
+    try {
+      setSendingRequest(true);
+      const accessToken = getCookie("accessToken");
+  
+      console.log("Sending matching request with data:", {
+        studentId,
+        tutorId: idUser,
+      }); // 🛠️ Log dữ liệu trước khi gửi
+  
+      const res = await fetch("http://localhost:3002/matching-request/send-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          studentId,
+          tutorId: idUser,
+        }),
+      });
+  
+      const responseData = await res.json(); // 🆕 Lấy luôn body response để debug
+  
+      if (!res.ok) {
+        console.error("Server responded with error:", responseData);
+        throw new Error(responseData?.message || "Failed to send matching request");
+      }
+  
+      console.log("Matching request sent successfully:", responseData);
+      setRequestSent(true);
+      alert("🎯 Request đã gửi thành công!");
+    } catch (error: any) {
+      console.error("Error sending matching request:", error);
+      alert("❌ Gửi request thất bại, thử lại!");
+    } finally {
+      setSendingRequest(false);
+    }
+  };
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -91,15 +148,11 @@ function Content() {
   }
 
   if (error) {
-    return (
-      <div className="text-center text-red-500 mt-10">{error}</div>
-    );
+    return <div className="text-center text-red-500 mt-10">{error}</div>;
   }
 
   if (!tutorData) {
-    return (
-      <div className="text-gray-400 text-center mt-8">Tutor not found</div>
-    );
+    return <div className="text-gray-400 text-center mt-8">Tutor not found</div>;
   }
 
   return (
@@ -129,6 +182,19 @@ function Content() {
               {tutorData.name}
             </h2>
             <p className="text-gray-400 text-sm">Tutor</p>
+
+            {/* Nút gửi matching request */}
+            {studentId !== idUser && (
+              <button
+                className={`mt-2 bg-green-600 hover:bg-green-700 px-4 py-1 rounded text-sm ${
+                  requestSent ? "bg-gray-500 cursor-not-allowed" : ""
+                }`}
+                disabled={requestSent || sendingRequest}
+                onClick={handleSendRequest}
+              >
+                {requestSent ? "Đã gửi yêu cầu" : sendingRequest ? "Đang gửi..." : "Gửi Matching Request"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -158,9 +224,7 @@ interface InfoItemProps {
 function InfoItem({ label, value, icon }: InfoItemProps) {
   return (
     <div className="flex items-center space-x-3">
-      <div className="p-2 bg-gray-700 rounded-full">
-        {icon}
-      </div>
+      <div className="p-2 bg-gray-700 rounded-full">{icon}</div>
       <div>
         <p className="text-sm text-gray-400">{label}</p>
         <p className="text-white">{value || "N/A"}</p>
