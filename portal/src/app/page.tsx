@@ -41,6 +41,7 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({});
   const [commentImageInputs, setCommentImageInputs] = useState<{ [key: string]: string }>({});
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const fetchUserInfo = async (userId: string) => {
     const accessToken = localStorage.getItem("accessToken");
@@ -50,7 +51,6 @@ const HomePage = () => {
       const res = await fetch(`http://localhost:3002/get-infors?idUser=${userId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
       const data = await res.json();
       const user = data.data?.[0];
       return {
@@ -70,28 +70,12 @@ const HomePage = () => {
       const res = await fetch(`http://localhost:3002/api/v1/users/get-role-byId?id=${userId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
       const data = await res.json();
-      return (data.data.role || "user").toLowerCase(); // ép luôn lowercase từ lúc fetch
+      return (data.data.role || "user").toLowerCase();
     } catch {
       return "user";
     }
   };
-
-  useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      router.push("/login");
-      return;
-    }
-
-    try {
-      const payload = JSON.parse(atob(accessToken.split(".")[1]));
-      setUser({ id: payload.id, name: payload.name });
-    } catch {
-      router.push("/login");
-    }
-  }, [router]);
 
   const fetchComments = async (blogId: string) => {
     const accessToken = localStorage.getItem("accessToken");
@@ -102,8 +86,12 @@ const HomePage = () => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
+
+      console.log("🚀 [fetchComments] Raw Data from API:", data.data); // ✅ ADD LOG 1
+
       return data.data || [];
-    } catch {
+    } catch (error) {
+      console.error("❌ [fetchComments] Error:", error);
       return [];
     }
   };
@@ -127,6 +115,8 @@ const HomePage = () => {
             const userRole = await fetchUserRole(post.userId);
             const comments = await fetchComments(post._id);
 
+            console.log("📄 [fetchBlogs] Comments for Post ID", post._id, ":", comments); // ✅ ADD LOG 2
+
             return {
               id: post._id,
               user: { id: post.userId, name: userInfo.name, avatar: userInfo.avatar },
@@ -147,6 +137,21 @@ const HomePage = () => {
     };
     fetchBlogs();
   }, []);
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(accessToken.split(".")[1]));
+      setUser({ id: payload.id, name: payload.name });
+    } catch {
+      router.push("/login");
+    }
+  }, [router]);
 
   const addPost = (post: { title: string; content: string; imageUrl?: string }) => {
     if (!user) return;
@@ -233,7 +238,7 @@ const HomePage = () => {
         </div>
 
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
             <div className="bg-[#1E2432] p-6 rounded-lg">
               <PostForm onPost={addPost} onClose={() => setIsModalOpen(false)} />
             </div>
@@ -272,14 +277,39 @@ const HomePage = () => {
                 />
               )}
 
-              {/* Comments */}
               <div className="mt-4">
                 <h4 className="text-sm text-gray-400 mb-2">Comments</h4>
-                {post.comments.map((c, idx) => (
-                  <div key={idx} className="text-sm text-gray-300 bg-[#2A4E89] p-2 rounded mb-2">
-                    <strong>{c.user?.[0]?.name || "Anonymous"}:</strong> {c.comment}
-                  </div>
-                ))}
+                {post.comments.map((c, idx) => {
+                  console.log("🖼️ [RenderComment] Single Comment Data:", c); // ✅ ADD LOG 3
+                  return (
+                    <div key={idx} className="text-sm text-gray-300 bg-[#2A4E89] p-2 rounded mb-2 space-y-2">
+                      <div>
+                        <strong>{c.user?.[0]?.name || "Anonymous"}:</strong> {c.comment || ""}
+                      </div>
+
+                      {Array.isArray(c.path) && c.path.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {c.path.map((imgUrl, imgIdx) => (
+                            <div
+                              key={imgIdx}
+                              className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
+                              onClick={() => setPreviewImage(imgUrl)}
+                            >
+                              <Image
+                                src={imgUrl}
+                                alt={`Comment image ${imgIdx}`}
+                                width={150}
+                                height={150}
+                                className="rounded-md object-cover max-h-40"
+                                unoptimized
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 <div className="flex flex-col space-y-2 mt-2">
                   <input
@@ -302,6 +332,28 @@ const HomePage = () => {
           ))
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+          <div className="relative">
+            <Image
+              src={previewImage}
+              alt="Preview"
+              width={800}
+              height={600}
+              className="rounded-lg max-w-full max-h-screen"
+              unoptimized
+            />
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-2 right-2 text-white bg-red-500 rounded-full p-2 hover:bg-red-600"
+            >
+              ✖
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
