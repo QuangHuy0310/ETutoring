@@ -6,6 +6,7 @@ import { Model } from 'mongoose';
 import { NotificationService } from '@modules/notification/notification.service';
 import { UserService } from '@modules/user/user.service';
 import { MatchingService } from '@modules/matching/matching.service';
+import { RoomService } from '@modules/room/room.service'; // Thêm import RoomService
 import { SocketGateway } from '@modules/chat/socket.gateway';
 import { CreateMatchingRequestDto, UpdateMatchingRequestStatusDto } from './dto/matchingRequest.dto';
 import { USER_ROLE } from '@utils/data-types/enums';
@@ -20,11 +21,12 @@ export class MatchingRequestService {
         private readonly userService: UserService,
         @Inject(forwardRef(() => MatchingService))
         private readonly matchingService: MatchingService,
+        @Inject(forwardRef(() => RoomService)) // Inject RoomService
+        private readonly roomService: RoomService,
         @Inject(forwardRef(() => SocketGateway))
         private readonly socketGateway: SocketGateway,
     ) {}
 
-    // Send a matching request from student to staff (đã có sẵn)
     async sendMatchingRequest(requestDto: CreateMatchingRequestDto): Promise<MatchingRequest> {
         const student = await this.userService.findById(requestDto.studentId);
         const tutor = await this.userService.findById(requestDto.tutorId);
@@ -84,10 +86,14 @@ export class MatchingRequestService {
 
         // If the request is accepted, create a new Matching record
         if (statusDto.status === 'accepted') {
+            // Tạo phòng chat và lấy roomId
+            const roomId = await this.roomService.createRoom(matchingRequest.studentId, matchingRequest.tutorId);
+
             const newMatching = new this.matchingModel({
                 studentId: matchingRequest.studentId,
                 tutorId: matchingRequest.tutorId,
                 status: 'on',
+                roomId: roomId, // Thêm roomId vào Matching
             });
             await newMatching.save();
 
