@@ -7,7 +7,8 @@ import { Matching, MatchingSchema } from '@entities/matching.entities';
 import { NotificationModule } from '@modules/notification/notification.module';
 import { UserModule } from '@modules/user/user.module';
 import { MatchingModule } from '@modules/matching/matching.module';
-import { ChatModule } from '@modules/chat/chat.module'; // Add this import
+import { RoomModule } from '@modules/room/room.module'; // Thêm import RoomModule
+import { ChatModule } from '@modules/chat/chat.module';
 import { SocketGateway } from '@modules/chat/socket.gateway';
 
 @Module({
@@ -19,7 +20,8 @@ import { SocketGateway } from '@modules/chat/socket.gateway';
         NotificationModule,
         UserModule,
         MatchingModule,
-        ChatModule, 
+        RoomModule, 
+        ChatModule,
     ],
     controllers: [MatchingRequestController],
     providers: [MatchingRequestService],
