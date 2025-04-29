@@ -1,13 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import {
-  FaPaperPlane,
-  FaSmile,
-  FaPlus,
-  FaCalendarAlt,
-  FaTimes,
-} from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
+import { FaPaperPlane, FaSmile, FaPlus, FaCalendarAlt, FaTimes } from "react-icons/fa";
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { getCookie } from "cookies-next";
@@ -22,15 +16,14 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
 
-  const [day, setDay] = useState("");
-  const [slot, setSlot] = useState("");
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  // 📦 Booking States:
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
+  const [bookingDate, setBookingDate] = useState("");
+  const [partnerUserId, setPartnerUserId] = useState<string | null>(null);
+  const [isFetchingBookingData, setIsFetchingBookingData] = useState(false);
 
-  const currentRoom =
-    typeof window !== "undefined"
-      ? localStorage.getItem("currentRoom") || null
-      : null;
+  const currentRoom = typeof window !== "undefined" ? localStorage.getItem("currentRoom") || null : null;
 
   const addEmoji = (emoji: string) => {
     setInput((prev) => prev + emoji);
@@ -43,21 +36,141 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
     }
   };
 
-  const toggleBookingForm = () => setShowBookingForm((prev) => !prev);
+  const toggleBookingForm = async () => {
+    if (!showBookingForm) {
+      await fetchBookingData();
+    }
+    setShowBookingForm((prev) => !prev);
+  };
 
-  const handleBookRequest = () => {
-    if (day && slot && title && content) {
-      onSend(`📅 Booking Request: ${title} - ${day} (Slot ${slot})`);
-      setShowBookingForm(false);
-      setDay("");
-      setSlot("");
-      setTitle("");
-      setContent("");
-    } else {
-      alert("Please fill full information!");
+  const fetchBookingData = async () => {
+    const token = getCookie("accessToken");
+    if (!token || !currentRoom) {
+      console.warn("⚠️ Không có token hoặc currentRoom để fetch booking.");
+      return;
+    }
+
+    try {
+      setIsFetchingBookingData(true);
+
+      // Fetch partner userId
+      const userRes = await fetch(`http://localhost:3002/get-user-by-roomId?roomId=${currentRoom}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const usersData = await userRes.json();
+      const users = usersData?.data || [];
+
+      if (!Array.isArray(users)) {
+        console.error("❌ Sai dữ liệu user trong room:", usersData);
+        return;
+      }
+
+      const tokenParts = token.toString().split(".");
+      const payload = JSON.parse(atob(tokenParts[1]));
+      const myUserId = payload.userId || payload.id || payload.sub;
+
+      const otherUser = users.find((u: any) => u.userId !== myUserId);
+      if (!otherUser) {
+        console.error("❌ Không tìm thấy partnerUserId");
+        return;
+      }
+      const otherUserId = otherUser.userId;
+      setPartnerUserId(otherUserId);
+      console.log("👤 Partner userId:", otherUserId);
+
+      // Fetch slot đã bận
+      const busyRes = await fetch(`http://localhost:3002/api/v1/slots/get-slot-by-id?id=${otherUserId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const busyData = await busyRes.json();
+      console.log("📚 Slot bận của partner:", busyData);
+
+      // Fetch schedule
+      const scheduleRes = await fetch(`http://localhost:3002/get-schedule?userId=${otherUserId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const scheduleData = await scheduleRes.json();
+      console.log("📅 Các schedule đã book của partner:", scheduleData);
+
+      // Fetch tất cả slots
+      const slotRes = await fetch(`http://localhost:3002/api/v1/slots/get-slot`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const slotData = await slotRes.json();
+      console.log("🕗 Danh sách tất cả slots:", slotData);
+
+      if (Array.isArray(slotData?.data)) {
+        setAvailableSlots(slotData.data);
+      } else {
+        console.error("❌ Slot data không phải array:", slotData);
+      }
+    } catch (err) {
+      console.error("❌ Lỗi khi fetch booking data:", err);
+    } finally {
+      setIsFetchingBookingData(false);
     }
   };
 
+  const handleBookRequest = async () => {
+    const token = getCookie("accessToken");
+    if (!token || !partnerUserId) {
+      alert("⚠️ Không đủ dữ liệu để đặt lịch.");
+      return;
+    }
+
+    if (!bookingDate || selectedSlotIds.length === 0) {
+      alert("⚠️ Hãy chọn ngày và ít nhất 1 Slot!");
+      return;
+    }
+
+    try {
+      const tokenParts = token.toString().split(".");
+      let userId = null;
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        userId = payload.userId || payload.id || payload.sub;
+      }
+
+      if (!userId) {
+        console.error("❌ Không tìm thấy userId trong token!");
+        return;
+      }
+
+      const [year, month, day] = bookingDate.split("-");
+      const formattedDay = `${day}/${month}/${year}`;
+
+      for (const slotId of selectedSlotIds) {
+        const url = new URL("http://localhost:3002/new-schedule");
+        url.searchParams.set("userId", userId);
+        url.searchParams.set("days", formattedDay);
+        url.searchParams.set("slotId", slotId);
+        url.searchParams.set("partnerId", partnerUserId);
+
+        console.log("🚀 Gửi booking:", url.toString());
+
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          console.error("❌ Lỗi gửi booking:", result);
+          alert("❌ Gửi lịch thất bại!");
+        } else {
+          console.log("✅ Booking thành công:", result);
+        }
+      }
+
+      alert("✅ Gửi booking thành công!");
+      setShowBookingForm(false);
+      setBookingDate("");
+      setSelectedSlotIds([]);
+    } catch (error) {
+      console.error("❌ Lỗi khi gửi booking:", error);
+    }
+  };
   const uploadImageToServer = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("image", file);
@@ -110,7 +223,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       return;
     }
 
-    // Upload ảnh
     if (imageFiles.length > 0) {
       const uploaded: string[] = [];
 
@@ -130,7 +242,6 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       setImageFiles([]);
     }
 
-    // Upload document và tạo document
     for (const file of docFiles) {
       const formData = new FormData();
       formData.append("image", file);
@@ -179,9 +290,10 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
 
     setDocFiles([]);
   };
-
   return (
     <div className="flex items-center p-4 border-t border-gray-700 bg-gray-800 relative">
+      
+      {/* 📦 Nút Upload ảnh/file */}
       <Menu as="div" className="relative">
         <Menu.Button className="mx-2 p-2 hover:bg-gray-700 rounded transition">
           <FaPlus className="text-white" />
@@ -212,6 +324,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </Transition>
       </Menu>
 
+      {/* 📦 Nếu có file thì render preview */}
       {(imageFiles.length > 0 || docFiles.length > 0) && (
         <div className="absolute bottom-16 left-4 w-96 bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-lg z-50">
           {imageFiles.length > 0 && (
@@ -268,6 +381,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </div>
       )}
 
+      {/* 📅 Nút mở Booking Form */}
       <button
         onClick={toggleBookingForm}
         className="mx-2 p-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
@@ -275,60 +389,65 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         <FaCalendarAlt />
       </button>
 
-      {showBookingForm && (
-        <div className="absolute bottom-16 left-4 w-96 p-4 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50">
-          <h3 className="text-lg font-semibold text-white text-center">
-            Book a Session
-          </h3>
-          <input
-            type="date"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
-            className="w-full p-2 bg-gray-700 text-white rounded mt-2"
-          />
-          <select
-            value={slot}
-            onChange={(e) => setSlot(e.target.value)}
-            className="w-full p-2 bg-gray-700 text-white rounded mt-2"
-          >
-            <option value="">Choose Slot 1-5</option>
-            <option value="1">8:00 - 10:00</option>
-            <option value="2">10:00 - 12:00</option>
-            <option value="3">13:00 - 15:00</option>
-            <option value="4">15:00 - 17:00</option>
-            <option value="5">17:00 - 19:00</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-2 mt-2 bg-gray-700 text-white rounded"
-          />
-          <textarea
-            placeholder="Content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full p-2 mt-2 bg-gray-700 text-white rounded h-20"
-          />
-          <div className="flex justify-between mt-3">
-            <button
-              onClick={handleBookRequest}
-              className="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600 text-white"
-            >
-              Send Request
-            </button>
-            <button
-              onClick={toggleBookingForm}
-              className="px-4 py-2 bg-red-500 rounded hover:bg-red-600 text-white"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+{/* 📅 Popup Booking */}
+{showBookingForm && (
+  <div className="absolute bottom-16 left-4 w-96 p-4 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50">
+    <h3 className="text-lg font-semibold text-white text-center">Book a Session</h3>
 
+    {/* 📅 Ngày đặt */}
+    <input
+      type="date"
+      value={bookingDate}
+      onChange={(e) => setBookingDate(e.target.value)}
+      min={new Date().toISOString().split("T")[0]}
+      className="w-full p-2 bg-gray-700 text-white rounded mt-2"
+    />
+
+    {/* 🕗 Chọn Slot */}
+    <div className="space-y-2 mt-4 max-h-[150px] overflow-y-auto">
+      {availableSlots.length === 0 ? (
+        <p className="text-white text-center">No slots available.</p>
+      ) : (
+        availableSlots.map((slot) => (
+          <label key={slot._id} className="flex items-center space-x-2 text-white">
+            <input
+              type="checkbox"
+              value={slot._id}
+              checked={selectedSlotIds.includes(slot._id)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedSlotIds((prev) =>
+                  prev.includes(value) ? prev.filter((id) => id !== value) : [...prev, value]
+                );
+              }}
+            />
+            <span>{`${slot.name} (${slot.timeStart} - ${slot.timeEnd})`}</span>
+          </label>
+        ))
+      )}
+    </div>
+
+    {/* 🔥 Buttons */}
+    <div className="flex justify-between mt-4">
+      <button
+        onClick={handleBookRequest}
+        disabled={isFetchingBookingData}
+        className="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600 text-white"
+      >
+        Send Request
+      </button>
+      <button
+        onClick={() => setShowBookingForm(false)}
+        className="px-4 py-2 bg-red-500 rounded hover:bg-red-600 text-white"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
+
+
+      {/* 😎 Nút Emoji */}
       <Menu as="div" className="relative">
         <Menu.Button className="mx-2 p-2 hover:bg-gray-700 rounded transition">
           <FaSmile className="text-white" />
@@ -344,13 +463,16 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         </Transition>
       </Menu>
 
+      {/* 📝 Input Message */}
       <input
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="Type a message..."
-        className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
       />
+
+      {/* 📨 Nút Gửi */}
       <button
         onClick={handleSendText}
         className="ml-2 px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition duration-200"
