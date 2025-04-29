@@ -19,10 +19,10 @@ export default function LoginPage() {
           />
           <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
             <h2 className="text-4xl font-bold text-white mb-3 drop-shadow-lg">
-              Chào mừng trở lại
+              Welcome Back
             </h2>
             <p className="text-white/95 max-w-sm text-lg drop-shadow-lg">
-              Đăng nhập để tiếp tục quản lý hệ thống của bạn
+              Log in to continue managing your system
             </p>
           </div>
         </div>
@@ -32,10 +32,10 @@ export default function LoginPage() {
           <div className="w-full max-w-md">
             <div className="mb-8 text-center md:hidden">
               <h2 className="text-3xl font-bold text-gray-800">
-                Chào mừng trở lại
+                Welcome Back
               </h2>
               <p className="text-gray-600 mt-2 text-lg">
-                Đăng nhập để tiếp tục quản lý
+                Log in to continue managing
               </p>
             </div>
             <LoginForm />

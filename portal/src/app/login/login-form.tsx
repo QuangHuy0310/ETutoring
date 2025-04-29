@@ -28,7 +28,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     e.preventDefault();
 
     if (!email || !password) {
-      setError("Vui lòng nhập đầy đủ email và mật khẩu");
+      setError("Please enter both email and password.");
       return;
     }
 
@@ -45,25 +45,22 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Đăng nhập thất bại!");
+        throw new Error(result.message || "Login failed!");
       }
 
       if (!result.data || !result.data.accessToken) {
-        throw new Error("Token không tìm thấy trong phản hồi");
+        throw new Error("Token not found in response.");
       }
 
       const { accessToken } = result.data;
 
-      // Lưu token vào cả cookie và localStorage
-      // Cookie cần thiết cho middleware
       setCookie('accessToken', accessToken, {
-        maxAge: 30 * 24 * 60 * 60, // 30 ngày (tính bằng giây)
+        maxAge: 30 * 24 * 60 * 60,
         path: '/',
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
       });
 
-      // Chuyển hướng người dùng dựa trên role
       redirectUserBasedOnRole(accessToken);
     } catch (err) {
       handleLoginError(err);
@@ -76,54 +73,41 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userRole = payload.role;
-      
-      // Lưu thông tin user vào localStorage để có sẵn cho client-side
+
       localStorage.setItem('accessToken', token);
       localStorage.setItem('userId', payload.id || payload.sub || '');
       localStorage.setItem('userEmail', payload.email || '');
       localStorage.setItem('userName', payload.name || '');
       localStorage.setItem('userRole', userRole || '');
 
-      // Lưu user ID và email vào cookie
-      setCookie('userId', payload.id || payload.sub || '', { 
-        maxAge: 30 * 24 * 60 * 60,
-        path: '/' 
-      });
-      
-      setCookie('userEmail', payload.email || '', { 
-        maxAge: 30 * 24 * 60 * 60,
-        path: '/' 
-      });
-      
-      setCookie('userName', payload.name || '', { 
-        maxAge: 30 * 24 * 60 * 60,
-        path: '/' 
-      });
+      setCookie('userId', payload.id || payload.sub || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      setCookie('userEmail', payload.email || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      setCookie('userName', payload.name || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
 
       const redirectPath =
         ROLE_REDIRECTS[userRole as keyof typeof ROLE_REDIRECTS] || ROLE_REDIRECTS.default;
-      
-      console.log(`Chuyển hướng role ${userRole} đến ${redirectPath}`);
-      
-      // Sử dụng window.location.href thay vì router.push để đảm bảo việc chuyển hướng hoạt động đúng
-      // Đây là sự thay đổi quan trọng để khắc phục vấn đề chuyển hướng sau đăng nhập
+
+      console.log(`Redirecting role ${userRole} to ${redirectPath}`);
+
+      alert("Login successful! Redirecting...");
+
       window.location.href = redirectPath;
     } catch (decodeError) {
-      console.error("Lỗi khi giải mã token:", decodeError);
-      setError("Không thể xác thực thông tin đăng nhập. Vui lòng thử lại.");
+      console.error("Token decoding error:", decodeError);
+      setError("Could not verify login information. Please try again.");
     }
   };
 
   const handleLoginError = (err: unknown) => {
-    console.error("Lỗi đăng nhập:", err);
+    console.error("Login error:", err);
     if (err instanceof Error) {
       if (err.message.includes("Network") || err.message.includes("fetch")) {
-        setError("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.");
+        setError("Unable to connect to the server. Please check your network.");
       } else {
         setError(err.message);
       }
     } else {
-      setError("Đã xảy ra lỗi không xác định!");
+      setError("An unknown error occurred.");
     }
   };
 
@@ -138,14 +122,14 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       </div>
 
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-black">Đăng nhập</h1>
+        <h1 className="text-2xl font-bold text-black">Log In</h1>
       </div>
 
       <div className="grid gap-4">
         <Input
           id="email"
           type="email"
-          placeholder="Nhập email của bạn"
+          placeholder="Enter your email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -156,7 +140,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
         <Input
           id="password"
           type="password"
-          placeholder="Nhập mật khẩu"
+          placeholder="Enter your password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -197,10 +181,10 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Đang đăng nhập...
+              Logging in...
             </div>
           ) : (
-            "Đăng nhập"
+            "Log In"
           )}
         </Button>
       </div>
