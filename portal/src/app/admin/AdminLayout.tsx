@@ -43,9 +43,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: "Dashboard", icon: <FaChartBar />, path: "/admin" },
     { name: "User Management", icon: <FaUsers />, path: "/admin/mgr_users" },
     { name: "Faculty Management", icon: <FaUniversity />, path: "/admin/mgr_faculties" },
-    { name: "Tutor Management", icon: <FaChalkboardTeacher />, path: "/admin/mgr_tutors" },
-    { name: "Blog Management", icon: <FaBlog />, path: "/admin/mgr_blogs" },
-    { name: "Settings", icon: <FaCog />, path: "/admin/settings" },
   ];
 
   const isActive = (path: string) => {
