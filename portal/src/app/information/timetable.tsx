@@ -357,11 +357,14 @@ export default function Timetable() {
   const scheduleGrid = slotNumbers.map(slotNumber => {
     const row = displayDays.map(day => {
       const classesInSlot = getScheduleForDayAndSlot(day, slotNumber);
-      
+
       if (classesInSlot.length === 0) {
-        return null;
+        // Nếu không có lớp nào trong slot, hiển thị dấu "-"
+        return (
+          <div key={`empty-${day.date.toISOString()}`} className="text-gray-400">-</div>
+        );
       }
-      
+
       return classesInSlot.map((item, index) => (
         <div key={index} className="bg-blue-900 rounded p-1 text-xs mb-1">
           <div className="font-bold">{item.courseName}</div>
@@ -371,7 +374,7 @@ export default function Timetable() {
         </div>
       ));
     });
-    
+
     return { slotNumber, row };
   });
 
