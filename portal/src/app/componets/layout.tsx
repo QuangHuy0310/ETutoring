@@ -1,14 +1,40 @@
 "use client";
 import Header from "./Header_for_user";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface LayoutProps {
   children: React.ReactNode;
+  activeMenu?: 'blog' | 'message' | 'dashboard' | 'settings';
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, activeMenu }: LayoutProps) {
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get user role from localStorage on client side
+    if (typeof window !== "undefined") {
+      const role = localStorage.getItem("userRole");
+      setUserRole(role);
+    }
+  }, []);
+
+  const handleDashboardClick = () => {
+    if (userRole === "tutor") {
+      router.push("/tutor/dashboard");
+    } else if (userRole === "student") {
+      router.push("/dbstudent");
+    } else {
+      // Default fallback if role not determined yet or unknown
+      router.push("/dbstudent");
+    }
+  };
+
+  // Function to determine button active state
+  const isActive = (menuItem: string) => {
+    return activeMenu === menuItem ? "bg-blue-700" : "bg-blue-500";
+  };
 
   return (
     <div className="h-screen flex flex-col bg-black">
@@ -27,16 +53,28 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             <nav className="space-y-4">
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded" onClick={() => router.push("/")}>
+              <button 
+                className={`w-full py-2 ${isActive('blog')} text-white font-semibold rounded hover:bg-blue-600 transition-colors`} 
+                onClick={() => router.push("/")}
+              >
                 Blog
               </button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded" onClick={() => router.push("/chatbox")}>
+              <button 
+                className={`w-full py-2 ${isActive('message')} text-white font-semibold rounded hover:bg-blue-600 transition-colors`}
+                onClick={() => router.push("/chatbox")}
+              >
                 Message
               </button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded" onClick={() => router.push("/dashboard")}>
-                Dashboard
+              <button 
+                className={`w-full py-2 ${isActive('dashboard')} text-white font-semibold rounded hover:bg-blue-600 transition-colors`}
+                onClick={handleDashboardClick}
+              >
+                Dashboard {userRole && `(${userRole})`}
               </button>
-              <button className="w-full py-2 bg-blue-500 text-white font-semibold rounded" onClick={() => router.push("/settings")}>
+              <button 
+                className={`w-full py-2 ${isActive('settings')} text-white font-semibold rounded hover:bg-blue-600 transition-colors`}
+                onClick={() => router.push("/settings")}
+              >
                 Setting
               </button>
             </nav>
