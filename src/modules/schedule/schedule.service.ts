@@ -70,33 +70,37 @@ export class ScheduleService {
 
     async getSchedule(query: QueryScheduleDto): Promise<Schedule[]> {
         const { userId, week, month, year } = query;
-
-        let filter: any = { userId };
-
+      
+        let filter: any = {
+          $or: [
+            { userId: userId },         // 🎯 Tìm lịch user tạo
+            { partnerId: userId }        // 🎯 Tìm lịch user được người khác đặt
+          ]
+        };
+      
         if (week && month && year) {
-            const firstDayOfMonth = new Date(year, month - 1, 1); 
-            const startOfSelectedWeek = startOfWeek(new Date(firstDayOfMonth.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 });
-            const endOfSelectedWeek = endOfWeek(startOfSelectedWeek, { weekStartsOn: 1 });
-
-            filter.days = {
-                $gte: startOfSelectedWeek.getTime(),
-                $lte: endOfSelectedWeek.getTime()
-            };
+          const firstDayOfMonth = new Date(year, month - 1, 1);
+          const startOfSelectedWeek = startOfWeek(new Date(firstDayOfMonth.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 });
+          const endOfSelectedWeek = endOfWeek(startOfSelectedWeek, { weekStartsOn: 1 });
+      
+          filter.days = {
+            $gte: startOfSelectedWeek.getTime(),
+            $lte: endOfSelectedWeek.getTime()
+          };
+        } else if (month && year) {
+          const startOfSelectedMonth = startOfMonth(new Date(year, month - 1));
+          const endOfSelectedMonth = endOfMonth(startOfSelectedMonth);
+      
+          filter.days = {
+            $gte: startOfSelectedMonth.getTime(),
+            $lte: endOfSelectedMonth.getTime()
+          };
         }
-        else if (month && year) {
-            const startOfSelectedMonth = startOfMonth(new Date(year, month - 1));
-            const endOfSelectedMonth = endOfMonth(startOfSelectedMonth);
-
-            filter.days = {
-                $gte: startOfSelectedMonth.getTime(),
-                $lte: endOfSelectedMonth.getTime()
-            };
-        }
-
+      
         const schedules = await this.scheduleModel.find(filter);
-
         return schedules;
-    }
+      }
+      
 
 
 }
