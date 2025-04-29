@@ -398,87 +398,78 @@ export default function Timetable() {
 
   return (
     <div className="overflow-x-auto">
-      {scheduleData.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 bg-black bg-opacity-50 rounded-lg">
-          <FaCalendarAlt className="text-gray-500 text-3xl mb-4" />
-          <p className="text-gray-300">No schedule available at this time.</p>
-          {rawResponse && (
-            <div className="mt-4 p-4 bg-gray-800 rounded-lg text-xs overflow-auto max-w-full max-h-48">
-              <p className="text-gray-300 mb-2">Debug - Raw API Response:</p>
-              <pre className="text-gray-400">{JSON.stringify(rawResponse, null, 2)}</pre>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Date navigation controls */}
-          <div className="flex items-center justify-between mb-4 px-2">
-            <div className="flex items-center">
-              <button 
-                onClick={goToPreviousWeek}
-                className="flex items-center justify-center p-2 bg-gray-800 text-white rounded-l-md hover:bg-gray-700"
-              >
-                <FaChevronLeft />
-              </button>
-              <button
-                onClick={goToCurrentWeek}
-                className="px-4 py-2 bg-blue-900 text-white hover:bg-blue-800"
-              >
-                Current Week
-              </button>
-              <button 
-                onClick={goToNextWeek}
-                className="flex items-center justify-center p-2 bg-gray-800 text-white rounded-r-md hover:bg-gray-700"
-              >
-                <FaChevronRight />
-              </button>
-            </div>
-            
-            <div className="text-white font-medium">
-              Week of {currentWeekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </div>
-            
-            <div className="flex items-center">
-              <input 
-                type="date"
-                className="p-2 bg-gray-800 text-white border border-gray-700 rounded"
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const selectedDate = new Date(e.target.value);
-                    setCurrentWeekStart(getWeekStartDate(selectedDate));
-                  }
-                }}
-              />
-            </div>
+      {/* Luôn hiển thị bảng thời khóa biểu, kể cả khi không có dữ liệu */}
+      <div>
+        {/* Date navigation controls */}
+        <div className="flex items-center justify-between mb-4 px-2">
+          <div className="flex items-center">
+            <button 
+              onClick={goToPreviousWeek}
+              className="flex items-center justify-center p-2 bg-gray-800 text-white rounded-l-md hover:bg-gray-700"
+            >
+              <FaChevronLeft />
+            </button>
+            <button
+              onClick={goToCurrentWeek}
+              className="px-4 py-2 bg-blue-900 text-white hover:bg-blue-800"
+            >
+              Current Week
+            </button>
+            <button 
+              onClick={goToNextWeek}
+              className="flex items-center justify-center p-2 bg-gray-800 text-white rounded-r-md hover:bg-gray-700"
+            >
+              <FaChevronRight />
+            </button>
           </div>
+          
+          <div className="text-white font-medium">
+            Week of {currentWeekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+          
+          <div className="flex items-center">
+            <input 
+              type="date"
+              className="p-2 bg-gray-800 text-white border border-gray-700 rounded"
+              onChange={(e) => {
+                if (e.target.value) {
+                  const selectedDate = new Date(e.target.value);
+                  setCurrentWeekStart(getWeekStartDate(selectedDate));
+                }
+              }}
+            />
+          </div>
+        </div>
 
-          <table className="w-full border border-gray-600 text-center">
-            <thead>
-              <tr className="bg-gray-800 text-white">
-                <th className="border border-gray-600 p-2">Slot / Day</th>
-                {displayDays.map(day => (
-                  <th key={day.name} className="border border-gray-600 p-2">
-                    <div>{day.name}</div>
-                    <div className="text-xs text-gray-300">{day.formattedDate}</div>
-                  </th>
+        <table className="w-full border border-gray-600 text-center">
+          <thead>
+            <tr className="bg-gray-800 text-white">
+              <th className="border border-gray-600 p-2">Slot / Day</th>
+              {displayDays.map(day => (
+                <th key={day.name} className="border border-gray-600 p-2">
+                  <div>{day.name}</div>
+                  <div className="text-xs text-gray-300">{day.formattedDate}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {scheduleGrid.map(({ slotNumber, row }, i) => (
+              <tr key={i} className="border border-gray-600">
+                <td className="border border-gray-600 p-2 bg-gray-800 text-white">{slotNumber}</td>
+                {row.map((classes, j) => (
+                  <td key={j} className="border border-gray-600 p-2 bg-gray-700 text-white min-w-[120px]">
+                    {classes || "-"}
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {scheduleGrid.map(({ slotNumber, row }, i) => (
-                <tr key={i} className="border border-gray-600">
-                  <td className="border border-gray-600 p-2 bg-gray-800 text-white">{slotNumber}</td>
-                  {row.map((classes, j) => (
-                    <td key={j} className="border border-gray-600 p-2 bg-gray-700 text-white min-w-[120px]">
-                      {classes || "-"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
+            ))}
+          </tbody>
+        </table>
+
+        {/* Hiển thị thông báo "Không có lịch" bên dưới bảng nếu không có dữ liệu */}
+        
+      </div>
     </div>
   );
 }
