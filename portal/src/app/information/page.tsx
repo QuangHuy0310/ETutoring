@@ -157,7 +157,52 @@ export default function InformationPage() {
             role: userInfo.role || (tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User")
           });
         } else {
-          throw new Error("User information not found in API response");
+          // Thay vì ném lỗi, tạo hồ sơ người dùng mới
+          console.log("User information not found. Creating new user profile...");
+          
+          try {
+            // Tạo thông tin người dùng mới với email từ token
+            const createResponse = await fetch("http://localhost:3002/new-Information", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                email: tokenInfo.email,
+                name: "User", 
+                phone: "0000000000", // Sử dụng số điện thoại mẫu hợp lệ
+                address: "Not specified", // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
+                major: "Not specified",   // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
+                country: "Not specified",
+                path: "Not specified" ,  // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
+              })
+            });
+            
+            if (!createResponse.ok) {
+              const errorText = await createResponse.text().catch(() => "Unknown error");
+              console.error(`Failed to create user profile: Status ${createResponse.status}, Details:`, errorText);
+              throw new Error(`Failed to create user profile: ${createResponse.status}`);
+            }
+            
+            const newUserData = await createResponse.json();
+            
+            // Cập nhật state với thông tin người dùng mới
+            setUserData({
+              id: newUserData.id || newUserData._id || "",
+              name: newUserData.name || "User",
+              email: tokenInfo.email,
+              phoneNumber: newUserData.phone || "",
+              major: newUserData.major || "",
+              avatar: newUserData.avatar || "",
+              role: tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User"
+            });
+            
+            console.log("New user profile created successfully");
+          } catch (createError) {
+            console.error("Error creating new user profile:", createError);
+            setError("Unable to create user profile. Please contact support.");
+          }
         }
       } catch (error) {
         console.error("Error fetching user info:", error);
