@@ -57,7 +57,9 @@ export default function TutorPage() {
       return {
         email: decodedToken.email,
         role: decodedToken.role,
-        userId: decodedToken.userId || decodedToken.id || decodedToken.sub
+        userId: decodedToken.userId || decodedToken.id || decodedToken.sub,
+        id: decodedToken.id,
+        sub: decodedToken.sub
       };
     } catch (error) {
       console.error("Error decoding token:", error);
@@ -112,7 +114,96 @@ export default function TutorPage() {
             roomId: userInfo.roomId || ""
           });
         } else {
-          throw new Error("User information not found.");
+          console.log("Tutor information not found. Creating new tutor profile...");
+
+          try {
+            // Thay đổi đoạn code tạo hồ sơ người dùng mới
+            const userId = tokenInfo.userId || tokenInfo.id || tokenInfo.sub;
+
+            const createResponse = await fetch("http://localhost:3002/new-Information", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                email: tokenInfo.email,
+                name: "User", 
+                phone: "0000000000", // Sử dụng số điện thoại mẫu hợp lệ
+                address: "Not specified", // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
+                major: "Not specified",   // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
+                country: "Not specified",
+                path: "Not specified" , 
+              })
+            });
+
+            if (!createResponse.ok) {
+              const errorText = await createResponse.text().catch(() => "Unknown error");
+              console.error(`Failed to create tutor profile: Status ${createResponse.status}, Details:`, errorText);
+
+              // Thử phương án B nếu phương án A thất bại
+              console.log("Trying alternative approach...");
+              const retryResponse = await fetch("http://localhost:3002/new-Information", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                  email: tokenInfo.email,
+                  userId: userId,
+                  // Chỉ gửi các trường tối thiểu
+                  name: "User",
+                  phone: "0123456789"
+                })
+              });
+
+              if (!retryResponse.ok) {
+                const retryErrorText = await retryResponse.text().catch(() => "Unknown retry error");
+                console.error(`Second attempt failed: Status ${retryResponse.status}, Details:`, retryErrorText);
+                throw new Error(`Failed to create user profile after multiple attempts`);
+              }
+
+              const newUserData = await retryResponse.json();
+              // Xử lý dữ liệu từ phương án B
+              setUserData({
+                id: newUserData.id || newUserData._id || "",
+                name: newUserData.name || "User",
+                email: tokenInfo.email,
+                phoneNumber: newUserData.phone || newUserData.phoneNumber || "",
+                major: newUserData.major || "",
+                avatar: newUserData.avatar || "",
+                role: tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "Tutor",
+                address: newUserData.address || "",
+                country: newUserData.country || "",
+                roomId: newUserData.roomId || ""
+              });
+
+              console.log("New user profile created successfully with alternative approach");
+              return; // Thoát khỏi hàm nếu phương án B thành công
+            }
+
+            const newUserData = await createResponse.json();
+
+            // Cập nhật state với thông tin người dùng mới (phương án A thành công)
+            setUserData({
+              id: newUserData.id || newUserData._id || "",
+              name: newUserData.name || "User",
+              email: tokenInfo.email,
+              phoneNumber: newUserData.phone || newUserData.phoneNumber || "",
+              major: newUserData.major || "",
+              avatar: newUserData.avatar || "",
+              role: tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "Tutor",
+              address: newUserData.address || "",
+              country: newUserData.country || "",
+              roomId: newUserData.roomId || ""
+            });
+
+            console.log("New tutor profile created successfully");
+          } catch (createError) {
+            console.error("Error creating new tutor profile:", createError);
+            setError("Unable to create tutor profile. Please contact support.");
+          }
         }
       } catch (error) {
         console.error("Error fetching user info:", error);
