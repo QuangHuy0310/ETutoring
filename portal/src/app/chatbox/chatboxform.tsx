@@ -46,7 +46,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   const fetchBookingData = async () => {
     const token = getCookie("accessToken");
     if (!token || !currentRoom) {
-      console.warn("⚠️ Không có token hoặc currentRoom để fetch booking.");
+      console.warn("⚠️ No token or currentRoom found to fetch booking data.");
       return;
     }
 
@@ -61,7 +61,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       const users = usersData?.data || [];
 
       if (!Array.isArray(users)) {
-        console.error("❌ Sai dữ liệu user trong room:", usersData);
+        console.error("❌ Incorrect user data in room:", usersData);
         return;
       }
 
@@ -71,7 +71,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
 
       const otherUser = users.find((u: any) => u.userId !== myUserId);
       if (!otherUser) {
-        console.error("❌ Không tìm thấy partnerUserId");
+        console.error("❌ Partner user not found.");
         return;
       }
       const otherUserId = otherUser.userId;
@@ -97,15 +97,15 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const slotData = await slotRes.json();
-      console.log("🕗 Danh sách tất cả slots:", slotData);
+      console.log("🕗 List all slots:", slotData);
 
       if (Array.isArray(slotData?.data)) {
         setAvailableSlots(slotData.data);
       } else {
-        console.error("❌ Slot data không phải array:", slotData);
+        console.error("❌ Slot data is not an array:", slotData);
       }
     } catch (err) {
-      console.error("❌ Lỗi khi fetch booking data:", err);
+      console.error("❌ Error fetching booking data:", err);
     } finally {
       setIsFetchingBookingData(false);
     }
@@ -114,12 +114,12 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
   const handleBookRequest = async () => {
     const token = getCookie("accessToken");
     if (!token || !partnerUserId) {
-      alert("⚠️ Không đủ dữ liệu để đặt lịch.");
+      alert("⚠️ Not enough data to send a booking request.");
       return;
     }
 
     if (!bookingDate || selectedSlotIds.length === 0) {
-      alert("⚠️ Hãy chọn ngày và ít nhất 1 Slot!");
+      alert("⚠️ Please select a date and at least one slot.");
       return;
     }
 
@@ -132,7 +132,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       }
 
       if (!userId) {
-        console.error("❌ Không tìm thấy userId trong token!");
+        console.error("❌ Cannot find userId in token!");
         return;
       }
 
@@ -156,19 +156,19 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
         const result = await res.json();
 
         if (!res.ok) {
-          console.error("❌ Lỗi gửi booking:", result);
-          alert("❌ Gửi lịch thất bại!");
+          console.error("❌ Booking request error:", result);
+          alert("❌ Failed to send booking request!");
         } else {
-          console.log("✅ Booking thành công:", result);
+          console.log("✅ Booking successful:", result);
         }
       }
 
-      alert("✅ Gửi booking thành công!");
+      alert("✅ Booking request sent successfully!");
       setShowBookingForm(false);
       setBookingDate("");
       setSelectedSlotIds([]);
     } catch (error) {
-      console.error("❌ Lỗi khi gửi booking:", error);
+      console.error("❌ Error sending booking request:", error);
     }
   };
   const uploadImageToServer = async (file: File): Promise<string | null> => {
@@ -187,7 +187,7 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       const result = await res.json();
       return result.data?.fileUrl || null;
     } catch (error) {
-      console.error("❌ Upload ảnh thất bại:", error);
+      console.error("❌ Failed to upload image:", error);
       return null;
     }
   };
@@ -214,12 +214,12 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
     const room = currentRoom;
 
     if (!token) {
-      alert("⚠️ Bạn chưa đăng nhập hoặc token hết hạn.");
+      alert("⚠️ You are not logged in or token has expired.");
       return;
     }
 
     if (!room) {
-      alert("⚠️ Không có phòng hiện tại được chọn.");
+      alert("⚠️ No current room selected.");
       return;
     }
 
