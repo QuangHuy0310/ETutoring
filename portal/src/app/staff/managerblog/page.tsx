@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import StaffLayout from "@/app/staff/StaffLayout";
 import { getCookie } from "cookies-next";
@@ -18,14 +18,14 @@ const ManagerBlogPage: React.FC = () => {
   const router = useRouter();
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [filterStatus, setFilterStatus] = useState<"pending" | "approve">("pending");
+  const didFetch = useRef(false);
 
-  // ✅ Hàm gọi API cập nhật status blog
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
-      const accessToken = getCookie('accessToken');
+      const accessToken = getCookie("accessToken");
       if (!accessToken) {
         console.error("Access token not found");
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
@@ -44,20 +44,18 @@ const ManagerBlogPage: React.FC = () => {
         return;
       }
 
-      // ✅ Refresh lại danh sách blogs sau khi cập nhật
-      fetchBlogs();
+      fetchBlogs(); // refresh sau update
     } catch (err) {
       console.error("Error updating blog status:", err);
     }
   };
 
-  // ✅ Hàm fetch blogs
   const fetchBlogs = async () => {
     try {
-      const accessToken = getCookie('accessToken');
+      const accessToken = getCookie("accessToken");
       if (!accessToken) {
         console.error("Access token not found");
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
@@ -76,28 +74,41 @@ const ManagerBlogPage: React.FC = () => {
       }
 
       const data = await response.json();
+
       if (!data.data || !data.data.item || !Array.isArray(data.data.item)) {
         console.error("Invalid API response format", data);
         return;
       }
 
-      const mappedBlogs: Blog[] = data.data.item.map((blog: any) => ({
-        id: blog._id,
-        actor: blog.userInfo?.name || "Anonymous",
-        time: new Date(blog.createdAt).toLocaleString(),
-        content: blog.caption || "",
-        status: blog.status,
-        createdAt: new Date(blog.createdAt).getTime(),
-      }));
+      const mappedBlogs: Blog[] = data.data.item
+        .map((blog: any): Blog => ({
+          id: blog._id,
+          actor: blog.userInfo?.name || "Anonymous",
+          time: new Date(blog.createdAt).toLocaleString(),
+          content: blog.caption || "",
+          status: blog.status,
+          createdAt: new Date(blog.createdAt).getTime(),
+        }))
+        .filter((blog: Blog) => blog.status === filterStatus); // 💥 lọc đúng status
 
-      setBlogs(mappedBlogs);
+      const uniqueBlogs = Array.from(
+        new Map(mappedBlogs.map((blog: Blog) => [blog.id, blog])).values()
+      );
+
+      setBlogs(uniqueBlogs);
     } catch (error) {
       console.error("Error fetching blogs:", error);
     }
   };
 
   useEffect(() => {
-    fetchBlogs();
+    if (!didFetch.current) {
+      didFetch.current = true;
+      fetchBlogs(); // lần đầu
+      return;
+    }
+
+    fetchBlogs(); // các lần sau khi filterStatus thay đổi
   }, [filterStatus]);
 
   const viewDetail = (id: string) => {
@@ -145,7 +156,7 @@ const ManagerBlogPage: React.FC = () => {
             </thead>
             <tbody>
               {blogs.length > 0 ? (
-                blogs.map((blog) => (
+                blogs.map((blog: Blog) => (
                   <tr key={blog.id} className="text-center">
                     <td className="border p-2">{blog.actor}</td>
                     <td className="border p-2">{blog.time}</td>
@@ -153,7 +164,11 @@ const ManagerBlogPage: React.FC = () => {
                     <td className="border p-2">
                       <span
                         className={`px-2 py-1 rounded-full text-white ${
-                          blog.status === "approve" ? "bg-green-500" : "bg-yellow-500"
+                          blog.status === "approve"
+                            ? "bg-green-500"
+                            : blog.status === "pending"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
                         }`}
                       >
                         {blog.status}
@@ -177,7 +192,7 @@ const ManagerBlogPage: React.FC = () => {
                         </>
                       ) : (
                         <button
-                          onClick={() => handleStatusUpdate(blog.id, "reject")} // ✅ Sửa: dùng "reject" thay vì "removed"
+                          onClick={() => handleStatusUpdate(blog.id, "reject")}
                           className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2"
                         >
                           Remove

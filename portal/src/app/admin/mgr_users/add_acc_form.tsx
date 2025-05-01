@@ -300,7 +300,7 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
               disabled={isLoading}
             >
               <option value="">Select Role</option>
-              <option value="user">User</option>
+              <option value="user">Student</option>
               <option value="admin">Admin</option>
               <option value="staff">Staff</option>
               <option value="tutor">Tutor</option>
@@ -338,13 +338,7 @@ const AddAccountForm: React.FC<AddAccountFormProps> = ({
                 "Create Account"
               )}
             </button>
-            <button
-              type="button"
-              onClick={testEmailApi}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg mr-2"
-            >
-              Test Email API
-            </button>
+            
           </div>
         </form>
       </div>

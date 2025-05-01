@@ -73,13 +73,13 @@ const MatchingPage = () => {
   ) => {
     setLoading(true);
     setError(null);
-
+  
     try {
       const accessToken = getCookie("accessToken");
       if (!accessToken) {
         throw new Error("Authentication token not found. Please login again.");
       }
-
+  
       const response = await fetch(`http://localhost:3002/get-role?role=${role}`, {
         method: "GET",
         headers: {
@@ -87,11 +87,11 @@ const MatchingPage = () => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-
+  
       if (!response.ok) {
         throw new Error(`Failed to fetch ${role} data: ${response.status}`);
       }
-
+  
       const data = await response.json();
       const mapped = (data.data || []).map((u: any) => ({
         id: u._id || "",
@@ -100,8 +100,13 @@ const MatchingPage = () => {
         email: u.email,
         avatar: u.path || "",
       }));
-
-      setUsers(mapped);
+  
+      // ✅ DISTINCT theo email
+      const deduped = Array.from(
+        new Map(mapped.map((item) => [item.email, item])).values()
+      );
+  
+      setUsers(deduped);
     } catch (err: any) {
       console.error(`Error fetching ${role} data:`, err);
       setError(err.message || "An error occurred while fetching data.");
@@ -109,6 +114,7 @@ const MatchingPage = () => {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     fetchUsers("user", setStudents, setLoadingStudents);
