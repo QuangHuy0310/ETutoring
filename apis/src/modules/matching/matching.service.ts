@@ -20,14 +20,15 @@ export class MatchingService {
         private readonly mailService: MailService,
     ) { }
 
-    async createMatching(matching: CreateMatchingDto): Promise<Matching> {
+    async createMatching(user: any, matching: CreateMatchingDto): Promise<Matching> {
+        const staffId = user.sub
         // Tạo phòng chat
         const roomResult = await this.roomService.createRoom(matching.studentId, matching.tutorId);
         if (!roomResult || typeof roomResult !== 'string') {
             throw new HttpException('Failed to create room', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        const newMatching = new this.matchingModel({ ...matching, roomId: roomResult });
+        const newMatching = new this.matchingModel({ ...matching, roomId: roomResult, createdBy: staffId });
         const payload = {
             from: matching.studentId,
             to: matching.tutorId,
@@ -71,7 +72,7 @@ export class MatchingService {
         return newMatching.save();
     }
 
-    async createBulkMatching(bulkMatching: CreateBulkMatchingDto): Promise<Matching[]> {
+    async createBulkMatching(user: any, bulkMatching: CreateBulkMatchingDto): Promise<Matching[]> {
         const { studentIds, tutorId, status } = bulkMatching;
 
         if (studentIds.length > 10) {
@@ -104,7 +105,7 @@ export class MatchingService {
                     tutorId,
                     status,
                 };
-                return this.createMatching(matchingDto);
+                return this.createMatching(user, matchingDto);
             })
         );
 
