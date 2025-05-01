@@ -1,8 +1,9 @@
 import { MatchingService } from '@modules/matching/matching.service';
-import { Controller, Post, Query, Body, Put } from '@nestjs/common';
+import { Controller, Post, Query, Body, Put, Request } from '@nestjs/common';
 import { ApiQuery, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { RequiredByUserRoles } from '@utils/decorator';
 import { CreateMatchingDto, CreateBulkMatchingDto } from './dto/matching.dto';
+import { AuthorizationRequest } from '@utils/data-types/types';
 
 @Controller()
 export class MatchingController {
@@ -14,16 +15,20 @@ export class MatchingController {
     @ApiQuery({ name: 'studentId', type: String, required: true })
     @ApiQuery({ name: 'tutorId', type: String, required: true })
     @Post('matching')
-    async createMatching(@Query() createMatchingDto: CreateMatchingDto) {
-        return await this.matchService.createMatching(createMatchingDto);
+    async createMatching(        
+        @Request() { user }: AuthorizationRequest,
+        @Query() createMatchingDto: CreateMatchingDto) {
+        return await this.matchService.createMatching(user, createMatchingDto);
     }
 
     @RequiredByUserRoles()
     @Post('bulk-matching')
     @ApiOperation({ summary: 'Match multiple students with a tutor' })
     @ApiBody({ type: CreateBulkMatchingDto })
-    async createBulkMatching(@Body() createBulkMatchingDto: CreateBulkMatchingDto) {
-        return await this.matchService.createBulkMatching(createBulkMatchingDto);
+    async createBulkMatching(
+        @Request() { user }: AuthorizationRequest,
+        @Body() createBulkMatchingDto: CreateBulkMatchingDto) {
+        return await this.matchService.createBulkMatching(user, createBulkMatchingDto);
     }
 
 

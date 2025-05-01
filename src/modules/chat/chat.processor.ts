@@ -11,7 +11,6 @@ export class MessageProcessor {
     @Process('sendMessageJob')
     async processMessage(job: Job) {
         const { senderId, roomId, message, path } = job.data;
-        // Tạo tin nhắn và lưu vào DB
         const payload = {
             senderId,
             roomId,
