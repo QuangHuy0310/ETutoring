@@ -40,9 +40,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   // Danh sách các mục menu
   const menuItems = [
-    { name: "Dashboard", icon: <FaChartBar />, path: "/admin" },
+    // { name: "Dashboard", icon: <FaChartBar />, path: "/admin" },
     { name: "User Management", icon: <FaUsers />, path: "/admin/mgr_users" },
     { name: "Faculty Management", icon: <FaUniversity />, path: "/admin/mgr_faculties" },
+    { name: "Risk ", icon: <FaUniversity />, path: "/admin/mgr_risk" },
+    // logout 
+    { 
+      name: "Logout", 
+      icon: <FaSignOutAlt className="text-red-600" />, 
+      path: "#", 
+      onClick: handleLogout,
+      className: "text-red-600 hover:bg-red-50"
+    },
   ];
 
   const isActive = (path: string) => {
@@ -98,31 +107,38 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <ul className="space-y-2">
             {menuItems.map((item) => (
               <li key={item.name}>
-                <Link href={item.path}>
+                {item.onClick ? (
                   <div
-                    className={`flex items-center p-3 rounded-lg transition-colors ${
-                      isActive(item.path)
-                        ? "bg-leaf-green text-green-700 font-medium"
-                        : "hover:bg-leaf-green/50 hover:text-green-700 text-gray-700"
+                    onClick={item.onClick}
+                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+                      item.className || (
+                        isActive(item.path)
+                          ? "bg-leaf-green text-green-700 font-medium"
+                          : "hover:bg-leaf-green/50 hover:text-green-700 text-gray-700"
+                      )
                     }`}
                   >
                     <span className="text-xl mr-3">{item.icon}</span>
                     {!isCollapsed && <span>{item.name}</span>}
                   </div>
-                </Link>
+                ) : (
+                  <Link href={item.path}>
+                    <div
+                      className={`flex items-center p-3 rounded-lg transition-colors ${
+                        isActive(item.path)
+                          ? "bg-leaf-green text-green-700 font-medium"
+                          : "hover:bg-leaf-green/50 hover:text-green-700 text-gray-700"
+                      }`}
+                    >
+                      <span className="text-xl mr-3">{item.icon}</span>
+                      {!isCollapsed && <span>{item.name}</span>}
+                    </div>
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
         </nav>
-
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center p-3 mt-6 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <FaSignOutAlt className="text-xl mr-3" />
-          {!isCollapsed && <span>Logout</span>}
-        </button>
       </div>
 
       {/* Main Content */}

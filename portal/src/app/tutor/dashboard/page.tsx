@@ -1,13 +1,13 @@
 "use client";
 import React from "react";
 import Layout from "../../componets/layout";
-import { FiClock, FiUsers, FiUserCheck } from 'react-icons/fi';
+import { FiClock, FiUsers, FiUserCheck, FiFileText, FiMessageSquare } from 'react-icons/fi';
 
 const TutorDashboard: React.FC = () => {
   // Sample data for line chart - matching data
-  const matchData = [1, 2, 2, 2, 1, 3];
-  const months = ["1", "2", "3", "4", "5", "6"];
-  const maxY = 3;
+  const matchData = [1, 3, 3, 3, 2, 5];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const maxY = 5;
   const chartHeight = 200;
   const chartWidth = 300;
 
@@ -20,46 +20,48 @@ const TutorDashboard: React.FC = () => {
     return `${x},${y}`;
   }).join(" ");
 
-  // Data for bar chart - male tutor matching
-  const barData = [2, 3, 1, 4];
-  const barLabels = ["Jan", "Feb", "Mar", "Apr"];
-  const maxBar = 5;
+  // Data for bar chart - messages received
+  const barData = [110, 85, 65];
+  const barLabels = ["Type 1", "Type 2", "Type 3"];
+  const maxBar = 120;
   const barChartHeight = 200;
   const barWidth = 40;
   const barGap = 30;
 
-  // Overview data
+  // Overview data - using the activity summary from the image
   const overviewData = [
-    { title: "Total Time", value: "124h", icon: <FiClock size={24} />, color: "bg-blue-600" },
-    { title: "Matchings", value: "18", icon: <FiUsers size={24} />, color: "bg-green-600" },
-    { title: "Male Tutor Matchings", value: "12", icon: <FiUserCheck size={24} />, color: "bg-purple-600" },
+    { title: "Total Contributions", value: "62", icon: <FiFileText size={24} />, color: "bg-blue-600" },
+    { title: "Submissions", value: "43", icon: <FiFileText size={24} />, color: "bg-blue-600" },
+    { title: "Comments", value: "8", icon: <FiMessageSquare size={24} />, color: "bg-blue-600" },
   ];
 
   return (
     <Layout activeMenu="dashboard">
       <div className="p-6 bg-gray-900 min-h-screen">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-white">Tutor Dashboard</h1>
-          <div className="bg-gray-800 rounded-md px-4 py-2">
-            <span className="text-gray-400 text-sm">April, 2025</span>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white">Tutor Dashboard</h1>
+            <span className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Tutor</span>
           </div>
+          <button className="text-gray-400 text-xl">
+            <span>×</span>
+          </button>
         </div>
 
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-          {overviewData.map((item, index) => (
-            <div key={index} className="bg-gray-800 rounded-xl p-6 border-l-4 shadow-lg transition-all hover:translate-y-[-5px] hover:shadow-xl" style={{ borderLeftColor: item.color.replace('bg-', '#') }}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">{item.title}</p>
-                  <h3 className="text-white text-2xl font-bold">{item.value}</h3>
-                </div>
-                <div className={`${item.color} p-3 rounded-lg bg-opacity-20`}>
-                  {item.icon}
-                </div>
+        
+        {/* Activity Summary */}
+        <div className="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg">
+          <div className="bg-blue-600 text-white rounded px-4 py-1 mb-4 inline-block">
+            <span>Activity Summary</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {overviewData.map((item, index) => (
+              <div key={index} className="bg-gray-700 rounded-xl p-4 text-center shadow-lg">
+                <div className="text-blue-400 font-medium">{item.title}</div>
+                <div className="text-2xl font-bold text-blue-400">{item.value}</div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -67,26 +69,18 @@ const TutorDashboard: React.FC = () => {
           <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-semibold text-white">Monthly Matchings</h2>
-              <select className="bg-gray-700 text-white text-sm rounded-md px-3 py-1 border border-gray-600">
-                <option>Last 6 months</option>
-                <option>Last 12 months</option>
-              </select>
             </div>
             <div className="relative" style={{height: chartHeight+40}}>
               <svg width={chartWidth} height={chartHeight} className="bg-transparent">
                 <defs>
                   <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.8"/>
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2"/>
                     <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.1"/>
-                  </linearGradient>
-                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#60A5FA"/>
-                    <stop offset="100%" stopColor="#3B82F6"/>
                   </linearGradient>
                 </defs>
 
                 {/* Grid lines */}
-                {[0,1,2,3].map(y => (
+                {[0, 1, 2, 3, 4, 5].map(y => (
                   <React.Fragment key={`grid-${y}`}>
                     <line 
                       x1="0" 
@@ -97,31 +91,9 @@ const TutorDashboard: React.FC = () => {
                       strokeWidth="1"
                       strokeDasharray="5,5"
                     />
-                    <text 
-                      x="-5" 
-                      y={chartHeight - (y/maxY)*chartHeight + 5} 
-                      fontSize="12" 
-                      fill="#9CA3AF" 
-                      textAnchor="end"
-                    >
-                      {y}
-                    </text>
                   </React.Fragment>
                 ))}
                 
-                {months.map((m,i) => (
-                  <text 
-                    key={`month-${m}`} 
-                    x={i*(chartWidth/(months.length-1))} 
-                    y={chartHeight+20} 
-                    fontSize="12" 
-                    fill="#9CA3AF" 
-                    textAnchor="middle"
-                  >
-                    {m}
-                  </text>
-                ))}
-
                 {/* Fill area under line */}
                 <path 
                   d={`M 0,${chartHeight} ${points} ${chartWidth},${chartHeight} Z`} 
@@ -131,8 +103,8 @@ const TutorDashboard: React.FC = () => {
                 {/* Line */}
                 <polyline 
                   fill="none" 
-                  stroke="url(#lineGradient)" 
-                  strokeWidth="3" 
+                  stroke="#3B82F6" 
+                  strokeWidth="2" 
                   points={points} 
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -144,53 +116,54 @@ const TutorDashboard: React.FC = () => {
                   const y = chartHeight - (v / maxY) * chartHeight;
                   return (
                     <g key={`point-${i}`}>
-                      <circle cx={x} cy={y} r="6" fill="#1E40AF" />
-                      <circle cx={x} cy={y} r="4" fill="#3B82F6" />
+                      <circle cx={x} cy={y} r="5" fill="#3B82F6" />
+                      <circle cx={x} cy={y} r="3" fill="#FFFFFF" />
                     </g>
                   );
                 })}
               </svg>
-              <div className="absolute left-[-60px] top-1/2 -translate-y-1/2 text-xs text-gray-400 rotate-[-90deg]">Number of matchings</div>
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-[-20px] text-xs text-gray-400">Month</div>
+              <div className="text-sm text-gray-400 text-center mt-2">Number of tutor matches per month</div>
             </div>
           </div>
           
           {/* Bar chart */}
           <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold text-white"> Tutor Matchings</h2>
-              <select className="bg-gray-700 text-white text-sm rounded-md px-3 py-1 border border-gray-600">
-                <option>This week</option>
-                <option>This month</option>
-              </select>
+              <h2 className="text-lg font-semibold text-white">Messages Received</h2>
             </div>
-            <div className="relative" style={{height: barChartHeight+40, width: 4*barWidth+3*barGap+40}}>
-              <svg width={4*barWidth+3*barGap+40} height={barChartHeight} className="bg-transparent">
+            <div className="relative" style={{height: barChartHeight+40}}>
+              <svg width="100%" height={barChartHeight} className="bg-transparent">
                 <defs>
-                  {barLabels.map((_, i) => (
-                    <linearGradient key={`barGradient-${i}`} id={`barGradient-${i}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'][i % 4]} stopOpacity="1"/>
-                      <stop offset="100%" stopColor={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'][i % 4]} stopOpacity="0.6"/>
-                    </linearGradient>
-                  ))}
+                  <linearGradient id="bar1Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#3B82F6" />
+                    <stop offset="100%" stopColor="#3B82F6" />
+                  </linearGradient>
+                  <linearGradient id="bar2Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#10B981" />
+                    <stop offset="100%" stopColor="#10B981" />
+                  </linearGradient>
+                  <linearGradient id="bar3Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#8B5CF6" />
+                    <stop offset="100%" stopColor="#8B5CF6" />
+                  </linearGradient>
                 </defs>
                 
                 {/* Grid lines */}
-                {[0, 1, 2, 3, 4, 5].map(y => (
+                {[0, 30, 60, 90, 120].map(y => (
                   <React.Fragment key={`bar-grid-${y}`}>
                     <line 
-                      x1="30" 
+                      x1="40" 
                       y1={barChartHeight - (y/maxBar)*barChartHeight} 
-                      x2={4*barWidth+3*barGap+40} 
+                      x2="100%" 
                       y2={barChartHeight - (y/maxBar)*barChartHeight} 
                       stroke="#374151" 
                       strokeWidth="1"
-                      strokeDasharray={y === 0 ? "" : "5,5"}
+                      strokeDasharray="5,5"
                     />
                     <text 
-                      x="25" 
+                      x="35" 
                       y={barChartHeight - (y/maxBar)*barChartHeight + 5} 
-                      fontSize="12" 
+                      fontSize="10" 
                       fill="#9CA3AF" 
                       textAnchor="end"
                     >
@@ -199,25 +172,26 @@ const TutorDashboard: React.FC = () => {
                   </React.Fragment>
                 ))}
 
-                {/* Bars with animation */}
+                {/* Bars */}
                 {barData.map((v, i) => {
-                  const x = 40 + i*(barWidth+barGap);
+                  const barSpace = (chartWidth - 40) / 3;
+                  const x = 60 + i * barSpace;
                   const y = barChartHeight - (v / maxBar) * barChartHeight;
                   const height = (v / maxBar) * barChartHeight;
+                  const gradientIds = ["url(#bar1Gradient)", "url(#bar2Gradient)", "url(#bar3Gradient)"];
                   
                   return (
                     <g key={`bar-${i}`}>
                       <rect 
-                        x={x} 
+                        x={x - barWidth/2} 
                         y={y} 
                         width={barWidth} 
                         height={height}
                         rx="4"
-                        fill={`url(#barGradient-${i})`} 
-                        className="hover:brightness-125 transition-all cursor-pointer"
+                        fill={gradientIds[i]}
                       />
                       <text 
-                        x={x + barWidth/2} 
+                        x={x} 
                         y={y - 10} 
                         fontSize="12" 
                         fill="white" 
@@ -226,20 +200,11 @@ const TutorDashboard: React.FC = () => {
                       >
                         {v}
                       </text>
-                      <text 
-                        x={x + barWidth/2} 
-                        y={barChartHeight + 15} 
-                        fontSize="12" 
-                        fill="#9CA3AF" 
-                        textAnchor="middle"
-                      >
-                        {barLabels[i]}
-                      </text>
                     </g>
                   );
                 })}
               </svg>
-              <div className="absolute left-[-60px] top-1/2 -translate-y-1/2 text-xs text-gray-400 rotate-[-90deg]">Total tutor matchings</div>
+              <div className="text-sm text-gray-400 text-center mt-2">Messages received in last month</div>
             </div>
           </div>
         </div>
