@@ -75,6 +75,10 @@ export class UpdateDto{
     @ApiProperty()
     @IsString()
     country: string;
+
+    @ApiProperty() 
+    @IsString()
+    path: string;
 }
 
 export class UpdateImage{
