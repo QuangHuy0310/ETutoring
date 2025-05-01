@@ -46,7 +46,6 @@ export class ChatService {
       roomId: roomId,
     };
 
-    // Chỉ filter theo path/document khi có senderId
     if (senderId) {
       query.senderId = senderId;
 

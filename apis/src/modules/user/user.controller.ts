@@ -39,7 +39,7 @@ export class UserController {
             },
         },
     })
-    @RequiredByUserRoles(USER_ROLE.STAFF)
+    @RequiredByUserRoles(USER_ROLE.ADMIN)
     @Post('bulk-create-from-file')
     @UseInterceptors(FileInterceptor('file', {
         storage: diskStorage({
