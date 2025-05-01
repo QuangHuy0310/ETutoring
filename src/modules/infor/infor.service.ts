@@ -172,7 +172,7 @@ export class InforService {
         information.address = payload.address;
         information.major = payload.major;
         information.country = payload.country;
-        information.path = payload.path; 
+        information.path = payload.path;
 
         const updatedInformation = await information.save();
 
