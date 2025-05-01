@@ -28,50 +28,50 @@ const AdminDashboard = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const accessToken = getCookie('accessToken');
-        if (!accessToken) {
-          router.push('/login');
-          return;
-        }
+    // const fetchStats = async () => {
+    //   try {
+    //     const accessToken = getCookie('accessToken');
+    //     if (!accessToken) {
+    //       router.push('/login');
+    //       return;
+    //     }
 
-        // Giải mã token để kiểm tra quyền admin
-        const decoded = jwtDecode<{ role?: string }>(accessToken.toString());
-        if (decoded.role !== 'admin') {
-          router.push('/unauthorized');
-          return;
-        }
+    //     // Giải mã token để kiểm tra quyền admin
+    //     const decoded = jwtDecode<{ role?: string }>(accessToken.toString());
+    //     if (decoded.role !== 'admin') {
+    //       router.push('/unauthorized');
+    //       return;
+    //     }
 
-        // Gọi API để lấy thống kê
-        const response = await fetch('http://localhost:3002/api/v1/admin/stats', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
+    //     // Gọi API để lấy thống kê
+    //     // const response = await fetch('http://localhost:3002/api/v1/admin/stats', {
+    //     //   headers: {
+    //     //     Authorization: `Bearer ${accessToken}`
+    //     //   }
+    //     // });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch stats');
-        }
+    //     // if (!response.ok) {
+    //     //   throw new Error('Failed to fetch stats');
+    //     // }
 
-        const data = await response.json();
+    //     const data = await response.json();
         
-        // Cập nhật state với dữ liệu từ API
-        setStats({
-          totalUsers: data.totalUsers || 0,
-          totalStudents: data.totalStudents || 0,
-          totalTutors: data.totalTutors || 0,
-          totalFaculties: data.totalFaculties || 0,
-          totalBlogs: data.totalBlogs || 0
-        });
-      } catch (error) {
-        console.error('Error fetching admin stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    //     // Cập nhật state với dữ liệu từ API
+    //     setStats({
+    //       totalUsers: data.totalUsers || 0,
+    //       totalStudents: data.totalStudents || 0,
+    //       totalTutors: data.totalTutors || 0,
+    //       totalFaculties: data.totalFaculties || 0,
+    //       totalBlogs: data.totalBlogs || 0
+    //     });
+    //   } catch (error) {
+    //     console.error('Error fetching admin stats:', error);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
 
-    fetchStats();
+    // fetchStats();
   }, [router]);
 
   // Mảng các card thống kê
