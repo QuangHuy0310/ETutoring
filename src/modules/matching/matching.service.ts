@@ -130,4 +130,18 @@ export class MatchingService {
 
         return await this.inforService.removeRoomId(payload)
     }
+
+    async getUserById(userId: string): Promise<any> {
+        const roomDocs = await this.matchingModel.find({
+            $or: [{ studentId: userId }, { tutorId: userId }]
+        }).select('roomId tutorId studentId').exec()
+
+        if (roomDocs.length === 0) {
+            return 0;
+        }
+        const roomIds = roomDocs.map(room => room.roomId);
+
+        const relatedUsers = roomDocs.map(m => m.studentId === userId ? m.tutorId : m.studentId);
+        return {roomIds, relatedUsers}
+    }
 }

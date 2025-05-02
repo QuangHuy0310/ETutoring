@@ -1,5 +1,5 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsArray, IsOptional, IsString } from "class-validator";
 
 export class GetMessageDto {
     @ApiPropertyOptional({ description: 'ID của phòng chat' })
@@ -27,3 +27,25 @@ export class GetMessageDto {
     limit : number = 20
 }
 
+
+export class FilterChartDto{
+    @ApiProperty()
+    @IsArray()
+    roomIds: string[];
+
+    @ApiProperty()
+    @IsString()
+    senderId: string;
+
+    @ApiProperty()
+    @IsArray()
+    relatedIds: string[];
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    startDate : Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    endDate: Date;
+}
