@@ -23,4 +23,18 @@ export class DashboardController {
     ) {
         return await this.dashboardService.getNumberMessageInMonth(idUser, dto);
     }
+
+
+    @RequiredByUserRoles()
+    @ApiQuery({ name: 'idUser', type: String, required: true })
+    @ApiQuery({ name: 'month', type: Number, required: false, default: 0 })
+    @ApiQuery({ name: 'year', type: Number, required: true })
+
+    @Get('Number-Matching')
+    async getNumberMatching(
+        @Query('idUser') idUser: string,
+        @Query() dto: Omit<FilterTimeDto, 'idUser'>
+    ) {
+        return await this.dashboardService.getNumbersMatching(idUser, dto);
+    }
 }
