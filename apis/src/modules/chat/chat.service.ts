@@ -8,7 +8,7 @@ import { UUID } from 'crypto';
 import { USER_ERRORS } from '@utils/data-types/constants';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { GetMessageDto } from './dto/get-message.dto';
+import { FilterChartDto, GetMessageDto } from './dto/get-message.dto';
 
 @Injectable()
 export class ChatService {
@@ -113,4 +113,38 @@ export class ChatService {
     await this.chatModel.findByIdAndDelete(id)
     return "success for deleteMessage "
   }
+
+  async getNumbersOfMessage(dto: FilterChartDto): Promise<any> {
+    const { roomIds, senderId, relatedIds, startDate , endDate } = dto;
+    const query: any = {
+      roomId: { $in: roomIds },
+      senderId: senderId,
+      deletedAt: null,
+    }
+    if (startDate  && endDate) {
+      query.createdAt = { $gte: startDate, $lt: endDate };
+    }
+
+    
+
+    const result = await this.chatModel.aggregate([
+      {
+        $match: query,
+      },
+      {
+        $group: {
+          _id: '$roomId',
+          count: { $sum: 1 },
+        },
+      },
+    ])
+
+    const resultWithRelate = result.map((item, index) => ({
+      ...item,
+      relate: relatedIds[index] ?? null,
+    }));
+
+    return resultWithRelate;
+  }
+
 }
