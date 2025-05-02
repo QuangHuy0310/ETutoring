@@ -36,7 +36,7 @@ import { redisOptions } from '@utils/configs/redis-config/redis.config';
     ChatController,],
   providers: [
     ChatService, SocketGateway, MessageProcessor],
-  exports: [SocketGateway]
+  exports: [SocketGateway, ChatService],
 
 })
 export class ChatModule { }
