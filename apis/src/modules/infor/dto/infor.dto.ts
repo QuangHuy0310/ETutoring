@@ -76,8 +76,8 @@ export class UpdateDto{
     @IsString()
     country: string;
 
-    @ApiProperty() 
-    @IsString()
+    @ApiPropertyOptional() 
+    @IsOptional()
     path: string;
 }
 

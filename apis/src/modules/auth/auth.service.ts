@@ -71,35 +71,42 @@ export class AuthService {
 
   async register(input: RegisterDto) {
     try {
-      if (await this.checkEmailExist(input.email)) {
-
-        const [hash, role] = await Promise.all([
-          this.hashPassword(input.password),
-          this.specialUserService.getRolebyEmail(input.email)
-        ])
-
-
-        if (role) {
-           const data: CreateNewUserDto = {
-              ...input,
-              hash,
-              role,
-           };
-           return this.userService.saveNewUser(data);
+        // Kiểm tra email trong collection users
+        const existingUser = await this.userService.findByEmail(input.email);
+        if (existingUser) {
+            throw new HttpException('Email already exists', HttpStatus.BAD_REQUEST);
         }
-      } else {
+
+        // Kiểm tra email trong specialUserService 
+        const isSpecialUser = await this.checkEmailExist(input.email);
+        if (isSpecialUser) {
+            const [hash, role] = await Promise.all([
+                this.hashPassword(input.password),
+                this.specialUserService.getRolebyEmail(input.email)
+            ]);
+
+            if (role) {
+                const data: CreateNewUserDto = {
+                    ...input,
+                    hash,
+                    role,
+                };
+                return this.userService.saveNewUser(data);
+            }
+        }
+
+        // Nếu không phải special user, tạo user với role mặc định
         const hash = await this.hashPassword(input.password);
         const data: CreateNewUserDto = {
-          ...input,
-          hash,
-          role: input.role || 'user',
+            ...input,
+            hash,
+            role: input.role || 'user',
         };
         return this.userService.saveNewUser(data);
-      }
     } catch (error) {
-      throw new BadRequestException(error.message);
+        throw new BadRequestException(error.message);
     }
-  }
+}
 
   async login(input: LoginDto) {
     // Check Email
