@@ -43,3 +43,17 @@ export class GetUserByRoomIdDto {
     @IsString()
     tutorId: string;
 }
+
+export class FilterStaffDto {
+    @ApiPropertyOptional()
+    @IsOptional()
+    start: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    end: Date;
+
+    @ApiProperty()
+    @IsString()
+    createdBy: string;
+}
