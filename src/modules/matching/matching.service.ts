@@ -2,11 +2,13 @@ import { Matching, MatchingDocument } from '@entities/matching.entities';
 import { forwardRef, Inject, Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateBulkMatchingDto, CreateMatchingDto, GetUserByRoomIdDto } from './dto/matching.dto';
+import { CreateBulkMatchingDto, CreateMatchingDto, FilterStaffDto, GetUserByRoomIdDto } from './dto/matching.dto';
 import { NotificationService } from '@modules/notification/notification.service';
 import { RoomService } from '@modules/room/room.service';
 import { InforService } from '@modules/infor/infor.service'; // Thêm import này
 import { MailService } from '@modules/mail/mail.service';
+import { create } from 'domain';
+import moment from 'moment';
 
 @Injectable()
 export class MatchingService {
@@ -142,6 +144,41 @@ export class MatchingService {
         const roomIds = roomDocs.map(room => room.roomId);
 
         const relatedUsers = roomDocs.map(m => m.studentId === userId ? m.tutorId : m.studentId);
-        return {roomIds, relatedUsers}
+        return { roomIds, relatedUsers }
+    }
+
+    async getNumbersMatching(dto: FilterStaffDto) {
+        const { start, end, createdBy } = dto;
+
+        return this.matchingModel.aggregate([
+            {
+                $match: {
+                    createdBy: createdBy,
+                    createdAt: { $gte: start, $lt: end },
+                }
+            },
+            {
+                $project: {
+                    month: { $month: "$createdAt" }, 
+                }
+            },
+            {
+                $group: {
+                    _id: "$month", 
+                    count: { $sum: 1 } 
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]).exec();
+    }
+
+    async getValueByYear(dto: FilterStaffDto) {
+        const { start, end, createdBy } = dto;
+        return this.matchingModel.countDocuments({
+            createdBy: createdBy,
+            createdAt: { $gte: start, $lt: end },
+        }).exec();
     }
 }
