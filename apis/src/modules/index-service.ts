@@ -14,3 +14,5 @@ export * from '@modules/mail/mail.service';
 export * from '@modules/room/room.service';
 export * from '@modules/matching/matching.service';
 export * from '@modules/docu/docu.service';
+export * from '@modules/sendRequest/matchingRequest.service';
+export * from '@modules/dashboard/dashboard.service';
