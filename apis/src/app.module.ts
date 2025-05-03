@@ -1,3 +1,4 @@
+import { ScheduleRequestModule } from './modules/scheduleRequest/scheduleRequest.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuthenticationGuard } from '@guards/authentication.guard';
 import * as MODULES from '@modules';
