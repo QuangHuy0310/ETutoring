@@ -35,7 +35,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly inforService: InforService,
     private readonly jwtService: JwtService,
     @InjectQueue('messageQueue') private readonly messageQueue: Queue,
-  ) {}
+  ) { }
 
   async handleConnection(client: Socket) {
     const token = client.handshake.query.token as string;
@@ -136,5 +136,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   removeRoom(stu: string, tut: string, roomId: string) {
     this.server.to(stu).emit('removeRoom', roomId);
     this.server.to(tut).emit('removeRoom', roomId);
+  }
+
+  @SubscribeMessage('newNotification')
+  scheduleRequestRecieveNotification(to: string, notification: string) {
+    this.server.to(to).emit('newNotification', notification);
+  }
+
+  @SubscribeMessage('newNotification')
+  scheduleRequestSenderNotification(to: string, notification: string) {
+    this.server.to(to).emit('newNotification', notification);
   }
 }

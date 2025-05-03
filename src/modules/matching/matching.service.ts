@@ -128,7 +128,7 @@ export class MatchingService {
 
         const update = await room.updateOne({ status: 'off' })
 
-        await this.notificationService.NotificationStatusMatching(payload.stuId, payload.tutId, payload.roomId)
+        await this.notificationService.notificationStatusMatching(payload.stuId, payload.tutId, payload.roomId)
 
         return await this.inforService.removeRoomId(payload)
     }
