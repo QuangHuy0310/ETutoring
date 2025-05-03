@@ -17,3 +17,4 @@ export * from '@modules/matching/matching.module';
 export * from '@modules/docu/docu.module';
 export * from '@modules/sendRequest/matchingRequest.module';
 export * from '@modules/dashboard/dashboard.module';
+export * from '@modules/scheduleRequest/scheduleRequest.module';

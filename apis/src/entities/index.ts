@@ -11,6 +11,9 @@ export * from '@entities/schedule.entities';
 export * from '@entities/majoring.entities';
 export * from '@entities/matching.entities';
 export * from '@entities/document.entities';
+export * from '@entities/room.entities';
+export * from '@entities/matchingRequest.entities';
+export * from '@entities/ScheduleRequest.entities';
 
 
 

@@ -49,7 +49,28 @@ export class NotificationService {
         return notification.save();
     }
 
-    async NotificationStatusMatching(stuId: string, tutId: string, roomId: string): Promise<any> {
+    async notificationStatusMatching(stuId: string, tutId: string, roomId: string): Promise<any> {
         return await this.socketGate.removeRoom(stuId, tutId, roomId)
+    }
+
+    async notificationScheduleRequest(senderId: string, reciverId: string): Promise<any> {
+        const payload = {
+            senderId,
+            title: 'You have a new schedule request',
+        }
+
+        return await this.socketGate.scheduleRequestRecieveNotification(reciverId, payload.title)
+    }
+
+    async notificationForSender(id: string, senderId: string, reciverId: string, status): Promise<any> {
+        const payload = {
+            id,
+            senderId,
+            reciverId,
+            status,
+            title: 'Your schedule request with Id ' + id + ' has been ' + status + ' by ' + senderId,
+        }
+
+        return await this.socketGate.scheduleRequestSenderNotification(senderId, payload.status)
     }
 }
