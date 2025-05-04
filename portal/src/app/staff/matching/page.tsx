@@ -20,15 +20,12 @@ const MatchingPage = () => {
   const [filteredTutors, setFilteredTutors] = useState<User[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<User[]>([]);
   const [selectedTutor, setSelectedTutor] = useState<User | null>(null);
-  const [subject, setSubject] = useState("Subject");
-  const [slot, setSlot] = useState("Slot");
   const [studentSearch, setStudentSearch] = useState("");
   const [tutorSearch, setTutorSearch] = useState("");
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingTutors, setLoadingTutors] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🛠️ Bulk Matching API
   const handleConfirmMatching = async (studentIds: string[], tutorId: string) => {
     try {
       const token = getCookie("accessToken");
@@ -65,7 +62,6 @@ const MatchingPage = () => {
     }
   };
 
-  // 🛠️ Fetch Users
   const fetchUsers = async (
     role: "user" | "tutor",
     setUsers: React.Dispatch<React.SetStateAction<User[]>>,
@@ -73,13 +69,13 @@ const MatchingPage = () => {
   ) => {
     setLoading(true);
     setError(null);
-  
+
     try {
       const accessToken = getCookie("accessToken");
       if (!accessToken) {
         throw new Error("Authentication token not found. Please login again.");
       }
-  
+
       const response = await fetch(`http://localhost:3002/get-role?role=${role}`, {
         method: "GET",
         headers: {
@@ -87,11 +83,11 @@ const MatchingPage = () => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-  
+
       if (!response.ok) {
         throw new Error(`Failed to fetch ${role} data: ${response.status}`);
       }
-  
+
       const data = await response.json();
       const mapped = (data.data || []).map((u: any) => ({
         id: u._id || "",
@@ -100,12 +96,11 @@ const MatchingPage = () => {
         email: u.email,
         avatar: u.path || "",
       }));
-  
-      // ✅ DISTINCT theo email
+
       const deduped = Array.from(
         new Map(mapped.map((item) => [item.email, item])).values()
       );
-  
+
       setUsers(deduped);
     } catch (err: any) {
       console.error(`Error fetching ${role} data:`, err);
@@ -114,7 +109,6 @@ const MatchingPage = () => {
       setLoading(false);
     }
   };
-  
 
   useEffect(() => {
     fetchUsers("user", setStudents, setLoadingStudents);
@@ -139,7 +133,6 @@ const MatchingPage = () => {
     );
   }, [tutorSearch, tutors]);
 
-  // 🛠️ Toggle select student
   const toggleSelectStudent = (student: User) => {
     setSelectedStudents((prev) => {
       const exists = prev.find((s) => s.id === student.id);
@@ -156,30 +149,6 @@ const MatchingPage = () => {
       <div className="p-6 min-h-screen flex flex-col bg-[#0B0F19] text-white">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Matching Page</h1>
-          <div className="flex gap-4">
-            <select
-              className="px-4 py-2 border rounded-lg bg-[#1E2432] text-white hover:bg-[#2A4E89]"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            >
-              <option value="Subject" disabled>Subject</option>
-              <option value="IT">IT</option>
-              <option value="Business">Business</option>
-              <option value="Graphic">Graphic</option>
-            </select>
-            <select
-              className="px-4 py-2 border rounded-lg bg-[#1E2432] text-white hover:bg-[#2A4E89]"
-              value={slot}
-              onChange={(e) => setSlot(e.target.value)}
-            >
-              <option value="Slot" disabled>Slot</option>
-              <option value="Slot 1: 8:00-10:00">Slot 1: 8:00-10:00</option>
-              <option value="Slot 2: 10:00-12:00">Slot 2: 10:00-12:00</option>
-              <option value="Slot 3: 13:00-15:00">Slot 3: 13:00-15:00</option>
-              <option value="Slot 4: 15:00-17:00">Slot 4: 15:00-17:00</option>
-              <option value="Slot 5: 17:00-19:00">Slot 5: 17:00-19:00</option>
-            </select>
-          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 flex-grow">

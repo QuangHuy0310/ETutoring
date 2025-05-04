@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import StaffLayout from "@/app/staff/StaffLayout";
 import { getCookie } from "cookies-next";
+import ReactModal from "react-modal";
 
 interface MatchingItem {
   studentName: string;
@@ -27,10 +28,18 @@ const ManagerMatchingPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("manager");
   const [requestFilter, setRequestFilter] = useState<"pending" | "accepted" | "rejected">("pending");
 
+  // New Slot Modal
+  const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
+  const [slotForm, setSlotForm] = useState({ name: "", timeStart: "", timeEnd: "" });
+
+  useEffect(() => {
+    ReactModal.setAppElement("body");
+  }, []);
+
   const fetchAllRooms = async (token: string) => {
     const rooms: any[] = [];
 
-    const res = await fetch('http://localhost:3002/get-all-room?page=1', {
+    const res = await fetch("http://localhost:3002/get-all-room?page=1", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const resData = await res.json();
@@ -60,14 +69,13 @@ const ManagerMatchingPage: React.FC = () => {
 
   const fetchMatchingRequests = async (status: "pending" | "accepted" | "rejected") => {
     try {
-      const rawToken = getCookie('accessToken');
-      const token = typeof rawToken === 'string' ? rawToken : '';
+      const rawToken = getCookie("accessToken");
+      const token = typeof rawToken === "string" ? rawToken : "";
 
       const res = await fetch(`http://localhost:3002/matching-request/list?status=${status}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      console.log(`Fetched matching-requests (${status}):`, data);
       setRequests(data.data || []);
     } catch (err) {
       console.error("❌ Error fetching matching requests:", err);
@@ -76,8 +84,8 @@ const ManagerMatchingPage: React.FC = () => {
 
   const updateRequestStatus = async (id: string, status: "accepted" | "rejected") => {
     try {
-      const rawToken = getCookie('accessToken');
-      const token = typeof rawToken === 'string' ? rawToken : '';
+      const rawToken = getCookie("accessToken");
+      const token = typeof rawToken === "string" ? rawToken : "";
 
       const res = await fetch(`http://localhost:3002/matching-request/${id}/update-status`, {
         method: "PATCH",
@@ -88,8 +96,6 @@ const ManagerMatchingPage: React.FC = () => {
         body: JSON.stringify({ status }),
       });
       const result = await res.json();
-      console.log("✅ Updated status:", result);
-
       fetchMatchingRequests(requestFilter);
     } catch (err) {
       console.error("❌ Error updating request status:", err);
@@ -101,8 +107,8 @@ const ManagerMatchingPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const rawToken = getCookie('accessToken');
-        const token = typeof rawToken === 'string' ? rawToken : '';
+        const rawToken = getCookie("accessToken");
+        const token = typeof rawToken === "string" ? rawToken : "";
 
         const rooms = await fetchAllRooms(token);
         if (rooms.length === 0) {
@@ -142,7 +148,7 @@ const ManagerMatchingPage: React.FC = () => {
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Manager Matching</h1>
 
-        {/* View switch */}
+        {/* View switch & New Slot */}
         <div className="flex gap-4 mb-4">
           <button
             onClick={() => setViewMode("manager")}
@@ -155,6 +161,12 @@ const ManagerMatchingPage: React.FC = () => {
             className={`px-4 py-2 rounded ${viewMode === "request" ? "bg-gray-400" : "bg-blue-600 text-white"}`}
           >
             Matching Request Manager
+          </button>
+          <button
+            onClick={() => setIsSlotModalOpen(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded"
+          >
+            New Slot
           </button>
         </div>
 
@@ -182,7 +194,7 @@ const ManagerMatchingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tables */}
+        {/* Matching Tables */}
         {error && <div className="text-red-500">{error}</div>}
         {isLoading ? (
           <div className="flex justify-center py-10">
@@ -265,6 +277,78 @@ const ManagerMatchingPage: React.FC = () => {
             )}
           </>
         )}
+
+        {/* Slot Modal */}
+        <ReactModal
+  isOpen={isSlotModalOpen}
+  onRequestClose={() => setIsSlotModalOpen(false)}
+  className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto mt-40"
+  overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+>
+  <h2 className="text-xl font-bold mb-4 text-black">Create New Slot</h2>
+  <form
+    onSubmit={async (e) => {
+      e.preventDefault();
+      const token = getCookie("accessToken");
+      try {
+        const query = new URLSearchParams(slotForm).toString();
+        const res = await fetch(`http://localhost:3002/api/v1/slots/new-comment?${query}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to create slot");
+        alert("✅ Slot created!");
+        setSlotForm({ name: "", timeStart: "", timeEnd: "" });
+        setIsSlotModalOpen(false);
+      } catch (err) {
+        console.error("❌ Slot creation error:", err);
+        alert("❌ Failed to create slot!");
+      }
+    }}
+    className="flex flex-col gap-4 text-black"
+  >
+    <input
+      type="text"
+      name="name"
+      placeholder="Slot Name"
+      value={slotForm.name}
+      onChange={(e) => setSlotForm({ ...slotForm, name: e.target.value })}
+      className="border p-2 rounded"
+      required
+    />
+    <input
+      type="time"
+      name="timeStart"
+      value={slotForm.timeStart}
+      onChange={(e) => setSlotForm({ ...slotForm, timeStart: e.target.value })}
+      className="border p-2 rounded"
+      required
+    />
+    <input
+      type="time"
+      name="timeEnd"
+      value={slotForm.timeEnd}
+      onChange={(e) => setSlotForm({ ...slotForm, timeEnd: e.target.value })}
+      className="border p-2 rounded"
+      required
+    />
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        className="px-4 py-2 bg-gray-400 rounded text-white"
+        onClick={() => setIsSlotModalOpen(false)}
+      >
+        Cancel
+      </button>
+      <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
+        Create
+      </button>
+    </div>
+  </form>
+</ReactModal>
+
       </div>
     </StaffLayout>
   );
