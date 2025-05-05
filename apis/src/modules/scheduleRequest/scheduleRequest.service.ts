@@ -1,4 +1,4 @@
-import { ScheduleRequest, ScheduleRequestDocument } from '@entities/ScheduleRequest.entities';
+import { ScheduleRequest, ScheduleRequestDocument } from '@entities/scheduleRequest.entities';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
