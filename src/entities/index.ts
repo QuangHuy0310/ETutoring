@@ -13,7 +13,7 @@ export * from '@entities/matching.entities';
 export * from '@entities/document.entities';
 export * from '@entities/room.entities';
 export * from '@entities/matchingRequest.entities';
-export * from '@entities/ScheduleRequest.entities';
+export * from '@entities/scheduleRequest.entities';
 
 
 
