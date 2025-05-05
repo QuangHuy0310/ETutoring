@@ -110,67 +110,68 @@ export default function ChatboxForm({ onSend }: ChatboxFormProps) {
       setIsFetchingBookingData(false);
     }
   };
-
   const handleBookRequest = async () => {
     const token = getCookie("accessToken");
     if (!token || !partnerUserId) {
-      alert("⚠️ Not enough data to send a booking request.");
+      alert("⚠️ Thiếu thông tin để gửi yêu cầu đặt lịch.");
       return;
     }
-
+  
     if (!bookingDate || selectedSlotIds.length === 0) {
-      alert("⚠️ Please select a date and at least one slot.");
+      alert("⚠️ Hãy chọn ngày và ít nhất một slot.");
       return;
     }
-
+  
     try {
       const tokenParts = token.toString().split(".");
-      let userId = null;
-      if (tokenParts.length === 3) {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        userId = payload.userId || payload.id || payload.sub;
-      }
-
-      if (!userId) {
-        console.error("❌ Cannot find userId in token!");
-        return;
-      }
-
+      const payload = JSON.parse(atob(tokenParts[1]));
+      const senderId = payload.userId || payload.id || payload.sub;
+  
       const [year, month, day] = bookingDate.split("-");
       const formattedDay = `${day}/${month}/${year}`;
-
+  
       for (const slotId of selectedSlotIds) {
-        const url = new URL("http://localhost:3002/new-schedule");
-        url.searchParams.set("userId", userId);
-        url.searchParams.set("days", formattedDay);
-        url.searchParams.set("slotId", slotId);
-        url.searchParams.set("partnerId", partnerUserId);
-
-        console.log("🚀 Gửi booking:", url.toString());
-
-        const res = await fetch(url.toString(), {
+        const api = new URL("http://localhost:3002/schedule-request");
+        api.searchParams.set("reciverId", partnerUserId);
+        api.searchParams.set("days", formattedDay);
+        api.searchParams.set("slotId", slotId);
+  
+        const res = await fetch(api.toString(), {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
-
+  
         const result = await res.json();
-
+  
         if (!res.ok) {
-          console.error("❌ Booking request error:", result);
-          alert("❌ Failed to send booking request!");
-        } else {
-          console.log("✅ Booking successful:", result);
+          console.error("❌ Lỗi khi gửi yêu cầu lịch:", result);
+          alert("❌ Gửi yêu cầu thất bại");
+          continue;
         }
+  
+        console.log("✅ Gửi thành công:", result);
+  
+        // 👇 Send schedule-request message format
+        const msgPayload = {
+          type: "schedule-request",
+          id: result?.data?._id || "", // cần đảm bảo BE trả về ID
+          date: formattedDay,
+          slotId,
+          status: "pending",
+        };
+  
+        onSend(JSON.stringify(msgPayload));
       }
-
-      alert("✅ Booking request sent successfully!");
+  
       setShowBookingForm(false);
       setBookingDate("");
       setSelectedSlotIds([]);
     } catch (error) {
-      console.error("❌ Error sending booking request:", error);
+      console.error("❌ Lỗi gửi yêu cầu lịch:", error);
+      alert("❌ Đã xảy ra lỗi khi gửi yêu cầu");
     }
   };
+  
   const uploadImageToServer = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("image", file);

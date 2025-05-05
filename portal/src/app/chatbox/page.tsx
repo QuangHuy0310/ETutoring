@@ -75,7 +75,7 @@ export default function ChatboxPage() {
   useEffect(() => {
     const token = getCookie("accessToken");
     if (!token) return;
-
+  
     try {
       const tokenParts = token.toString().split(".");
       if (tokenParts.length === 3) {
@@ -87,29 +87,29 @@ export default function ChatboxPage() {
     } catch (error) {
       console.error("❌ Lỗi khi parse token:", error);
     }
-
+  
     socket = io("http://localhost:3002", {
       transports: ["websocket"],
       query: { token },
     });
-
+  
     socket.on("connect", () => {
       console.log("🛰️ [Socket Connected]:", socket.id);
     });
-
+  
     socket.on("disconnect", (reason) => {
       console.warn("🔌 [Socket Disconnected]:", reason);
     });
-
+  
     socket.on("newMessage", (msg: any) => {
       if (!msg || !msg.roomId || !msg.senderId || !msg.message) {
         console.warn("❌ [Socket] Payload không hợp lệ:", msg);
         return;
       }
-
+  
       const roomFromSocket = String(msg.roomId).trim();
       const current = String(currentRoomRef.current).trim();
-
+  
       if (roomFromSocket === current) {
         setMessages((prev) => [
           ...prev,
@@ -122,20 +122,117 @@ export default function ChatboxPage() {
         ]);
       }
     });
-
+  
+    // ⚡ Nhận lịch hẹn mới
+    socket.on("scheduleRequestRecieveNotification", async () => {
+      console.log("🔔 [Socket] Nhận scheduleRequestRecieveNotification");
+  
+      try {
+        const roleApi = new URL("http://localhost:3002/api/v1/users/role");
+        roleApi.searchParams.set("id", userIdRef.current!);
+        const roleRes = await fetch(roleApi.toString(), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const roleData = await roleRes.json();
+        const role = roleData?.data?.role || "unknown";
+        console.log("👤 Role của mình:", role);
+  
+        const scheduleApi =
+          role === "tutor"
+            ? "http://localhost:3002/tutor-request-schedule"
+            : "http://localhost:3002/get-student-request-schedule";
+  
+        const res = await fetch(`${scheduleApi}?userId=${userIdRef.current}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+  
+        const data = await res.json();
+        const list = data?.data || [];
+        const latest = list[list.length - 1];
+        if (!latest) return;
+  
+        const scheduleMsg = {
+          type: "schedule-request",
+          id: latest._id,
+          date: latest.days,
+          slotId: latest.slotId,
+          status: latest.status,
+        };
+  
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: JSON.stringify(scheduleMsg),
+            sender: "other",
+            senderId: latest.senderId,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        console.error("❌ Lỗi nhận schedule request:", err);
+      }
+    });
+  
+    // 📩 Khi người nhận bấm Accept/Reject → emit socket lại cho người gửi biết
+    socket.on("scheduleStatusUpdated", async () => {
+      console.log("🔁 [Socket] Đã nhận update lịch hẹn → refetch");
+  
+      try {
+        const roleRes = await fetch(`http://localhost:3002/api/v1/users/role?id=${userIdRef.current}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const roleData = await roleRes.json();
+        const role = roleData?.data?.role;
+  
+        const apiUrl =
+          role === "tutor"
+            ? "http://localhost:3002/tutor-request-schedule"
+            : "http://localhost:3002/get-student-request-schedule";
+  
+        const res = await fetch(`${apiUrl}?userId=${userIdRef.current}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+  
+        const data = await res.json();
+        const list = data?.data || [];
+        const latest = list[list.length - 1];
+        if (!latest) return;
+  
+        const scheduleMsg = {
+          type: "schedule-request",
+          id: latest._id,
+          date: latest.days,
+          slotId: latest.slotId,
+          status: latest.status,
+        };
+  
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: JSON.stringify(scheduleMsg),
+            sender: "other",
+            senderId: latest.senderId,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        console.error("❌ Lỗi khi refetch update schedule:", err);
+      }
+    });
+  
     const fetchRoomsAndNames = async () => {
       try {
         const res = await fetch("http://localhost:3002/get-room", {
           headers: { Authorization: `Bearer ${token}` },
         });
-
+  
         const response = await res.json();
         const roomList = response?.data;
         if (!Array.isArray(roomList)) {
           console.error("❌ API /get-room không trả mảng:", roomList);
           return;
         }
-
+  
         const fetchNames = await Promise.all(
           roomList.map(async (roomId: string) => {
             try {
@@ -145,25 +242,24 @@ export default function ChatboxPage() {
               );
               const result = await res.json();
               const users = result?.data;
-
+  
               if (!Array.isArray(users)) {
                 return { roomId, name: "Unknown", avatarPath: null };
               }
-
+  
               const otherUser = users.find((user: any) => user.userId !== userIdRef.current);
-
+  
               if (!otherUser) {
                 return { roomId, name: "Unknown", avatarPath: null };
               }
-
-              // 🎯 Gọi tiếp /get-infors
+  
               const infoRes = await fetch(
                 `http://localhost:3002/get-infors?idUser=${otherUser.userId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
               const infos = await infoRes.json();
               const infoData = infos?.data?.[0];
-
+  
               return {
                 roomId,
                 name: otherUser.name || "Unknown",
@@ -175,9 +271,9 @@ export default function ChatboxPage() {
             }
           })
         );
-
+  
         setRoomInfos(fetchNames);
-
+  
         if (roomList.length > 0) {
           setCurrentRoom(roomList[0]);
           localStorage.setItem("currentRoom", roomList[0]);
@@ -186,14 +282,14 @@ export default function ChatboxPage() {
         console.error("❌ Lỗi khi fetch get-room:", err);
       }
     };
-
+  
     fetchRoomsAndNames();
-
+  
     return () => {
       socket.disconnect();
     };
   }, []);
-
+  
   useEffect(() => {
     if (!currentRoom || !userId) return;
     currentRoomRef.current = currentRoom;
