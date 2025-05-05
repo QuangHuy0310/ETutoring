@@ -2,9 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/app/admin/AdminLayout";
-import AddAccountForm from "@/app/admin/mgr_users/add_acc_form";
-import EditAccount from "@/app/admin/mgr_users/edit_acc";
+import AddAccountForm from "./add_acc_form";
+import EditAccount from "./edit_acc";
 import { getCookie } from "cookies-next";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 interface User {
   id: number;
@@ -16,66 +21,31 @@ interface User {
 }
 
 const AccountManagerPage: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      name: "Kiet",
-      email: "kiet@gmail.com",
-      faculties: "IT",
-      role: "student",
-    },
-    {
-      id: 2,
-      name: "Huy",
-      email: "huy@gmail.com",
-      faculties: "Graphic",
-      role: "student",
-    },
-    {
-      id: 3,
-      name: "Hoang",
-      email: "Hoang@gmail.com",
-      faculties: "Graphic",
-      role: "student",
-    },
-  ]);
-
-  // Add search state
+  // States
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // State for selected role filter
   const [selectedRole, setSelectedRole] = useState<string>("all");
-  
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  
-  // State for managing the account creation modal
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
-  
-  // State for managing the edit account modal
   const [isEditAccountOpen, setIsEditAccountOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
-  // Filter users based on search term and role
+  // Filtered users based on search term and role
   const filteredUsers = users.filter(user => {
-    // Filter by search term
     const matchesSearch = 
       (user.name ? user.name.toLowerCase().includes(searchTerm.toLowerCase()) : false) || 
       (user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false);
     
-    // Filter by role
     let matchesRole = true;
-    if (selectedRole === "staff") {
-      matchesRole = user.role === "staff";
-    } else if (selectedRole === "user_tutor") {
-      matchesRole = user.role === "student" || user.role === "tutor";
+    if (selectedRole !== "all") {
+      matchesRole = user.role === selectedRole;
     }
     
     return matchesSearch && matchesRole;
   });
 
-  // Paginate the filtered users
+  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
@@ -83,16 +53,14 @@ const AccountManagerPage: React.FC = () => {
   
   // Calculate page numbers to display
   const getPageNumbers = () => {
-    const maxPagesToShow = 5; // Số lượng trang tối đa hiển thị cùng lúc
+    const maxPagesToShow = 5;
     const pages = [];
     
     if (totalPages <= maxPagesToShow) {
-      // Nếu tổng số trang ít hơn số lượng trang tối đa, hiển thị tất cả
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Nếu tổng số trang nhiều hơn, hiển thị một phạm vi giới hạn
       let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
       let endPage = startPage + maxPagesToShow - 1;
       
@@ -110,9 +78,29 @@ const AccountManagerPage: React.FC = () => {
   };
 
   // Function to handle user deletion
-  const deleteUser = (id: number) => {
+  const deleteUser = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter((user) => user.id !== id));
+      try {
+        const token = getCookie("accessToken");
+        
+        if (!token) {
+          toast.error("Authentication error. Please login again.");
+          return;
+        }
+
+        const response = await axios.delete(`${API_URL}/api/v1/users/delete-user?id=${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
+
+        // Update the UI after successful deletion
+        setUsers(users.filter((user) => user.id !== id));
+        toast.success("User deleted successfully");
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        toast.error("An error occurred while deleting the user");
+      }
     }
   };
   
@@ -127,7 +115,7 @@ const AccountManagerPage: React.FC = () => {
 
   // Function to save edited user
   const handleSaveEditedUser = async (userId: number, updatedData: { email?: string; role?: string }) => {
-    // Cập nhật trong state UI
+    // Update UI state after successful API call in EditAccount component
     setUsers(users.map(user => 
       user.id === userId ? { ...user, ...updatedData } : user
     ));
@@ -138,31 +126,10 @@ const AccountManagerPage: React.FC = () => {
     setIsAddAccountOpen(true);
   };
 
-  // Function to add a new user from form with name, email, faculties, role
-  const handleAddUser = (userData: {
-    name?: string;
-    email: string;
-    faculties?: string;
-    role: string;
-  }) => {
-    // Create a new user with a new ID
-    const newUser = {
-      id: users.length > 0 ? Math.max(...users.map(user => user.id)) + 1 : 1,
-      ...userData
-    };
-    
-    setUsers([...users, newUser]);
-  };
-
-  // Function to handle submissions from add_acc_form (email, password, role)
+  // Function to handle submissions from add_acc_form
   const handleAddAccount = (userData: { email: string; password: string; role: string }) => {
-    // Đảm bảo userData có đủ các trường cần thiết trước khi thêm vào state
-    if (!userData || !userData.email) {
-      console.error("Invalid user data received from form");
-      return;
-    }
-    
-    // Sau đó thêm vào danh sách users (không phải accounts)
+    // The API call is handled in the AddAccountForm component
+    // We just need to update the UI with the new user
     const newUser = {
       id: users.length > 0 ? Math.max(...users.map(user => user.id)) + 1 : 1,
       ...userData
@@ -171,7 +138,7 @@ const AccountManagerPage: React.FC = () => {
     setUsers([...users, newUser]);
   };
 
-  // Cập nhật hàm fetchUsers để xử lý dữ liệu API đúng cách
+  // Fetch users on component mount
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -182,67 +149,43 @@ const AccountManagerPage: React.FC = () => {
           return;
         }
         
-        const response = await fetch("http://localhost:3002/api/v1/users/get-all-users", {
+        const response = await axios.get(`${API_URL}/api/v1/users/get-all-users`, {
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           }
         });
         
-        console.log("API response status:", response.status);
+        // Process the API response
+        let userData = response.data;
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`API error (${response.status}):`, errorText);
-          throw new Error(`API error: ${response.status}`);
+        // Handle nested data structure if present
+        if (userData.data) {
+          userData = userData.data;
+        } else if (userData.users) {
+          userData = userData.users;
+        } else if (userData.result) {
+          userData = userData.result;
         }
         
-        const responseData = await response.json();
-        console.log("API raw data received:", responseData);
-        
-        // Kiểm tra cấu trúc dữ liệu trả về
-        let userData = responseData;
-        
-        // Kiểm tra xem dữ liệu có nằm trong thuộc tính data hoặc users không
-        if (responseData.data) {
-          userData = responseData.data;
-          console.log("Data found in responseData.data:", userData);
-        } else if (responseData.users) {
-          userData = responseData.users;
-          console.log("Data found in responseData.users:", userData);
-        } else if (responseData.result) {
-          userData = responseData.result;
-          console.log("Data found in responseData.result:", userData);
-        }
-        
-        // Kiểm tra xem userData có phải là mảng không
-        if (!Array.isArray(userData)) {
-          console.error("User data is not an array:", userData);
-          return;
-        }
-        
-        console.log("Processing user data:", userData);
-        
-        // Ánh xạ dữ liệu API vào cấu trúc User
-        const validUsers = userData
-          .filter((user: any) => user && user.email)
-          .map((user: any) => ({
-            id: user.id || user._id,
-            name: user.name || user.username || user.fullName || "N/A",
-            email: user.email,
-            faculties: user.faculties || user.faculty || "N/A",
-            role: user.role || "student",
-          }));
-        
-        console.log("Processed user data:", validUsers);
-        
-        if (validUsers.length > 0) {
-          setUsers(validUsers);
-        } else {
-          console.warn("No valid users found in API response");
+        // Map API data to our User interface
+        if (Array.isArray(userData)) {
+          const validUsers = userData
+            .filter((user: any) => user && user.email)
+            .map((user: any) => ({
+              id: user.id || user._id,
+              name: user.name || user.username || user.fullName || "N/A",
+              email: user.email,
+              faculties: user.faculties || user.faculty || "N/A",
+              role: user.role || "student",
+            }));
+          
+          if (validUsers.length > 0) {
+            setUsers(validUsers);
+          }
         }
       } catch (error) {
         console.error("Error fetching users:", error);
-        // Giữ nguyên dữ liệu mẫu nếu API không hoạt động
+        toast.error("Failed to fetch users");
       }
     };
     
@@ -277,12 +220,12 @@ const AccountManagerPage: React.FC = () => {
                 value={selectedRole}
                 onChange={(e) => {
                   setSelectedRole(e.target.value);
-                  setCurrentPage(1); // Reset to first page on filter change
+                  setCurrentPage(1);
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Roles</option>
-                <option value="user">User</option>
+                <option value="student">Student</option>
                 <option value="tutor">Tutor</option>
                 <option value="staff">Staff</option>
                 <option value="admin">Admin</option>
@@ -298,11 +241,11 @@ const AccountManagerPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Add Account Form Modal - Cập nhật handler */}
+        {/* Add Account Form Modal */}
         <AddAccountForm 
           open={isAddAccountOpen}
           onClose={() => setIsAddAccountOpen(false)}
-          onSubmit={handleAddAccount} // Đổi từ handleAddUser sang handleAddAccount
+          onSubmit={handleAddAccount}
           faculties={[
             { id: "1", name: "IT" },
             { id: "2", name: "Graphic" },
@@ -377,7 +320,7 @@ const AccountManagerPage: React.FC = () => {
         {/* Pagination */}
         {totalPages > 0 && (
           <div className="flex justify-center mt-4 space-x-1">
-            {/* Nút Previous */}
+            {/* Previous button */}
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
@@ -388,7 +331,7 @@ const AccountManagerPage: React.FC = () => {
               &laquo;
             </button>
             
-            {/* Hiển thị trang đầu tiên nếu không nằm trong phạm vi hiển thị */}
+            {/* First page if not in view */}
             {getPageNumbers()[0] > 1 && (
               <>
                 <button
@@ -403,7 +346,7 @@ const AccountManagerPage: React.FC = () => {
               </>
             )}
             
-            {/* Các số trang */}
+            {/* Page numbers */}
             {getPageNumbers().map((page) => (
               <button
                 key={page}
@@ -416,7 +359,7 @@ const AccountManagerPage: React.FC = () => {
               </button>
             ))}
             
-            {/* Hiển thị trang cuối cùng nếu không nằm trong phạm vi hiển thị */}
+            {/* Last page if not in view */}
             {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
               <>
                 {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
@@ -431,7 +374,7 @@ const AccountManagerPage: React.FC = () => {
               </>
             )}
             
-            {/* Nút Next */}
+            {/* Next button */}
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
@@ -443,6 +386,8 @@ const AccountManagerPage: React.FC = () => {
             </button>
           </div>
         )}
+
+        <ToastContainer position="bottom-right" />
       </div>
     </AdminLayout>
   );

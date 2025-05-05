@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { getCookie } from "cookies-next";
 
 interface Faculty {
   _id: string;
@@ -12,6 +15,8 @@ interface EditFacultyModalProps {
   faculty: Faculty;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+
 const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
   isOpen,
   onClose,
@@ -20,6 +25,7 @@ const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
 }) => {
   const [facultyName, setFacultyName] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (faculty) {
@@ -27,7 +33,7 @@ const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
     }
   }, [faculty]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!facultyName.trim()) {
@@ -35,7 +41,33 @@ const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
       return;
     }
     
-    onSave({ _id: faculty._id, name: facultyName.trim() });
+    setError("");
+    setIsSubmitting(true);
+    
+    try {
+      const token = getCookie("accessToken");
+      const updatedFaculty = { _id: faculty._id, name: facultyName.trim() };
+      
+      // Changing from PATCH to PUT based on the error response
+      await axios.put(
+        `${API_URL}/edit-major?id=${faculty._id}`,
+        { name: facultyName.trim() },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      toast.success("Faculty updated successfully");
+      onSave(updatedFaculty);
+    } catch (error) {
+      console.error("Error updating faculty:", error);
+      toast.error("Failed to update faculty");
+      setError("Failed to update faculty. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -57,6 +89,7 @@ const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
               onChange={(e) => setFacultyName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="Enter faculty name"
+              disabled={isSubmitting}
             />
             {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
           </div>
@@ -66,14 +99,16 @@ const EditFacultyModal: React.FC<EditFacultyModalProps> = ({
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              disabled={isSubmitting}
             >
-              Update
+              {isSubmitting ? "Updating..." : "Update"}
             </button>
           </div>
         </form>

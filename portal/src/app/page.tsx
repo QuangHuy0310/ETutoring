@@ -228,133 +228,135 @@ const HomePage = () => {
   if (!user) return null;
 
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">All Blogs</h2>
-          <button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
-            Create Blog
-          </button>
-        </div>
-
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
-            <div className="bg-[#1E2432] p-6 rounded-lg">
-              <PostForm onPost={addPost} onClose={() => setIsModalOpen(false)} />
-            </div>
-          </div>
-        )}
-
-        {posts.length === 0 ? (
-          <p className="text-gray-400">No posts yet</p>
-        ) : (
-          posts.map((post) => (
-            <div key={post.id} className="p-4 bg-[#161b25] border border-[#2A4E89] rounded-lg">
-              <div className="flex items-center space-x-3 mb-4">
-                <Link href={post.userRole === "tutor" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
-                  <img
-                    src={post.user.avatar || "/default-avatar.png"}
-                    alt="Avatar"
-                    className="w-10 h-10 rounded-full object-cover cursor-pointer"
-                  />
-                </Link>
-                <Link href={post.userRole === "tutor" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
-                  <span className="font-bold hover:underline">{post.user.name}</span>
-                </Link>
-              </div>
-
-              <h3 className="text-lg font-bold">{post.title}</h3>
-              <p className="text-gray-400">{post.content}</p>
-
-              {post.imageUrl && (
-                <Image
-                  src={post.imageUrl}
-                  alt="Post Image"
-                  width={500}
-                  height={300}
-                  className="rounded-lg mt-4"
-                  unoptimized
-                />
-              )}
-
-              <div className="mt-4">
-                <h4 className="text-sm text-gray-400 mb-2">Comments</h4>
-                {post.comments.map((c, idx) => {
-                  console.log("🖼️ [RenderComment] Single Comment Data:", c); // ✅ ADD LOG 3
-                  return (
-                    <div key={idx} className="text-sm text-gray-300 bg-[#2A4E89] p-2 rounded mb-2 space-y-2">
-                      <div>
-                        <strong>{c.user?.[0]?.name || "Anonymous"}:</strong> {c.comment || ""}
-                      </div>
-
-                      {Array.isArray(c.path) && c.path.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {c.path.map((imgUrl, imgIdx) => (
-                            <div
-                              key={imgIdx}
-                              className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
-                              onClick={() => setPreviewImage(imgUrl)}
-                            >
-                              <Image
-                                src={imgUrl}
-                                alt={`Comment image ${imgIdx}`}
-                                width={150}
-                                height={150}
-                                className="rounded-md object-cover max-h-40"
-                                unoptimized
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                <div className="flex flex-col space-y-2 mt-2">
-                  <input
-                    value={commentInputs[post.id] || ""}
-                    onChange={(e) => handleCommentChange(e, post.id)}
-                    placeholder="Write a comment..."
-                    className="bg-[#2A4E89] rounded p-2"
-                  />
-                  <input
-                    type="file"
-                    onChange={(e) => handleCommentFileChange(e, post.id)}
-                    className="text-white"
-                  />
-                  <button onClick={() => addComment(post.id)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">
-                    Send
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Lightbox Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
-          <div className="relative">
-            <Image
-              src={previewImage}
-              alt="Preview"
-              width={800}
-              height={600}
-              className="rounded-lg max-w-full max-h-screen"
-              unoptimized
-            />
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-2 right-2 text-white bg-red-500 rounded-full p-2 hover:bg-red-600"
-            >
-              ✖
+    <>
+      <Layout>
+        <div className="p-6 space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-white">All Blogs</h2>
+            <button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+              Create Blog
             </button>
           </div>
+
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+              <div className="bg-[#1E2432] p-6 rounded-lg">
+                <PostForm onPost={addPost} onClose={() => setIsModalOpen(false)} />
+              </div>
+            </div>
+          )}
+
+          {posts.length === 0 ? (
+            <p className="text-gray-400">No posts yet</p>
+          ) : (
+            posts.map((post) => (
+              <div key={post.id} className="p-4 bg-[#161b25] border border-[#2A4E89] rounded-lg">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Link href={post.userRole === "tutor" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
+                    <img
+                      src={post.user.avatar || "/default-avatar.png"}
+                      alt="Avatar"
+                      className="w-10 h-10 rounded-full object-cover cursor-pointer"
+                    />
+                  </Link>
+                  <Link href={post.userRole === "tutor" ? `/tutor/view?idUser=${post.user.id}` : `/information/view?idUser=${post.user.id}`}>
+                    <span className="font-bold hover:underline">{post.user.name}</span>
+                  </Link>
+                </div>
+
+                <h3 className="text-lg font-bold">{post.title}</h3>
+                <p className="text-gray-400">{post.content}</p>
+
+                {post.imageUrl && (
+                  <Image
+                    src={post.imageUrl}
+                    alt="Post Image"
+                    width={500}
+                    height={300}
+                    className="rounded-lg mt-4"
+                    unoptimized
+                  />
+                )}
+
+                <div className="mt-4">
+                  <h4 className="text-sm text-gray-400 mb-2">Comments</h4>
+                  {post.comments.map((c, idx) => {
+                    console.log("🖼️ [RenderComment] Single Comment Data:", c); // ✅ ADD LOG 3
+                    return (
+                      <div key={idx} className="text-sm text-gray-300 bg-[#2A4E89] p-2 rounded mb-2 space-y-2">
+                        <div>
+                          <strong>{c.user?.[0]?.name || "Anonymous"}:</strong> {c.comment || ""}
+                        </div>
+
+                        {Array.isArray(c.path) && c.path.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {c.path.map((imgUrl, imgIdx) => (
+                              <div
+                                key={imgIdx}
+                                className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
+                                onClick={() => setPreviewImage(imgUrl)}
+                              >
+                                <Image
+                                  src={imgUrl}
+                                  alt={`Comment image ${imgIdx}`}
+                                  width={150}
+                                  height={150}
+                                  className="rounded-md object-cover max-h-40"
+                                  unoptimized
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex flex-col space-y-2 mt-2">
+                    <input
+                      value={commentInputs[post.id] || ""}
+                      onChange={(e) => handleCommentChange(e, post.id)}
+                      placeholder="Write a comment..."
+                      className="bg-[#2A4E89] rounded p-2"
+                    />
+                    <input
+                      type="file"
+                      onChange={(e) => handleCommentFileChange(e, post.id)}
+                      className="text-white"
+                    />
+                    <button onClick={() => addComment(post.id)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">
+                      Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-      )}
-    </Layout>
+
+        {/* Lightbox Modal */}
+        {previewImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+            <div className="relative">
+              <Image
+                src={previewImage}
+                alt="Preview"
+                width={800}
+                height={600}
+                className="rounded-lg max-w-full max-h-screen"
+                unoptimized
+              />
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="absolute top-2 right-2 text-white bg-red-500 rounded-full p-2 hover:bg-red-600"
+              >
+                ✖
+              </button>
+            </div>
+          </div>
+        )}
+      </Layout>
+    </>
   );
 };
 

@@ -1,11 +1,15 @@
 import React, { useState } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { getCookie } from "cookies-next";
 
 interface AddFacultyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (faculty: { name: string }) => void;
-  lastId?: number; // Có thể không cần thiết nếu backend tự tạo ID
+  onSave: (faculty: { _id: string; name: string }) => void;
 }
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
   isOpen,
@@ -14,8 +18,9 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
 }) => {
   const [facultyName, setFacultyName] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!facultyName.trim()) {
@@ -23,12 +28,38 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
       return;
     }
     
-    onSave({ name: facultyName.trim() });
-    
-    // Đặt lại form và đóng form
-    setFacultyName("");
     setError("");
-    onClose(); // Thêm dòng này để đảm bảo form được đóng sau khi submit
+    setIsSubmitting(true);
+    
+    try {
+      const token = getCookie("accessToken");
+      // Using the correct API endpoint for adding new majors
+      const response = await axios.post(
+        `${API_URL}/new-major`,
+        { name: facultyName.trim() },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      if (response.data && response.data.data) {
+        toast.success("Faculty added successfully");
+        onSave(response.data.data);
+        
+        // Reset form
+        setFacultyName("");
+      } else {
+        toast.warning("Faculty added but returned unexpected data format");
+      }
+    } catch (error) {
+      console.error("Error adding faculty:", error);
+      toast.error("Failed to add faculty");
+      setError("Failed to add faculty. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -50,6 +81,7 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
               onChange={(e) => setFacultyName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="Enter faculty name"
+              disabled={isSubmitting}
             />
             {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
           </div>
@@ -59,14 +91,16 @@ const AddFacultyModal: React.FC<AddFacultyModalProps> = ({
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              disabled={isSubmitting}
             >
-              Save
+              {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
         </form>

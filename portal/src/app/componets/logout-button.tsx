@@ -1,6 +1,7 @@
 "use client";
-import { useRouter } from 'next/navigation';
-import { deleteCookie } from 'cookies-next';
+import { useRouter } from "next/navigation";
+import { deleteCookie } from "cookies-next";
+import { clearTokens } from "../lib/token"; // Import hàm clearTokens
 
 interface LogoutButtonProps {
   className?: string;
@@ -10,12 +11,13 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
   const router = useRouter();
 
   const handleLogout = () => {
-    // Xóa tất cả các cookie liên quan đến phiên đăng nhập
+    // Xóa tất cả các cookie và localStorage liên quan đến phiên đăng nhập
     deleteCookie('accessToken', { path: '/' });
-    localStorage.removeItem('accessToken'); // Xóa cả từ localStorage
-    sessionStorage.removeItem('accessToken'); // Xóa cả từ sessionStorage
     deleteCookie('userId', { path: '/' });
     deleteCookie('userEmail', { path: '/' });
+    
+    // Xóa tokens từ localStorage
+    clearTokens();
     
     // Chuyển hướng người dùng về trang đăng nhập
     router.push('/login');

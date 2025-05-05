@@ -2,21 +2,12 @@
 
 import { Suspense } from "react";
 import Layout from "@/app/componets/layout";
-
-export default function ViewTutorPage() {
-  return (
-    <Layout>
-      <Content />
-    </Layout>
-  );
-}
-
-// --- Nội dung Content ---
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getCookie } from "cookies-next";
 import { jwtDecode } from "jwt-decode";
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
+import { getAccessTokenFromRefresh } from "@/app/lib/token";
 
 interface UserInfo {
   id?: string;
@@ -35,6 +26,14 @@ interface DecodedToken {
   email: string;
 }
 
+export default function ViewTutorPage() {
+  return (
+    <Layout>
+      <Content />
+    </Layout>
+  );
+}
+
 function Content() {
   const searchParams = useSearchParams();
   const idUser = searchParams.get("idUser");
@@ -50,14 +49,16 @@ function Content() {
   useEffect(() => {
     const fetchTutorInfo = async () => {
       try {
-        const accessToken = getCookie("accessToken");
+        // Lấy accessToken từ refreshToken
+        const accessToken = await getAccessTokenFromRefresh();
+        
         if (!accessToken || !idUser) {
           setError("Authentication failed or user ID missing.");
           setLoading(false);
           return;
         }
 
-        const decoded = jwtDecode<DecodedToken>(accessToken.toString());
+        const decoded = jwtDecode<DecodedToken>(accessToken);
         const studentIdDecoded = decoded.userId || decoded.id || decoded.sub || "";
         setStudentId(studentIdDecoded);
 
@@ -121,7 +122,12 @@ function Content() {
     }
     try {
       setSendingRequest(true);
-      const accessToken = getCookie("accessToken");
+      
+      // Lấy accessToken từ refreshToken
+      const accessToken = await getAccessTokenFromRefresh();
+      if (!accessToken) {
+        throw new Error("Authentication required");
+      }
 
       console.log("🚀 Sending matching request with data:", {
         studentId,

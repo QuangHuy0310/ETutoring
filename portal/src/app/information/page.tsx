@@ -43,10 +43,8 @@ export default function InformationPage() {
     major: "",
     avatar: ""
   });
-  
   // State để lưu email từ token
   const [tokenEmail, setTokenEmail] = useState<string>("");
-  
   // State cho UI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,15 +54,13 @@ export default function InformationPage() {
   const decodeToken = () => {
     try {
       if (typeof window === 'undefined') return null; // Check for server-side rendering
-      
       const accessToken = getCookie('accessToken');
       if (!accessToken) return null;
-
       const decodedToken = jwtDecode<DecodedToken>(accessToken.toString());
       return {
         email: decodedToken.email,
         role: decodedToken.role,
-        userId: decodedToken.userId || decodedToken.id || decodedToken.sub // Extract userId from different possible token formats
+        userId: decodedToken.userId || decodedToken.id || decodedToken.sub // Lấy userId từ token
       };
     } catch (error) {
       console.error('Error decoding token:', error);
@@ -72,137 +68,62 @@ export default function InformationPage() {
     }
   };
 
-  // Fetch user information
+  // Lấy thông tin người dùng từ API (chỉ lấy, không tạo mới)
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
         if (typeof window === 'undefined') return;
-        
-        // Get token and decode it (for authentication only)
         const accessToken = getCookie('accessToken');
         const tokenInfo = decodeToken();
-        
         if (!accessToken || !tokenInfo) {
           setError("Authentication required. Please log in.");
           setLoading(false);
           return;
         }
-
-        // Lưu email từ token vào state
-        if (tokenInfo.email) {
-          setTokenEmail(tokenInfo.email);
-        }
-
-        // Fetch detailed user information from API
+        if (tokenInfo.email) setTokenEmail(tokenInfo.email);
+        // Gọi API lấy thông tin người dùng
         const response = await fetch("http://localhost:3002/get-infors", {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`
-          }
+          headers: { "Authorization": `Bearer ${accessToken}` }
         });
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data = await response.json();
-        
-        // Process the API response
+        // Tìm user theo email hoặc userId từ token
         let userInfo;
-
-        // Kiểm tra nếu response có cấu trúc { data: [...] }
         if (data && data.data) {
           if (Array.isArray(data.data)) {
-            // Nếu data.data là một mảng, tìm user phù hợp
-            userInfo = data.data.find((user: { email: string }) => user.email === tokenInfo.email);
-            
-            if (!userInfo) {
-              // Thử tìm theo userId nếu không tìm thấy theo email
-                userInfo = data.data.find((user: { userId?: string; _id?: string; email: string }) => 
-                user.userId === tokenInfo.userId || 
-                user._id === tokenInfo.userId
-                );
-            }
+            userInfo = data.data.find((user: { email: string; userId?: string; _id?: string; id?: string }) =>
+              user.email === tokenInfo.email ||
+              user.userId === tokenInfo.userId ||
+              user._id === tokenInfo.userId ||
+              user.id === tokenInfo.userId
+            );
           } else if (typeof data.data === 'object') {
-            // Nếu data.data là một object đơn
             userInfo = data.data;
           }
-        } else {
-          // Xử lý theo cách cũ nếu không có cấu trúc { data: [...] }
-          if (Array.isArray(data)) {
-            // If API returns an array of users, find the matching one by email from token
-            userInfo = data.find(user => user.email === tokenInfo.email);
-            
-            if (!userInfo) {
-              // Try finding by user ID if email match fails
-              userInfo = data.find(user => 
-                user.id === tokenInfo.userId || 
-                user._id === tokenInfo.userId
-              );
-            }
-          } else if (typeof data === 'object') {
-            // If API returns a single user object
-            userInfo = data;
-          }
+        } else if (Array.isArray(data)) {
+          userInfo = data.find((user: any) =>
+            user.email === tokenInfo.email ||
+            user.userId === tokenInfo.userId ||
+            user._id === tokenInfo.userId ||
+            user.id === tokenInfo.userId
+          );
+        } else if (typeof data === 'object') {
+          userInfo = data;
         }
-
         if (userInfo) {
-          // Use only the data from API response, not from token
           setUserData({
             id: userInfo.id || userInfo._id || "",
             name: userInfo.name || "User",
-            email: userInfo.email || tokenInfo.email, // Fallback to token email if API doesn't provide it
-            phoneNumber: userInfo.phone || "", // Change from phoneNumber to phone
+            email: userInfo.email || tokenInfo.email,
+            phoneNumber: userInfo.phone || userInfo.phoneNumber || "",
             major: userInfo.major || "",
             avatar: userInfo.avatar || "",
-            role: userInfo.role || (tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User")
+            role: userInfo.role || (tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User"),
+            address: userInfo.address || "",
+            country: userInfo.country || ""
           });
         } else {
-          // Thay vì ném lỗi, tạo hồ sơ người dùng mới
-          console.log("User information not found. Creating new user profile...");
-          
-          try {
-            // Tạo thông tin người dùng mới với email từ token
-            const createResponse = await fetch("http://localhost:3002/new-Information", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${accessToken}`
-              },
-              body: JSON.stringify({
-                email: tokenInfo.email,
-                name: "User", 
-                phone: "0000000000", // Sử dụng số điện thoại mẫu hợp lệ
-                address: "Not specified", // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
-                major: "Not specified",   // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
-                country: "Not specified",
-                path: "Not specified" ,  // Sử dụng chuỗi có giá trị thay vì chuỗi rỗng
-              })
-            });
-            
-            if (!createResponse.ok) {
-              const errorText = await createResponse.text().catch(() => "Unknown error");
-              console.error(`Failed to create user profile: Status ${createResponse.status}, Details:`, errorText);
-              throw new Error(`Failed to create user profile: ${createResponse.status}`);
-            }
-            
-            const newUserData = await createResponse.json();
-            
-            // Cập nhật state với thông tin người dùng mới
-            setUserData({
-              id: newUserData.id || newUserData._id || "",
-              name: newUserData.name || "User",
-              email: tokenInfo.email,
-              phoneNumber: newUserData.phone || "",
-              major: newUserData.major || "",
-              avatar: newUserData.avatar || "",
-              role: tokenInfo.role ? tokenInfo.role.charAt(0).toUpperCase() + tokenInfo.role.slice(1) : "User"
-            });
-            
-            console.log("New user profile created successfully");
-          } catch (createError) {
-            console.error("Error creating new user profile:", createError);
-            setError("Unable to create user profile. Please contact support.");
-          }
+          setError("Không tìm thấy thông tin người dùng. Vui lòng liên hệ quản trị viên.");
         }
       } catch (error) {
         console.error("Error fetching user info:", error);
@@ -211,14 +132,13 @@ export default function InformationPage() {
         setLoading(false);
       }
     };
-
     fetchUserInfo();
   }, []);
 
-  // Update user information
-  const handleUpdateInfo = async (updatedData: { 
-    name: string; 
-    phoneNumber: string; 
+  // Hàm cập nhật thông tin người dùng
+  const handleUpdateInfo = async (updatedData: {
+    name: string;
+    phoneNumber: string;
     email: string;
     major?: string;
     address?: string;
@@ -226,22 +146,12 @@ export default function InformationPage() {
   }) => {
     try {
       if (typeof window === 'undefined') return;
-      
       const accessToken = getCookie('accessToken');
       const tokenInfo = decodeToken();
-      
-      if (!accessToken || !tokenInfo) {
-        throw new Error("Authentication required. Please log in.");
-      }
-      
-      // Sử dụng userId từ JWT token thay vì từ userData
+      if (!accessToken || !tokenInfo) throw new Error("Authentication required. Please log in.");
       const userId = tokenInfo.userId;
-      
-      if (!userId) {
-        throw new Error("User ID not found in token");
-      }
-      
-      // Call API to update user information
+      if (!userId) throw new Error("User ID not found in token");
+      // Gọi API cập nhật thông tin
       const response = await fetch(`http://localhost:3002/edit-infor?userId=${userId}`, {
         method: "PUT",
         headers: {
@@ -257,78 +167,20 @@ export default function InformationPage() {
           country: updatedData.country || ""
         })
       });
-      
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         throw new Error(errorData?.message || `Update failed with status: ${response.status}`);
       }
-      
-      // After successful update, fetch the updated info from API again
-      const updatedResponse = await fetch("http://localhost:3002/get-infors", {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`
-        }
-      });
-      
-      if (updatedResponse.ok) {
-        const updatedData = await updatedResponse.json();
-        let updatedUserInfo;
-        
-        // Kiểm tra cấu trúc response { data: [...] }
-        if (updatedData && updatedData.data) {
-          if (Array.isArray(updatedData.data)) {
-            // Tìm user theo userId từ token thay vì id từ userData
-            updatedUserInfo = updatedData.data.find((user: { userId?: string; _id?: string; id?: string }) => 
-              user.userId === userId || user._id === userId || user.id === userId
-            );
-          } else if (typeof updatedData.data === 'object') {
-            updatedUserInfo = updatedData.data;
-          }
-        } else {
-          // Xử lý theo cách cũ
-          if (Array.isArray(updatedData)) {
-            // Tìm user theo userId từ token thay vì id từ userData
-            updatedUserInfo = updatedData.find(user => 
-              user.userId === userId || user._id === userId || user.id === userId
-            );
-          } else if (typeof updatedData === 'object') {
-            updatedUserInfo = updatedData;
-          }
-        }
-        
-        if (updatedUserInfo) {
-          setUserData(prev => ({
-            ...prev,
-            name: updatedUserInfo.name || prev.name,
-            email: updatedUserInfo.email || prev.email,
-            phoneNumber: updatedUserInfo.phone || prev.phoneNumber,
-            major: updatedUserInfo.major || prev.major,
-            address: updatedUserInfo.address || prev.address,
-            country: updatedUserInfo.country || prev.country
-          }));
-        }
-      } else {
-        // If we can't fetch updated data, at least update local state
-        setUserData(prev => ({
-          ...prev,
-          name: updatedData.name,
-          email: updatedData.email,
-          phoneNumber: updatedData.phoneNumber,
-          major: updatedData.major || prev.major,
-          address: updatedData.address || prev.address,
-          country: updatedData.country || prev.country
-        }));
-      }
-      
-      // Close the edit form
+      // Sau khi cập nhật thành công, đóng form chỉnh sửa
       setShowEditForm(false);
+      // Có thể gọi lại API lấy thông tin mới nếu muốn đồng bộ UI
     } catch (error: any) {
       console.error("Error updating information:", error);
       throw error;
     }
   };
 
-  // Helper function for avatar
+  // Hàm lấy ký tự đầu tên làm avatar
   const getInitialAvatar = () => {
     return userData.name ? userData.name.charAt(0).toUpperCase() : 'U';
   };
@@ -358,7 +210,6 @@ export default function InformationPage() {
                   className="w-full h-full object-cover"
                 />
               </div>
-
               {/* Avatar & User Info */}
               <div className="flex items-end absolute left-0 -bottom-16">
                 <div className="w-32 h-32 bg-gray-500 rounded-full border-4 border-black shadow-lg">
@@ -395,10 +246,9 @@ export default function InformationPage() {
                 </div>
               </div>
             </div>
-
             {/* Content */}
             <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-              {/* User Information Section - REDESIGNED */}
+              {/* Thông tin người dùng */}
               <div className="md:col-span-1">
                 <div className="bg-black border border-gray-700 rounded-lg shadow-md overflow-hidden">
                   {/* Header */}
@@ -414,7 +264,6 @@ export default function InformationPage() {
                       </button>
                     )}
                   </div>
-                  
                   {/* Content */}
                   <div className="p-6">
                     {showEditForm ? (
@@ -453,7 +302,6 @@ export default function InformationPage() {
                             )}
                           </div>
                         </div>
-                        
                         <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
                           <div className="bg-yellow-600 rounded-full p-2 mr-3">
                             <FaPhone className="text-white" />
@@ -463,7 +311,6 @@ export default function InformationPage() {
                             <p className="text-white">{userData.phoneNumber || "Not provided"}</p>
                           </div>
                         </div>
-                        
                         <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
                           <div className="bg-purple-600 rounded-full p-2 mr-3">
                             <FaGraduationCap className="text-white" />
@@ -473,7 +320,6 @@ export default function InformationPage() {
                             <p className="text-white">{userData.major || "Not specified"}</p>
                           </div>
                         </div>
-                        
                         <div className="flex items-center p-3 bg-gray-800 bg-opacity-40 rounded-lg">
                           <div className="bg-red-600 rounded-full p-2 mr-3">
                             <FaUserTag className="text-white" />
@@ -488,8 +334,7 @@ export default function InformationPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Timetable Section */}
+              {/* Thời khoá biểu */}
               <div className="md:col-span-2 bg-black border border-gray-700 p-8 rounded-lg shadow-md text-white">
                 <h3 className="text-lg font-semibold mb-4">Timetable</h3>
                 <Timetable />
