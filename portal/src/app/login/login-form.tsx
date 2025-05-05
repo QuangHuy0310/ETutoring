@@ -88,7 +88,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
 
       // Nếu là user hoặc tutor thì chuyển sang check-info để kiểm tra thông tin
       if (userRole === 'user' || userRole === 'tutor') {
-        window.location.href = '/check-info';
+        window.location.href = 'information/check-info';
         return;
       }
 

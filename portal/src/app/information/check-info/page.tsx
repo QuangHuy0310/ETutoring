@@ -27,14 +27,14 @@ export default function CheckInfo() {
         const data = await res.json();
         // Nếu không có thông tin hoặc data rỗng thì chuyển sang trang nhập thông tin
         if (!data || !data.data || data.data.length === 0) {
-          router.replace("/NewInfor");
+          router.replace("/information/NewInfor");
         } else {
           // Nếu đã có info thì về trang chủ
           router.replace("/");
         }
       } catch (error) {
         // Nếu lỗi, chuyển sang trang nhập thông tin
-        router.replace("/NewInfor");
+        router.replace("/information/NewInfor");
       }
     };
     checkUserInfo();
