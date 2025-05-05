@@ -6,6 +6,7 @@ import { cn } from "@/app/lib/utils";
 import { Button } from "../componets/ui/button";
 import { Input } from "../componets/ui/input";
 import { setCookie } from "cookies-next";
+import { saveTokens } from "../lib/token";
 
 interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {}
 
@@ -48,11 +49,11 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
         throw new Error(result.message || "Login failed!");
       }
 
-      if (!result.data || !result.data.accessToken) {
+      if (!result.data || !result.data.accessToken || !result.data.refreshToken) {
         throw new Error("Token not found in response.");
       }
 
-      const { accessToken } = result.data;
+      const { accessToken, refreshToken } = result.data;
 
       setCookie('accessToken', accessToken, {
         maxAge: 30 * 24 * 60 * 60,
@@ -60,6 +61,8 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
       });
+
+      saveTokens(accessToken, refreshToken);
 
       redirectUserBasedOnRole(accessToken);
     } catch (err) {
@@ -74,7 +77,6 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userRole = payload.role;
 
-      localStorage.setItem('accessToken', token);
       localStorage.setItem('userId', payload.id || payload.sub || '');
       localStorage.setItem('userEmail', payload.email || '');
       localStorage.setItem('userName', payload.name || '');
@@ -83,6 +85,12 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
       setCookie('userId', payload.id || payload.sub || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
       setCookie('userEmail', payload.email || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
       setCookie('userName', payload.name || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
+
+      // Nếu là user hoặc tutor thì chuyển sang check-info để kiểm tra thông tin
+      if (userRole === 'user' || userRole === 'tutor') {
+        window.location.href = '/check-info';
+        return;
+      }
 
       const redirectPath =
         ROLE_REDIRECTS[userRole as keyof typeof ROLE_REDIRECTS] || ROLE_REDIRECTS.default;

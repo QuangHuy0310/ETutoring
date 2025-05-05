@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import AddFacultyModal from "./add_faculty_form";
-import EditFacultyModal from "./edit_faculty_form"
+import EditFacultyModal from "./edit_faculty_form";
 import AdminLayout from "../AdminLayout";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -13,8 +13,9 @@ import { getCookie } from "cookies-next";
 interface Faculty {
   _id: string;
   name: string;
-  // Thêm các trường khác nếu cần
 }
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 export default function FacultyManagement() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -24,20 +25,25 @@ export default function FacultyManagement() {
   const [currentFaculty, setCurrentFaculty] = useState<Faculty | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Lấy danh sách khoa
+  // Fetch major list
   const fetchFaculties = async () => {
     setIsLoading(true);
     try {
       const token = getCookie("accessToken");
-      const response = await axios.get(`http://localhost:3002/get-major`, {
+      const response = await axios.get(`${API_URL}/get-major`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setFaculties(response.data.data);
+      
+      if (response.data && response.data.data) {
+        setFaculties(response.data.data);
+      } else {
+        toast.error("Invalid data format received from the server");
+      }
     } catch (error) {
       console.error("Error fetching faculties:", error);
-      toast.error("Failed to fetch faculties");
+      toast.error("Failed to fetch faculties. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -47,90 +53,67 @@ export default function FacultyManagement() {
     fetchFaculties();
   }, []);
 
-  // Thêm khoa mới
-  const handleAddFaculty = async (faculty: { name: string }) => {
-    try {
-      const token = getCookie("accessToken");
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/faculty`, faculty, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setFaculties([...faculties, response.data.data]);
-      setShowAddForm(false);
-      toast.success("Faculty added successfully");
-    } catch (error) {
-      console.error("Error adding faculty:", error);
-      toast.error("Failed to add faculty");
-    }
+  // Add new faculty - simplified to only handle state update after the API call in the modal
+  const handleAddFaculty = (newFaculty: { _id: string; name: string }) => {
+    // Update the faculties state with the new faculty returned from the API
+    setFaculties([...faculties, newFaculty]);
+    setShowAddForm(false);
+    // No need to call API here as it's handled in the AddFacultyModal
   };
 
-  // Cập nhật khoa
-  const handleUpdateFaculty = async (updatedFaculty: Faculty) => {
-    try {
-      const token = getCookie("accessToken");
-      await axios.patch(
-        `http://localhost:3002/edit-major?id=${updatedFaculty._id}`,
-        { name: updatedFaculty.name },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setFaculties(
-        faculties.map((faculty) =>
-          faculty._id === updatedFaculty._id ? updatedFaculty : faculty
-        )
-      );
-      setShowEditForm(false);
-      toast.success("Faculty updated successfully");
-    } catch (error) {
-      console.error("Error updating faculty:", error);
-      toast.error("Failed to update faculty");
-    }
+  // Update faculty - already simplified to only handle state update
+  const handleUpdateFaculty = (updatedFaculty: Faculty) => {
+    // Update the local state after successful edit in the modal
+    setFaculties(
+      faculties.map((faculty) =>
+        faculty._id === updatedFaculty._id ? updatedFaculty : faculty
+      )
+    );
+    setShowEditForm(false);
+    // No need to call API here as it's handled in the EditFacultyModal
   };
 
-  // Xóa khoa
+  // Delete faculty
   const handleDeleteFaculty = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this faculty?")) {
       try {
         const token = getCookie("accessToken");
-        await axios.delete(`http://localhost:3002/delete-major?id=${id}`, {
+        await axios.delete(`${API_URL}/delete-major?id=${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+        
         setFaculties(faculties.filter((faculty) => faculty._id !== id));
         toast.success("Faculty deleted successfully");
       } catch (error) {
         console.error("Error deleting faculty:", error);
-        toast.error("Failed to delete faculty");
+        toast.error("Failed to delete faculty. Please try again later.");
       }
     }
   };
 
-  // Lọc dựa trên tìm kiếm
+  // Filter based on search
   const filteredFaculties = faculties.filter((faculty) =>
     faculty.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <AdminLayout>
-      <div>
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="admin-heading">Faculty Management</h1>
+          <h1 className="text-2xl font-bold">Faculty Management</h1>
           <div className="flex gap-2">
             <button
               onClick={() => setShowAddForm(true)}
-              className="admin-button-primary flex items-center"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition"
             >
               <FaPlus className="mr-2" /> Add Faculty
             </button>
             <input
               type="text"
               placeholder="Search faculties..."
-              className="admin-input"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -140,17 +123,17 @@ export default function FacultyManagement() {
         {/* Faculties List */}
         {isLoading ? (
           <div className="flex justify-center my-10">
-            <div className="admin-spinner"></div>
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="admin-table">
+          <div className="overflow-x-auto border rounded-lg bg-white">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="admin-table-header">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Faculty Name
                   </th>
-                  <th scope="col" className="admin-table-header text-right">
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -166,13 +149,15 @@ export default function FacultyManagement() {
                             setCurrentFaculty(faculty);
                             setShowEditForm(true);
                           }}
-                          className="text-emerald-600 hover:text-emerald-900 mr-3"
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                          title="Edit faculty"
                         >
                           <FaEdit className="inline text-lg" />
                         </button>
                         <button
                           onClick={() => handleDeleteFaculty(faculty._id)}
                           className="text-red-600 hover:text-red-900"
+                          title="Delete faculty"
                         >
                           <FaTrash className="inline text-lg" />
                         </button>
@@ -182,7 +167,7 @@ export default function FacultyManagement() {
                 ) : (
                   <tr>
                     <td colSpan={2} className="px-6 py-4 text-center text-gray-500">
-                      No faculties found
+                      {searchTerm ? "No matching faculties found" : "No faculties found"}
                     </td>
                   </tr>
                 )}
