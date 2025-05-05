@@ -1,4 +1,4 @@
-import { ScheduleRequest, ScheduleRequestSchema } from '@entities/ScheduleRequest.entities';
+import { ScheduleRequest, ScheduleRequestSchema } from '@entities/scheduleRequest.entities';
 import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleRequestController } from './scheduleRequest.controller';
